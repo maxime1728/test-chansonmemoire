@@ -39,14 +39,12 @@ body {
   padding: 24px 20px 0;
   flex-shrink: 0;
 }
-.cm-logo {
-  font-family: 'Fraunces', serif;
-  font-style: italic;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--cm-plum-dark);
+.cm-logo-link { display: inline-block; }
+.cm-logo-img {
+  height: 48px;
+  width: auto;
+  display: block;
 }
-.cm-logo span { color: var(--cm-gold); }
 
 /* ── BARRE DE PROGRESSION ── */
 .cm-progress-header {
@@ -426,7 +424,9 @@ body {
 
 <!-- HEADER -->
 <header class="cm-header">
-  <div class="cm-logo">Chanson<span>Mémoire</span></div>
+  <a href="/" class="cm-logo-link">
+    <img src="https://res.cloudinary.com/dcx1tfm47/image/upload/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire" class="cm-logo-img">
+  </a>
 </header>
 
 <!-- BARRE DE PROGRESSION -->
