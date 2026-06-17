@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Politique de remboursement — Chanson Mémoire</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #F7F3EE;
+      --surface:   #FFFFFF;
+      --mauve:     #8B7A9E;
+      --mauve-lt:  #EDE8F3;
+      --ink:       #2B2430;
+      --ink-soft:  #5C5165;
+      --rule:      #D9D3E0;
+      --accent:    #6B5880;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--rule);
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .brand-mark {
+      width: 36px; height: 36px;
+      background: var(--mauve);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .brand-mark svg { width: 18px; height: 18px; fill: white; }
+    .brand-name {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.3rem;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+    .nav-links { margin-left: auto; display: flex; gap: 1.5rem; list-style: none; }
+    .nav-links a {
+      font-size: 0.8rem;
+      color: var(--ink-soft);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .nav-links a:hover { color: var(--accent); }
+    .nav-links a[aria-current] { color: var(--accent); font-weight: 500; }
+    .page-wrap { max-width: 760px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+    .page-header { padding-bottom: 2rem; border-bottom: 1px solid var(--rule); margin-bottom: 2.5rem; }
+    .page-label { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mauve); font-weight: 500; margin-bottom: 0.6rem; }
+    .page-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(1.9rem, 5vw, 2.8rem); font-weight: 400; line-height: 1.15; color: var(--ink); }
+    .page-date { margin-top: 0.75rem; font-size: 0.82rem; color: var(--ink-soft); }
+
+    /* Highlight card */
+    .highlight-card {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-top: 3px solid var(--mauve);
+      border-radius: 6px;
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 2.5rem;
+    }
+    .highlight-card .card-title {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+    .highlight-card p { font-size: 0.95rem; color: var(--ink); }
+
+    .legal-section { margin-bottom: 2.4rem; }
+    .legal-section h2 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 0.8rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .legal-section p { margin-bottom: 0.85rem; color: var(--ink); }
+    .legal-section ul { padding-left: 1.4rem; margin-bottom: 0.85rem; }
+    .legal-section li { margin-bottom: 0.35rem; }
+    .legal-section strong { color: var(--ink); }
+
+    /* Steps */
+    .steps { list-style: none; padding: 0; margin: 1rem 0; }
+    .steps li {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .steps li:last-child { border-bottom: none; }
+    .step-num {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.5rem;
+      color: var(--mauve);
+      line-height: 1;
+      flex-shrink: 0;
+      width: 2rem;
+      text-align: center;
+    }
+    .step-body { font-size: 0.94rem; }
+    .step-body strong { display: block; margin-bottom: 0.2rem; color: var(--ink); }
+
+    footer {
+      border-top: 1px solid var(--rule);
+      padding: 2rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--ink-soft);
+    }
+    footer a { color: var(--mauve); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+      .page-wrap { padding: 2rem 1.25rem 4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand-mark">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 16c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7zm1-11h-2v3H8v2h3v3h2v-3h3v-2h-3z"/>
+    </svg>
+  </div>
+  <span class="brand-name">Chanson Mémoire</span>
+  <nav>
+    <ul class="nav-links">
+      <li><a href="conditions-de-vente.html">Conditions de vente</a></li>
+      <li><a href="politique-de-remboursement.html" aria-current="page">Remboursement</a></li>
+      <li><a href="politique-de-confidentialite.html">Confidentialité</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main class="page-wrap">
+
+  <div class="page-header">
+    <p class="page-label">Documents légaux</p>
+    <h1 class="page-title">Politique de remboursement</h1>
+    <p class="page-date">Dernière mise à jour : <strong>[DATE]</strong></p>
+  </div>
+
+  <div class="highlight-card">
+    <p class="card-title">Notre engagement</p>
+    <p>Chez Chanson Mémoire, nous voulons que vous adoriez votre chanson personnalisée. Comme chaque chanson est créée spécifiquement pour vous, notre politique diffère de celle des produits traditionnels.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>Révisions gratuites</h2>
+    <p>Vous n'êtes pas satisfait ? Contactez-nous dans les <strong>14 jours</strong> suivant la réception et nous créerons une version révisée sans frais. Indiquez ce que vous souhaitez modifier (style, ambiance, prononciation, ajustement des paroles) et nous corrigerons le tout.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>Admissibilité aux remboursements</h2>
+    <p>Comme nos chansons sont des produits numériques personnalisés, nous ne pouvons généralement pas offrir de remboursement une fois la chanson livrée. Un remboursement peut toutefois être envisagé si :</p>
+    <ul>
+      <li>Vous n'avez jamais reçu votre chanson et nous n'avons pas pu résoudre le problème de livraison ;</li>
+      <li>La chanson contient des erreurs importantes que nous ne pouvons pas corriger par une révision ;</li>
+      <li>Un problème technique empêche le fichier de fonctionner.</li>
+    </ul>
+    <p>Ces dispositions s'appliquent sans préjudice des droits d'annulation que vous accorde la <em>Loi sur la protection du consommateur</em> pour les contrats conclus à distance.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>Comment nous contacter</h2>
+    <ol class="steps">
+      <li>
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <strong>Écrivez-nous</strong>
+          Envoyez un courriel à <strong>[COURRIEL]</strong> avec votre numéro de commande et les détails de votre demande.
+        </div>
+      </li>
+      <li>
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <strong>Nous répondons</strong>
+          Nous accusons réception et vous répondons généralement dans les <strong>24 heures</strong>.
+        </div>
+      </li>
+      <li>
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <strong>Révision ou remboursement</strong>
+          Selon votre situation, nous procédons à une révision ou à un remboursement conformément à la présente politique.
+        </div>
+      </li>
+    </ol>
+  </div>
+
+</main>
+
+<footer>
+  <p>
+    <a href="conditions-de-vente.html">Conditions de vente</a> &nbsp;·&nbsp;
+    <a href="politique-de-remboursement.html">Politique de remboursement</a> &nbsp;·&nbsp;
+    <a href="politique-de-confidentialite.html">Politique de confidentialité</a>
+  </p>
+  <p style="margin-top:.75rem;">&copy; <span id="yr"></span> [NOM LÉGAL] — Chanson Mémoire. Tous droits réservés.</p>
+  <script>document.getElementById('yr').textContent = new Date().getFullYear();</script>
+</footer>
+
+</body>
+</html>
