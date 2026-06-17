@@ -39,14 +39,12 @@ body {
   padding: 24px 20px 0;
   flex-shrink: 0;
 }
-.cm-logo {
-  font-family: 'Fraunces', serif;
-  font-style: italic;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--cm-plum-dark);
+.cm-logo-link { display: inline-block; }
+.cm-logo-img {
+  height: 48px;
+  width: auto;
+  display: inline-block;
 }
-.cm-logo span { color: var(--cm-gold); }
 
 /* ── BARRE DE PROGRESSION ── */
 .cm-progress-header {
@@ -424,9 +422,8 @@ body {
   <input type="checkbox" name="consentement">
 </form>
 
-<!-- HEADER -->
-<header class="cm-header">
-  <div class="cm-logo">Chanson<span>Mémoire</span></div>
+<header class="cm-header" style="text-align: center;">
+  <img src="https://res.cloudinary.com/dcx1tfm47/image/upload/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire" class="cm-logo-img">
 </header>
 
 <!-- BARRE DE PROGRESSION -->
@@ -524,7 +521,7 @@ body {
   <!-- ── ÉTAPE 5 : Ambiance ── -->
   <div class="cm-step-card" data-step="5">
     <div class="cm-q-eyebrow">L'ambiance</div>
-    <h2 class="cm-q-title">Comment voulez-vous vous souvenir de lui / d'elle ?</h2>
+    <h2 class="cm-q-title">Choisi l'ambiance musicale désirée</h2>
     <p class="cm-q-sub">Choisissez l'émotion qui guide la chanson.</p>
     <div class="cm-choices cm-grid-2" id="choices-ambiance">
       <button class="cm-choice" data-value="Émotionnelle"><span class="cm-choice-emoji">💧</span> Émotionnelle</button>
@@ -714,7 +711,7 @@ body {
     /* Personnaliser les titres avec le prénom */
     if (data.prenom_defunt) {
       var q2 = document.getElementById('q2-title');
-      if (q2) q2.textContent = 'Qui était ' + data.prenom_defunt + ' pour vous ?';
+      if (q2 && data.prenom_defunt) q2.textContent = 'Qui était ' + data.prenom_defunt + ' pour vous ?';
       var q6 = document.getElementById('q6-title');
       if (q6) q6.textContent = 'Qu\'est-ce qui rendait ' + data.prenom_defunt + ' unique ?';
     }
