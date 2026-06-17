@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Création en cours — Chanson Mémoire</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400;1,600&family=Mulish:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;text-align:center;}
+
+/* ── VARIABLES ── */
+:root{
+  --plum:#4a3b57;
+  --plum-deep:#2e2238;
+  --ink:#2a2330;
+  --muted:#6b6175;
+  --candle:#c39a52;
+  --candle-soft:#ecdcbd;
+  --line:#e3dceb;
+}
+
+.in{max-width:560px;margin:0 auto;padding:0 20px;}
+.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.72rem;font-weight:800;color:var(--candle);display:block;margin-bottom:12px;}
+.serif{font-family:"Fraunces",Georgia,serif;}
+
+/* ── FLAMME ── */
+.flame{width:36px;height:52px;margin:0 auto 28px;position:relative;}
+.flame::before{
+  content:"";position:absolute;inset:0;margin:auto;
+  width:18px;height:28px;
+  border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  background:linear-gradient(180deg,var(--candle-soft),var(--candle));
+  animation:breathe 2.6s ease-in-out infinite;
+  transform-origin:center bottom;
+}
+.flame::after{
+  content:"";position:absolute;left:50%;bottom:0;
+  transform:translateX(-50%);
+  width:2px;height:14px;
+  background:var(--plum-deep);opacity:.4;
+}
+@keyframes breathe{
+  0%,100%{transform:scaleY(1) scaleX(1);opacity:.92;}
+  50%{transform:scaleY(1.14) scaleX(.93);opacity:1;}
+}
+
+/* ── SECTION 1 : ATTENTE ── */
+.s-wait{padding:54px 20px 40px;}
+.s-wait h1{
+  font-family:"Fraunces",serif;font-weight:600;
+  color:var(--plum-deep);
+  font-size:clamp(1.9rem,6vw,2.6rem);
+  line-height:1.15;letter-spacing:-.01em;
+  margin-bottom:.35em;
+}
+.s-wait .lede{font-size:1.05rem;color:var(--muted);line-height:1.6;margin-bottom:28px;}
+.s-wait .lede .defunt-name{font-family:"Fraunces",serif;font-style:italic;color:var(--plum);}
+
+.steps{display:flex;flex-direction:column;gap:10px;max-width:400px;margin:0 auto 24px;text-align:left;}
+.wstep{
+  display:flex;align-items:center;gap:14px;
+  background:#fff;border:1px solid var(--line);
+  border-radius:14px;padding:13px 16px;
+  opacity:.4;transition:opacity .5s;
+}
+.wstep .dot{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:2px solid var(--candle-soft);}
+.wstep .txt{font-weight:700;color:var(--plum-deep);font-size:.95rem;}
+.wstep:nth-child(1){animation:stepPulse 7.5s infinite 0s;}
+.wstep:nth-child(2){animation:stepPulse 7.5s infinite 2.5s;}
+.wstep:nth-child(3){animation:stepPulse 7.5s infinite 5s;}
+@keyframes stepPulse{0%,100%{opacity:.4;}13%,33%{opacity:1;}}
+
+.wait-status{
+  background:#fff;border:1px solid var(--line);
+  border-radius:16px;padding:18px 20px;
+  max-width:420px;margin:0 auto 8px;
+}
+.wait-status .status-txt{font-size:.95rem;color:var(--muted);line-height:1.6;}
+.wait-status .status-txt strong{color:var(--plum-deep);}
+
+.wait-dots{display:inline-flex;gap:5px;vertical-align:middle;margin-left:6px;}
+.wait-dots span{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--candle);display:inline-block;
+  animation:dotBounce 1.4s ease-in-out infinite;
+}
+.wait-dots span:nth-child(2){animation-delay:.2s;}
+.wait-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes dotBounce{
+  0%,80%,100%{transform:scale(0.7);opacity:.5;}
+  40%{transform:scale(1);opacity:1;}
+}
+
+.keep-open{font-size:.82rem;color:var(--muted);margin-top:8px;max-width:380px;margin-left:auto;margin-right:auto;}
+
+/* ── SECTION 2 : PLAYERS ── */
+.s-players{padding:30px 20px 40px;}
+.s-players h2{
+  font-family:"Fraunces",serif;font-weight:600;
+  color:var(--plum-deep);
+  font-size:clamp(1.35rem,5vw,1.9rem);
+  margin-bottom:6px;
+}
+.s-players .sub{font-size:.96rem;color:var(--muted);margin-bottom:26px;}
+.players-list{display:flex;flex-direction:column;gap:14px;max-width:520px;margin:0 auto;}
+
+.cm-player{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px 18px;}
+.cm-bars{display:flex;align-items:flex-end;justify-content:center;gap:4px;height:38px;margin-bottom:12px;}
+.cm-bars span{
+  width:11px;border-radius:4px 4px 2px 2px;
+  background:linear-gradient(180deg,var(--candle),var(--plum));
+  transform-origin:bottom;opacity:.85;
+}
+.cm-bars span:nth-child(1){height:30%}.cm-bars span:nth-child(2){height:58%}
+.cm-bars span:nth-child(3){height:42%}.cm-bars span:nth-child(4){height:80%}
+.cm-bars span:nth-child(5){height:100%}.cm-bars span:nth-child(6){height:36%}
+.cm-bars span:nth-child(7){height:70%}.cm-bars span:nth-child(8){height:50%}
+.cm-bars span:nth-child(9){height:34%}
+
+@keyframes barPulse{0%,100%{height:25%}50%{height:94%}}
+.cm-player.is-playing .cm-bars span{animation:barPulse 2s ease-in-out infinite;}
+.cm-player.is-playing .cm-bars span:nth-child(2){animation-duration:1.6s;animation-delay:.22s}
+.cm-player.is-playing .cm-bars span:nth-child(3){animation-duration:2.2s;animation-delay:.1s}
+.cm-player.is-playing .cm-bars span:nth-child(4){animation-duration:1.4s;animation-delay:.38s}
+.cm-player.is-playing .cm-bars span:nth-child(5){animation-duration:1.9s;animation-delay:.15s}
+.cm-player.is-playing .cm-bars span:nth-child(6){animation-duration:2.4s;animation-delay:.28s}
+.cm-player.is-playing .cm-bars span:nth-child(7){animation-duration:1.7s;animation-delay:.04s}
+.cm-player.is-playing .cm-bars span:nth-child(8){animation-duration:2.1s;animation-delay:.34s}
+.cm-player.is-playing .cm-bars span:nth-child(9){animation-duration:1.8s;animation-delay:.19s}
+
+.cm-pl-title{font-family:"Fraunces",serif;font-weight:600;color:var(--plum-deep);font-size:1.05rem;margin-bottom:2px;}
+.cm-pl-sub{font-size:.85rem;color:var(--muted);margin-bottom:12px;}
+.cm-pl-controls{display:flex;align-items:center;justify-content:center;gap:10px;max-width:400px;margin:0 auto;}
+.cm-play{
+  flex:0 0 auto;width:42px;height:42px;border-radius:50%;
+  border:0;background:var(--plum);color:#fff;
+  font-size:.95rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.cm-play:hover{background:var(--plum-deep);}
+.cm-time{font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;min-width:32px;}
+.cm-track{flex:1;height:5px;border-radius:999px;background:var(--line);cursor:pointer;position:relative;}
+.cm-fill{position:absolute;left:0;top:0;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--candle),var(--plum));pointer-events:none;}
+.cm-player audio{display:none!important;}
+
+/* ── SECTION 3 : TÉMOIGNAGES ── */
+.s-temoignages{padding:30px 20px 40px;}
+.s-temoignages h2{
+  font-family:"Fraunces",serif;font-weight:600;
+  color:var(--plum-deep);
+  font-size:clamp(1.35rem,5vw,1.9rem);
+  margin-bottom:24px;
+}
+.quotes{display:flex;flex-direction:column;gap:14px;max-width:520px;margin:0 auto;}
+.q{
+  background:#fff;border:1px solid var(--line);
+  border-left:3px solid var(--candle);
+  border-radius:0 16px 16px 0;
+  padding:20px 20px 16px;text-align:left;
+}
+.q .stars{color:var(--candle);font-size:.85rem;margin-bottom:8px;letter-spacing:1px;}
+.q p{font-size:.97rem;color:var(--ink);line-height:1.58;margin-bottom:10px;font-style:italic;}
+.q .who{font-weight:800;color:var(--plum-deep);font-size:.88rem;}
+.q .role{font-weight:400;color:var(--muted);font-size:.84rem;}
+
+/* ── SECTION 4 : FOOTER ── */
+.s-foot{padding:10px 20px 56px;}
+.s-foot .box{
+  background:#fff;border:1px solid var(--line);
+  border-radius:16px;padding:22px 24px;
+  max-width:460px;margin:0 auto;
+}
+.s-foot .flame-sm{width:20px;height:28px;margin:0 auto 16px;position:relative;}
+.s-foot .flame-sm::before{
+  content:"";position:absolute;inset:0;margin:auto;
+  width:10px;height:16px;
+  border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  background:linear-gradient(180deg,var(--candle-soft),var(--candle));
+  animation:breathe 2.6s ease-in-out infinite;
+}
+.s-foot .em{font-family:"Fraunces",serif;font-style:italic;color:var(--plum);font-size:1.08rem;display:block;margin-bottom:8px;}
+.s-foot p{font-size:.92rem;color:var(--muted);line-height:1.58;}
+
+@media(prefers-reduced-motion:reduce){
+  .flame::before,.s-foot .flame-sm::before,
+  .wstep,.wait-dots span,
+  .cm-player.is-playing .cm-bars span{animation:none!important;}
+  .wstep{opacity:1;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     SECTION 1 : ATTENTE
+════════════════════════════════════════ -->
+<section class="s-wait">
+  <div class="in">
+    <div class="flame" aria-hidden="true"></div>
+    <span class="eyebrow">Création en cours</span>
+    <h1 class="serif">On compose sa chanson</h1>
+    <p class="lede">
+      À partir des souvenirs que tu nous as confiés, on donne vie à une œuvre unique
+      pour honorer la mémoire de <span class="defunt-name serif" id="defuntName">ta personne aimée</span>.
+    </p>
+
+    <div class="steps" role="list">
+      <div class="wstep" role="listitem"><span class="dot" aria-hidden="true"></span><span class="txt">On relit tes souvenirs</span></div>
+      <div class="wstep" role="listitem"><span class="dot" aria-hidden="true"></span><span class="txt">On écrit ses paroles</span></div>
+      <div class="wstep" role="listitem"><span class="dot" aria-hidden="true"></span><span class="txt">On compose sa mélodie</span></div>
+    </div>
+
+    <div class="wait-status">
+      <p class="status-txt" id="statusMsg">
+        C'est généralement prêt en <strong>quelques minutes</strong>.
+        Tu seras redirigé automatiquement dès qu'elle est prête
+        <span class="wait-dots"><span></span><span></span><span></span></span>
+      </p>
+    </div>
+    <p class="keep-open">Garde cette page ouverte — on t'envoie aussi le lien par courriel.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 2 : PLAYERS DÉMO
+════════════════════════════════════════ -->
+<section class="s-players">
+  <div class="in">
+    <span class="eyebrow">En attendant</span>
+    <h2 class="serif">Écoute d'autres œuvres qu'on a créées</h2>
+    <p class="sub">Le temps que la sienne se termine, prends un moment avec celles d'autres familles.</p>
+
+    <div class="players-list">
+
+      <div class="cm-player">
+        <div class="cm-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <p class="cm-pl-title">Pour Maman — Merci</p>
+        <p class="cm-pl-sub">Orchestre gospel mélancolique</p>
+        <div class="cm-pl-controls">
+          <button class="cm-play" type="button" aria-label="Lecture" onclick="togglePlay(this)">&#9654;</button>
+          <span class="cm-time cm-cur">0:00</span>
+          <div class="cm-track" onclick="seekTrack(this,event)"><div class="cm-fill"></div></div>
+          <span class="cm-time cm-dur">0:00</span>
+        </div>
+        <audio preload="metadata"
+          onloadedmetadata="setDur(this)"
+          ontimeupdate="updateProgress(this)"
+          onplay="onPlay(this)" onpause="onPause(this)" onended="onEnded(this)">
+          <source src="https://assets.cdn.filesafe.space/2aEvL7jAfKfV4D45pRD5/media/69fbe2de7c0e0f0a9e662313.mp3" type="audio/mpeg">
+        </audio>
+      </div>
+
+      <div class="cm-player">
+        <div class="cm-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <p class="cm-pl-title">Pour Grand-Maman — La bonne crème glacée</p>
+        <p class="cm-pl-sub">Douce mélodie émotionnelle</p>
+        <div class="cm-pl-controls">
+          <button class="cm-play" type="button" aria-label="Lecture" onclick="togglePlay(this)">&#9654;</button>
+          <span class="cm-time cm-cur">0:00</span>
+          <div class="cm-track" onclick="seekTrack(this,event)"><div class="cm-fill"></div></div>
+          <span class="cm-time cm-dur">0:00</span>
+        </div>
+        <audio preload="metadata"
+          onloadedmetadata="setDur(this)"
+          ontimeupdate="updateProgress(this)"
+          onplay="onPlay(this)" onpause="onPause(this)" onended="onEnded(this)">
+          <source src="https://assets.cdn.filesafe.space/2aEvL7jAfKfV4D45pRD5/media/69fbe2de7c0e0f0a9e662314.mp3" type="audio/mpeg">
+        </audio>
+      </div>
+
+      <div class="cm-player">
+        <div class="cm-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <p class="cm-pl-title">En mémoire à mon père — Au bord du lac avec toi</p>
+        <p class="cm-pl-sub">Acoustique inspirant</p>
+        <div class="cm-pl-controls">
+          <button class="cm-play" type="button" aria-label="Lecture" onclick="togglePlay(this)">&#9654;</button>
+          <span class="cm-time cm-cur">0:00</span>
+          <div class="cm-track" onclick="seekTrack(this,event)"><div class="cm-fill"></div></div>
+          <span class="cm-time cm-dur">0:00</span>
+        </div>
+        <audio preload="metadata"
+          onloadedmetadata="setDur(this)"
+          ontimeupdate="updateProgress(this)"
+          onplay="onPlay(this)" onpause="onPause(this)" onended="onEnded(this)">
+          <source src="https://assets.cdn.filesafe.space/2aEvL7jAfKfV4D45pRD5/media/69e50a5850b9a3263a17f1e6.mp3" type="audio/mpeg">
+        </audio>
+      </div>
+
+      <div class="cm-player">
+        <div class="cm-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <p class="cm-pl-title">Pour Grand-Papa — Roxanne</p>
+        <p class="cm-pl-sub">Jazz inspirant</p>
+        <div class="cm-pl-controls">
+          <button class="cm-play" type="button" aria-label="Lecture" onclick="togglePlay(this)">&#9654;</button>
+          <span class="cm-time cm-cur">0:00</span>
+          <div class="cm-track" onclick="seekTrack(this,event)"><div class="cm-fill"></div></div>
+          <span class="cm-time cm-dur">0:00</span>
+        </div>
+        <audio preload="metadata"
+          onloadedmetadata="setDur(this)"
+          ontimeupdate="updateProgress(this)"
+          onplay="onPlay(this)" onpause="onPause(this)" onended="onEnded(this)">
+          <source src="https://assets.cdn.filesafe.space/2aEvL7jAfKfV4D45pRD5/media/69fbe2dea6982c16559b6423.mp3" type="audio/mpeg">
+        </audio>
+      </div>
+
+      <div class="cm-player">
+        <div class="cm-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <p class="cm-pl-title">Pour mon ami — Road trip pour le fun</p>
+        <p class="cm-pl-sub">Country inspirant</p>
+        <div class="cm-pl-controls">
+          <button class="cm-play" type="button" aria-label="Lecture" onclick="togglePlay(this)">&#9654;</button>
+          <span class="cm-time cm-cur">0:00</span>
+          <div class="cm-track" onclick="seekTrack(this,event)"><div class="cm-fill"></div></div>
+          <span class="cm-time cm-dur">0:00</span>
+        </div>
+        <audio preload="metadata"
+          onloadedmetadata="setDur(this)"
+          ontimeupdate="updateProgress(this)"
+          onplay="onPlay(this)" onpause="onPause(this)" onended="onEnded(this)">
+          <source src="https://assets.cdn.filesafe.space/2aEvL7jAfKfV4D45pRD5/media/69fbe2de516b813067e8268e.mp3" type="audio/mpeg">
+        </audio>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 3 : TÉMOIGNAGES
+════════════════════════════════════════ -->
+<section class="s-temoignages">
+  <div class="in">
+    <span class="eyebrow">D'autres familles, avant toi</span>
+    <h2 class="serif">Tu n'es pas seul dans ce moment</h2>
+
+    <div class="quotes">
+
+      <div class="q">
+        <div class="stars">★★★★★</div>
+        <p>« J'ai perdu ma maman il y a trois mois. Quand j'ai entendu la chanson pour la première fois, j'ai éclaté en sanglots, mais des larmes de gratitude. C'était elle. C'était exactement ce qu'elle aurait dit si elle avait pu me parler une dernière fois. »</p>
+        <div class="who">Marie-France L. <span class="role">— Québec · Chanson en hommage à sa mère</span></div>
+      </div>
+
+      <div class="q">
+        <div class="stars">★★★★★</div>
+        <p>« Mon père était un homme de peu de mots. Cette chanson a dit tout ce qu'on n'a jamais réussi à se dire. Je la mets en boucle dans l'auto, là où on passait nos meilleurs moments ensemble. »</p>
+        <div class="who">Pierre B. <span class="role">— Montréal · Chanson pour son père décédé</span></div>
+      </div>
+
+      <div class="q">
+        <div class="stars">★★★★★</div>
+        <p>« Nous l'avons jouée aux funérailles de papa et personne n'a pu retenir ses larmes. Elle reflétait parfaitement qui il était : son humour, sa chaleur, tout. »</p>
+        <div class="who">Sophie H. <span class="role">— Montréal · Chanson pour le service de son père</span></div>
+      </div>
+
+      <div class="q">
+        <div class="stars">★★★★★</div>
+        <p>« Perdre son mari après 38 ans ensemble, c'est perdre une moitié de soi. Cette chanson m'a rendu quelque chose — sa voix dans les mots, ses habitudes dans les images. Je la joue chaque matin. »</p>
+        <div class="who">Sophie C. <span class="role">— Laval · Chanson pour son mari décédé</span></div>
+      </div>
+
+      <div class="q">
+        <div class="stars">★★★★★</div>
+        <p>« Maman aurait adoré. Les paroles évoquaient son jardin et son rire, des choses que nous seuls connaissions. C'était tellement personnel. »</p>
+        <div class="who">Mélanie G. <span class="role">— Brossard · Chanson en hommage à sa mère</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 4 : FOOTER
+════════════════════════════════════════ -->
+<section class="s-foot">
+  <div class="in">
+    <div class="box">
+      <div class="flame-sm" aria-hidden="true"></div>
+      <span class="em">Sa chanson arrive.</span>
+      <p>Tu pourras l'écouter en entier, autant de fois que tu veux. Si quelque chose ne te touche pas, on la révise sans frais jusqu'à ce qu'elle soit juste pour toi.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ════════════════════════════════════════
+   INJECTION DU PRÉNOM DU DÉFUNT
+════════════════════════════════════════ */
+(function(){
+  try{
+    var name = new URLSearchParams(window.location.search).get("name");
+    if(name){
+      var el = document.getElementById("defuntName");
+      if(el) el.textContent = name;
+    }
+  }catch(e){}
+})();
+
+/* ════════════════════════════════════════
+   AUDIO PLAYERS
+════════════════════════════════════════ */
+function fmt(s){
+  var m = Math.floor(s/60), x = Math.floor(s%60);
+  return m + ":" + (x<10?"0":"") + x;
+}
+function setDur(a){
+  var p = a.closest(".cm-player");
+  if(p && a.duration) p.querySelector(".cm-dur").textContent = fmt(a.duration);
+}
+function updateProgress(a){
+  var p = a.closest(".cm-player");
+  if(!p) return;
+  p.querySelector(".cm-cur").textContent = fmt(a.currentTime);
+  p.querySelector(".cm-fill").style.width = (a.duration ? a.currentTime/a.duration*100 : 0) + "%";
+}
+function onPlay(a){
+  document.querySelectorAll(".cm-player audio").forEach(function(o){
+    if(o !== a && !o.paused) o.pause();
+  });
+  var p = a.closest(".cm-player");
+  p.classList.add("is-playing");
+  var b = p.querySelector(".cm-play");
+  b.innerHTML = "&#10074;&#10074;";
+  b.setAttribute("aria-label","Pause");
+}
+function onPause(a){
+  var p = a.closest(".cm-player");
+  p.classList.remove("is-playing");
+  var b = p.querySelector(".cm-play");
+  b.innerHTML = "&#9654;";
+  b.setAttribute("aria-label","Lecture");
+}
+function onEnded(a){
+  onPause(a);
+  a.closest(".cm-player").querySelector(".cm-fill").style.width = "0%";
+}
+function togglePlay(btn){
+  var p = btn.closest(".cm-player"), a = p.querySelector("audio");
+  if(a.paused){ a.play(); } else { a.pause(); }
+}
+function seekTrack(track, e){
+  var a = track.closest(".cm-player").querySelector("audio");
+  if(!a.duration) return;
+  var r = track.getBoundingClientRect();
+  a.currentTime = ((e.clientX - r.left) / r.width) * a.duration;
+}
+
+/* ════════════════════════════════════════
+   POLLING — VÉRIFICATION CHANSON PRÊTE
+   
+   CONFIGURATION REQUISE :
+   Remplace MAKE_WEBHOOK_URL par l'URL de
+   ton webhook Make (scénario lookup Airtable).
+   
+   Le webhook doit retourner :
+   { "ready": true,  "preview1": "...", "preview2": "...", "name": "...", "email": "..." }
+   ou
+   { "ready": false }
+════════════════════════════════════════ */
+var MAKE_WEBHOOK_URL = "https://hook.us1.make.com/TON_WEBHOOK_ICI";
+var REDIRECT_BASE    = "https://chansonmemoire.com/preview-chanson-memoire/";
+
+var redirected       = false;
+var attempts         = 0;
+var maxAttempts      = 24; /* 24 x 20s = ~8 minutes */
+var pollingInterval;
+
+function getEmail(){
+  try{ return new URLSearchParams(window.location.search).get("email"); }
+  catch(e){ return null; }
+}
+
+function checkReady(){
+  if(redirected) return;
+
+  if(attempts >= maxAttempts){
+    clearInterval(pollingInterval);
+    var msg = document.getElementById("statusMsg");
+    if(msg){
+      msg.innerHTML = "Nous rencontrons un délai inhabituel. Tu recevras le lien par courriel dès que ta chanson sera prête. Merci de ta patience.";
+    }
+    return;
+  }
+
+  attempts++;
+  var email = getEmail();
+  if(!email) return;
+
+  fetch(MAKE_WEBHOOK_URL + "?email=" + encodeURIComponent(email), { cache: "no-store" })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data && data.ready === true && !redirected){
+        clearInterval(pollingInterval);
+        redirected = true;
+
+        var msg = document.getElementById("statusMsg");
+        if(msg){
+          var dots = msg.querySelector(".wait-dots");
+          if(dots) dots.remove();
+          msg.innerHTML = "Sa chanson est prête — on t'amène à sa page.";
+        }
+
+        var p = new URLSearchParams();
+        p.set("email",    data.email    || email);
+        p.set("preview1", data.preview1 || "");
+        p.set("preview2", data.preview2 || "");
+        p.set("name",     data.name     || "");
+
+        setTimeout(function(){
+          window.location.href = REDIRECT_BASE + "?" + p.toString();
+        }, 1500);
+      }
+    })
+    .catch(function(){ /* silencieux — on réessaie au prochain intervalle */ });
+}
+
+pollingInterval = setInterval(checkReady, 20000);
+setTimeout(checkReady, 20000); /* premier check après 20 secondes */
+</script>
+
+</body>
+</html>
