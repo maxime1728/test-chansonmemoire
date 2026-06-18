@@ -668,9 +668,11 @@ body {
 
   /* ── CONFIG ─────────────────────────────────────── */
   const TOTAL_STEPS  = 9;
-  const ATTENTE_URL  = '/revision'; 
-  /* Make déclenché depuis /revision après validation des paroles */
-return Promise.resolve();
+  const ATTENTE_URL  = '/revision';
+
+  /* ⚠️ REMPLACE cette URL par ton webhook Make A (création du record Airtable).
+     C'est la SEULE valeur à changer dans ce fichier. */
+  const MAKE_WEBHOOK_A = 'https://hook.us1.make.com/TON_WEBHOOK_A';
 
   /* ── ÉTAT ───────────────────────────────────────── */
   let currentStep = 1;
@@ -780,6 +782,24 @@ return Promise.resolve();
     goTo(9);
   });
 
+  /* ── SAUVEGARDE + REDIRECTION (factorisé) ───────── */
+  function persistAndRedirect() {
+    sessionStorage.setItem('cm_souvenirs', JSON.stringify({
+      nomPersonne:        data.prenom_defunt,
+      relation:           data.relation,
+      styleMusical:       data.style_musical,
+      voix:               data.voix,
+      ambiance:           data.ambiance,
+      ceQuiRendaitUnique: data.unicite,
+      souvenirGarder:     data.souvenir_garder,
+      detailsPersonnels:  data.souvenirs,
+      souvenirsFavoris:   data.souvenirs,
+      message:            data.souvenir_garder,
+      email:              data.email
+    }));
+    window.location.href = ATTENTE_URL;
+  }
+
   /* ── ÉTAPE 9 : Soumission ───────────────────────── */
   document.getElementById('btn-submit').addEventListener('click', function() {
     var email    = document.getElementById('input-email').value.trim();
@@ -800,57 +820,37 @@ return Promise.resolve();
 
     if (!valid) return;
 
-    data.email       = email;
+    data.email        = email;
     data.consentement = true;
 
     var submitBtn = document.getElementById('btn-submit');
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Envoi en cours…';
 
-    /* ── 1. Netlify Forms ────────────────────────── */
+    /* ── 1. Netlify Forms (backup anti-spam, fire-and-forget) ── */
     var formData = new FormData();
     formData.append('form-name', 'chanson-memoire-survey');
     Object.keys(data).forEach(function(k) { formData.append(k, data[k]); });
+    fetch('/', { method: 'POST', body: formData }).catch(function() {});
 
-    fetch('/', { method: 'POST', body: formData })
-      .then(function() {
-        /* Make déclenché depuis /revision après validation des paroles */
-return Promise.resolve();
-      })
-      .then(function() {
-  /* ── 3. SessionStorage + Redirect ────────── */
-  sessionStorage.setItem('cm_souvenirs', JSON.stringify({
-    nomPersonne:        data.prenom_defunt,
-    relation:           data.relation,
-    styleMusical:       data.style_musical,
-    voix:               data.voix,
-    ambiance:           data.ambiance,
-    ceQuiRendaitUnique: data.unicite,
-    souvenirGarder:     data.souvenir_garder,
-    detailsPersonnels:  data.souvenirs,
-    souvenirsFavoris:   data.souvenirs,
-    message:            data.souvenir_garder,
-    email:              data.email
-  }));
-  window.location.href = ATTENTE_URL;
-})
-.catch(function(err) {
-  console.error('Erreur soumission:', err);
-  sessionStorage.setItem('cm_souvenirs', JSON.stringify({
-    nomPersonne:        data.prenom_defunt,
-    relation:           data.relation,
-    styleMusical:       data.style_musical,
-    voix:               data.voix,
-    ambiance:           data.ambiance,
-    ceQuiRendaitUnique: data.unicite,
-    souvenirGarder:     data.souvenir_garder,
-    detailsPersonnels:  data.souvenirs,
-    souvenirsFavoris:   data.souvenirs,
-    message:            data.souvenir_garder,
-    email:              data.email
-  }));
-  window.location.href = ATTENTE_URL;
-});
+    /* ── 2. Make webhook A : crée le record Airtable, récupère record_id ── */
+    fetch(MAKE_WEBHOOK_A, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(function(r) { return r.json().catch(function() { return {}; }); })
+    .then(function(res) {
+      if (res && res.record_id) {
+        sessionStorage.setItem('cm_record_id', res.record_id);
+      }
+      persistAndRedirect();
+    })
+    .catch(function(err) {
+      console.error('Erreur webhook Make:', err);
+      /* On redirige quand même : le client ne doit jamais rester bloqué. */
+      persistAndRedirect();
+    });
   });
 
   /* ── INIT ───────────────────────────────────────── */
