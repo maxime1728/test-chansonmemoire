@@ -7,523 +7,99 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
-
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --papier:     #F5F0EA;
-      --papier-alt: #EDE6DC;
-      --mauve:      #7B5EA7;
-      --mauve-doux: #A688C8;
-      --mauve-pale: #E8DFF5;
-      --encre:      #2C2035;
-      --encre-doux: #6B5A7E;
-      --or:         #C4A882;
-      --blanc:      #FDFAF6;
+      --papier:#F5F0EA; --papier-alt:#EDE6DC; --mauve:#7B5EA7; --mauve-doux:#A688C8;
+      --mauve-pale:#E8DFF5; --encre:#2C2035; --encre-doux:#6B5A7E; --or:#C4A882; --blanc:#FDFAF6;
     }
-
     html { scroll-behavior: smooth; }
-
-    body {
-      background: var(--papier);
-      color: var(--encre);
-      font-family: 'Inter', sans-serif;
-      font-size: 15px;
-      line-height: 1.6;
-      min-height: 100vh;
-    }
-
-    /* ── HEADER ── */
-    header {
-      background: var(--blanc);
-      border-bottom: 1px solid var(--papier-alt);
-      padding: 20px 24px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo-mark {
-      width: 32px;
-      height: 32px;
-      background: var(--mauve);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .logo-mark svg { width: 16px; height: 16px; fill: white; }
-
-    .logo-text {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 18px;
-      font-weight: 400;
-      color: var(--encre);
-      letter-spacing: 0.02em;
-    }
-
-    /* ── ÉTAPES ── */
-    .etapes {
-      background: var(--blanc);
-      border-bottom: 1px solid var(--papier-alt);
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--encre-doux);
-      letter-spacing: 0.05em;
-    }
-
-    .etape { display: flex; align-items: center; gap: 6px; opacity: 0.45; }
-    .etape.active { opacity: 1; color: var(--mauve); font-weight: 500; }
-    .etape.done { opacity: 0.7; }
-
-    .etape-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-
-    .etape-sep { color: var(--papier-alt); font-size: 14px; }
-
-    /* ── CONTENU PRINCIPAL ── */
-    main {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 48px 24px 80px;
-    }
-
-    /* ── ÉTAT CHARGEMENT ── */
-    #etat-chargement {
-      text-align: center;
-      padding: 80px 0;
-    }
-
-    .spinner {
-      width: 48px; height: 48px;
-      border: 2px solid var(--mauve-pale);
-      border-top-color: var(--mauve);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 28px;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .chargement-titre {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 24px;
-      font-weight: 300;
-      color: var(--encre);
-      margin-bottom: 10px;
-    }
-
-    .chargement-sous {
-      font-size: 14px;
-      color: var(--encre-doux);
-      font-weight: 300;
-    }
-
-    /* ── ÉTAT ERREUR ── */
-    #etat-erreur {
-      display: none;
-      text-align: center;
-      padding: 60px 0;
-    }
-
-    .erreur-icone {
-      font-size: 40px;
-      margin-bottom: 20px;
-    }
-
-    .erreur-titre {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 22px;
-      color: var(--encre);
-      margin-bottom: 10px;
-    }
-
-    .erreur-msg {
-      font-size: 14px;
-      color: var(--encre-doux);
-      margin-bottom: 28px;
-    }
-
-    .btn-reessayer {
-      background: var(--mauve);
-      color: white;
-      border: none;
-      padding: 12px 28px;
-      border-radius: 6px;
-      font-family: 'Inter', sans-serif;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .btn-reessayer:hover { background: #6A4E96; }
-
-    /* ── CONTENU PAROLES ── */
-    #contenu { display: none; }
-
-    .titre-chanson {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 13px;
-      font-weight: 400;
-      color: var(--or);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-
-    .intro-titre {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 34px;
-      font-weight: 300;
-      color: var(--encre);
-      line-height: 1.25;
-      margin-bottom: 6px;
-    }
-
-    .intro-titre em {
-      font-style: italic;
-      color: var(--mauve);
-    }
-
-    .intro-sous {
-      font-size: 14px;
-      color: var(--encre-doux);
-      font-weight: 300;
-      margin-bottom: 36px;
-      line-height: 1.7;
-    }
-
-    /* ── CARTE PAROLES ── */
-    .carte-paroles {
-      background: var(--blanc);
-      border: 1px solid var(--papier-alt);
-      border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 36px;
-    }
-
-    .carte-paroles-header {
-      background: var(--mauve-pale);
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid #D8CEE8;
-    }
-
-    .carte-paroles-label {
-      font-size: 11px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--mauve);
-      font-weight: 500;
-    }
-
-    .nom-chanson {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 15px;
-      font-style: italic;
-      color: var(--encre-doux);
-    }
-
-    .paroles-texte {
-      padding: 28px 32px;
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 17px;
-      font-weight: 300;
-      line-height: 1.9;
-      color: var(--encre);
-      white-space: pre-wrap;
-      border-bottom: 1px solid var(--papier-alt);
-    }
-
-    .carte-paroles-footer {
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--papier);
-    }
-
-    .compteur-chars {
-      font-size: 12px;
-      color: var(--encre-doux);
-      margin-left: auto;
-    }
-
-    /* ── SECTION MODIFICATIONS ── */
-    .section-modifs {
-      background: var(--blanc);
-      border: 1px solid var(--papier-alt);
-      border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 28px;
-    }
-
-    .modifs-header {
-      padding: 20px 24px 0;
-    }
-
-    .modifs-label {
-      font-size: 11px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--or);
-      font-weight: 500;
-      margin-bottom: 8px;
-    }
-
-    .modifs-titre {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 22px;
-      font-weight: 400;
-      color: var(--encre);
-      margin-bottom: 6px;
-    }
-
-    .modifs-description {
-      font-size: 13.5px;
-      color: var(--encre-doux);
-      font-weight: 300;
-      line-height: 1.65;
-      margin-bottom: 20px;
-    }
-
-    .modifs-exemples {
-      background: var(--mauve-pale);
-      border-top: 1px solid #D8CEE8;
-      border-bottom: 1px solid #D8CEE8;
-      padding: 14px 24px;
-      margin-bottom: 0;
-    }
-
-    .exemples-titre {
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--mauve);
-      font-weight: 500;
-      margin-bottom: 8px;
-    }
-
-    .exemples-liste {
-      list-style: none;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .exemple-chip {
-      background: white;
-      border: 1px solid #D8CEE8;
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 12px;
-      color: var(--encre-doux);
-      cursor: pointer;
-      transition: all 0.15s;
-      user-select: none;
-    }
-
-    .exemple-chip:hover {
-      background: var(--mauve);
-      color: white;
-      border-color: var(--mauve);
-    }
-
-    .modifs-champ {
-      padding: 20px 24px;
-    }
-
-    textarea#modifications {
-      width: 100%;
-      min-height: 160px;
-      padding: 16px;
-      border: 1.5px solid var(--papier-alt);
-      border-radius: 8px;
-      font-family: 'Inter', sans-serif;
-      font-size: 14px;
-      color: var(--encre);
-      background: var(--papier);
-      resize: vertical;
-      outline: none;
-      line-height: 1.6;
-      transition: border-color 0.2s;
-    }
-
-    textarea#modifications::placeholder {
-      color: #B8A8C8;
-      font-style: italic;
-    }
-
-    textarea#modifications:focus {
-      border-color: var(--mauve-doux);
-      background: var(--blanc);
-    }
-
-    .champ-hint {
-      font-size: 12px;
-      color: var(--encre-doux);
-      margin-top: 8px;
-      font-weight: 300;
-    }
-
-    /* ── OPTION SANS MODIF ── */
-    .option-sans-modif {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 24px 20px;
-      cursor: pointer;
-    }
-
-    .checkbox-custom {
-      width: 18px; height: 18px;
-      border: 1.5px solid var(--mauve-doux);
-      border-radius: 4px;
-      background: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: all 0.15s;
-    }
-
-    input[type="checkbox"]:checked + .option-sans-modif .checkbox-custom {
-      background: var(--mauve);
-      border-color: var(--mauve);
-    }
-
-    input[type="checkbox"] { display: none; }
-
-    .sans-modif-label {
-      font-size: 13.5px;
-      color: var(--encre-doux);
-      font-weight: 300;
-    }
-
-    /* ── BOUTON SOUMETTRE ── */
-    .btn-soumettre {
-      width: 100%;
-      background: var(--mauve);
-      color: white;
-      border: none;
-      padding: 16px 24px;
-      border-radius: 10px;
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 20px;
-      font-weight: 400;
-      letter-spacing: 0.02em;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .btn-soumettre:hover { background: #6A4E96; }
-    .btn-soumettre:active { transform: scale(0.99); }
-    .btn-soumettre:disabled { background: #C4B8D4; cursor: not-allowed; transform: none; }
-
-    .btn-sous-note {
-      text-align: center;
-      font-size: 12px;
-      color: var(--encre-doux);
-      margin-top: 10px;
-      font-weight: 300;
-    }
-
-    /* ── ÉTAT SOUMISSION ── */
-    #etat-soumission {
-      display: none;
-      text-align: center;
-      padding: 60px 0;
-    }
-
-    .soumission-icone {
-      width: 64px; height: 64px;
-      background: var(--mauve-pale);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 24px;
-    }
-
-    .soumission-icone svg { width: 28px; height: 28px; stroke: var(--mauve); }
-
-    .soumission-titre {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 28px;
-      font-weight: 300;
-      color: var(--encre);
-      margin-bottom: 10px;
-    }
-
-    .soumission-sous {
-      font-size: 14px;
-      color: var(--encre-doux);
-      font-weight: 300;
-      line-height: 1.7;
-      max-width: 400px;
-      margin: 0 auto;
-    }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 600px) {
-      main { padding: 32px 16px 60px; }
-      .intro-titre { font-size: 26px; }
-      .paroles-texte { padding: 20px 20px; font-size: 15px; }
-      .modifs-header { padding: 18px 18px 0; }
-      .modifs-champ { padding: 16px 18px; }
-      .option-sans-modif { padding: 10px 18px 16px; }
-      .modifs-exemples { padding: 14px 18px; }
-    }
+    body { background:var(--papier); color:var(--encre); font-family:'Inter',sans-serif; font-size:15px; line-height:1.6; min-height:100vh; }
+    header { background:var(--blanc); border-bottom:1px solid var(--papier-alt); padding:20px 24px; display:flex; align-items:center; gap:12px; }
+    .logo-mark { width:32px; height:32px; background:var(--mauve); border-radius:50%; display:flex; align-items:center; justify-content:center; }
+    .logo-mark svg { width:16px; height:16px; fill:white; }
+    .logo-text { font-family:'Cormorant Garamond',serif; font-size:18px; color:var(--encre); letter-spacing:0.02em; }
+    .etapes { background:var(--blanc); border-bottom:1px solid var(--papier-alt); padding:14px 24px; display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; color:var(--encre-doux); letter-spacing:0.05em; }
+    .etape { display:flex; align-items:center; gap:6px; opacity:0.45; }
+    .etape.active { opacity:1; color:var(--mauve); font-weight:500; }
+    .etape.done { opacity:0.7; }
+    .etape-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+    .etape-sep { color:var(--papier-alt); font-size:14px; }
+    main { max-width:720px; margin:0 auto; padding:48px 24px 80px; }
+    #etat-chargement { text-align:center; padding:80px 0; }
+    .spinner { width:48px; height:48px; border:2px solid var(--mauve-pale); border-top-color:var(--mauve); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 28px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .chargement-titre { font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:300; color:var(--encre); margin-bottom:10px; }
+    .chargement-sous { font-size:14px; color:var(--encre-doux); font-weight:300; }
+    #etat-erreur { display:none; text-align:center; padding:60px 0; }
+    .erreur-icone { font-size:40px; margin-bottom:20px; }
+    .erreur-titre { font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--encre); margin-bottom:10px; }
+    .erreur-msg { font-size:14px; color:var(--encre-doux); margin-bottom:28px; }
+    .btn-reessayer { background:var(--mauve); color:white; border:none; padding:12px 28px; border-radius:6px; font-family:'Inter',sans-serif; font-size:14px; cursor:pointer; }
+    .btn-reessayer:hover { background:#6A4E96; }
+    #contenu { display:none; }
+    .titre-chanson { font-family:'Cormorant Garamond',serif; font-size:13px; color:var(--or); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; }
+    .intro-titre { font-family:'Cormorant Garamond',serif; font-size:34px; font-weight:300; color:var(--encre); line-height:1.25; margin-bottom:6px; }
+    .intro-titre em { font-style:italic; color:var(--mauve); }
+    .intro-sous { font-size:14px; color:var(--encre-doux); font-weight:300; margin-bottom:36px; line-height:1.7; }
+    .carte-paroles { background:var(--blanc); border:1px solid var(--papier-alt); border-radius:12px; overflow:hidden; margin-bottom:36px; }
+    .carte-paroles-header { background:var(--mauve-pale); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #D8CEE8; }
+    .carte-paroles-label { font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--mauve); font-weight:500; }
+    .nom-chanson { font-family:'Cormorant Garamond',serif; font-size:15px; font-style:italic; color:var(--encre-doux); }
+    .paroles-texte { padding:28px 32px; font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:300; line-height:1.9; color:var(--encre); white-space:pre-wrap; }
+    .section-modifs { background:var(--blanc); border:1px solid var(--papier-alt); border-radius:12px; overflow:hidden; margin-bottom:28px; }
+    .modifs-header { padding:20px 24px 0; }
+    .modifs-label { font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--or); font-weight:500; margin-bottom:8px; }
+    .modifs-titre { font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--encre); margin-bottom:6px; }
+    .modifs-description { font-size:13.5px; color:var(--encre-doux); font-weight:300; line-height:1.65; margin-bottom:20px; }
+    .modifs-exemples { background:var(--mauve-pale); border-top:1px solid #D8CEE8; border-bottom:1px solid #D8CEE8; padding:14px 24px; }
+    .exemples-titre { font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--mauve); font-weight:500; margin-bottom:8px; }
+    .exemples-liste { list-style:none; display:flex; flex-wrap:wrap; gap:6px; }
+    .exemple-chip { background:white; border:1px solid #D8CEE8; border-radius:20px; padding:4px 12px; font-size:12px; color:var(--encre-doux); cursor:pointer; transition:all 0.15s; user-select:none; }
+    .exemple-chip:hover { background:var(--mauve); color:white; border-color:var(--mauve); }
+    .modifs-champ { padding:20px 24px; }
+    textarea#modifications { width:100%; min-height:160px; padding:16px; border:1.5px solid var(--papier-alt); border-radius:8px; font-family:'Inter',sans-serif; font-size:14px; color:var(--encre); background:var(--papier); resize:vertical; outline:none; line-height:1.6; }
+    textarea#modifications::placeholder { color:#B8A8C8; font-style:italic; }
+    textarea#modifications:focus { border-color:var(--mauve-doux); background:var(--blanc); }
+    .champ-hint { font-size:12px; color:var(--encre-doux); margin-top:8px; font-weight:300; }
+    .option-sans-modif { display:flex; align-items:center; gap:10px; padding:14px 24px 20px; cursor:pointer; }
+    .checkbox-custom { width:18px; height:18px; border:1.5px solid var(--mauve-doux); border-radius:4px; background:white; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s; }
+    input[type="checkbox"] { display:none; }
+    .sans-modif-label { font-size:13.5px; color:var(--encre-doux); font-weight:300; }
+    .btn-soumettre { width:100%; background:var(--mauve); color:white; border:none; padding:16px 24px; border-radius:10px; font-family:'Cormorant Garamond',serif; font-size:20px; cursor:pointer; transition:background 0.2s, transform 0.1s; display:flex; align-items:center; justify-content:center; gap:10px; }
+    .btn-soumettre:hover { background:#6A4E96; }
+    .btn-soumettre:active { transform:scale(0.99); }
+    .btn-soumettre:disabled { background:#C4B8D4; cursor:not-allowed; transform:none; }
+    .btn-sous-note { text-align:center; font-size:12px; color:var(--encre-doux); margin-top:10px; font-weight:300; }
+    #etat-soumission { display:none; text-align:center; padding:60px 0; }
+    .soumission-icone { width:64px; height:64px; background:var(--mauve-pale); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; }
+    .soumission-icone svg { width:28px; height:28px; stroke:var(--mauve); }
+    .soumission-titre { font-family:'Cormorant Garamond',serif; font-size:28px; font-weight:300; color:var(--encre); margin-bottom:10px; }
+    .soumission-sous { font-size:14px; color:var(--encre-doux); font-weight:300; line-height:1.7; max-width:400px; margin:0 auto; }
+    @media (max-width:600px) { main { padding:32px 16px 60px; } .intro-titre { font-size:26px; } .paroles-texte { padding:20px; font-size:15px; } }
   </style>
 </head>
 <body>
 
   <header>
-    <div class="logo-mark">
-      <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-    </div>
+    <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
     <span class="logo-text">Chanson Mémoire</span>
   </header>
 
   <div class="etapes">
-    <div class="etape done">
-      <div class="etape-dot"></div>
-      Vos souvenirs
-    </div>
+    <div class="etape done"><div class="etape-dot"></div> Vos souvenirs</div>
     <div class="etape-sep">›</div>
-    <div class="etape active">
-      <div class="etape-dot"></div>
-      Vos paroles
-    </div>
+    <div class="etape active"><div class="etape-dot"></div> Vos paroles</div>
     <div class="etape-sep">›</div>
-    <div class="etape">
-      <div class="etape-dot"></div>
-      Création
-    </div>
+    <div class="etape"><div class="etape-dot"></div> Création</div>
   </div>
 
   <main>
-
-    <!-- CHARGEMENT -->
+    <!-- CHARGEMENT / ATTENTE (polling) -->
     <div id="etat-chargement">
       <div class="spinner"></div>
       <div class="chargement-titre">Nous composons vos paroles…</div>
-      <div class="chargement-sous">Cela prend environ 20 à 30 secondes.<br>Prenez un moment.</div>
+      <div class="chargement-sous">Cela prend généralement moins d'une minute.<br>Cette page se mettra à jour automatiquement.</div>
     </div>
 
     <!-- ERREUR -->
@@ -531,263 +107,194 @@
       <div class="erreur-icone">✦</div>
       <div class="erreur-titre">Quelque chose s'est passé</div>
       <div class="erreur-msg" id="erreur-detail">Une erreur inattendue est survenue.</div>
-      <button class="btn-reessayer" onclick="genererParoles(true)">Réessayer</button>
+      <button class="btn-reessayer" onclick="location.reload()">Réessayer</button>
     </div>
 
-    <!-- CONTENU PRINCIPAL -->
+    <!-- CONTENU -->
     <div id="contenu">
-
       <div class="titre-chanson">Vos paroles personnalisées</div>
       <h1 class="intro-titre">Voici <em id="titre-chanson-affiche"></em></h1>
-      <p class="intro-sous">
-        Lisez ces paroles attentivement. Si quelque chose ne vous convient pas — un détail à ajuster, une phrase à reformuler, un souvenir à ajouter ou à retirer — indiquez-le ci-dessous. De nouvelles paroles seront générées selon vos demandes.
-      </p>
+      <p class="intro-sous">Lisez ces paroles attentivement. Si quelque chose ne vous convient pas — un détail à ajuster, une phrase à reformuler, un souvenir à ajouter ou à retirer — indiquez-le ci-dessous.</p>
 
-      <!-- PAROLES -->
       <div class="carte-paroles">
         <div class="carte-paroles-header">
           <span class="carte-paroles-label">Paroles générées</span>
           <span class="nom-chanson" id="nom-chanson-header"></span>
         </div>
         <div class="paroles-texte" id="paroles-affichees"></div>
-        <div class="carte-paroles-footer">
-          <span class="compteur-chars" id="compteur"></span>
-        </div>
       </div>
 
-      <!-- FORMULAIRE MODIFICATIONS -->
       <div class="section-modifs">
         <div class="modifs-header">
           <div class="modifs-label">Vos retours</div>
           <h2 class="modifs-titre">Souhaitez-vous apporter des changements ?</h2>
-          <p class="modifs-description">
-            Ces paroles ont été créées spécialement pour vous. Si vous désirez ajuster certains éléments, décrivez vos modifications ci-dessous. Vous pouvez ajouter des détails, retirer des passages, changer le ton d'une section, ou reformuler une phrase. De nouvelles paroles seront générées en tenant compte de vos demandes.
-          </p>
+          <p class="modifs-description">Si vous désirez ajuster certains éléments, décrivez vos modifications ci-dessous. De nouvelles paroles seront générées en tenant compte de vos demandes.</p>
         </div>
-
         <div class="modifs-exemples">
           <div class="exemples-titre">Exemples de retours fréquents</div>
           <ul class="exemples-liste">
             <li class="exemple-chip" onclick="ajouterExemple(this)">Ajouter le surnom « [nom] »</li>
-            <li class="exemple-chip" onclick="ajouterExemple(this)">Retirer la référence aux [saisons]</li>
             <li class="exemple-chip" onclick="ajouterExemple(this)">Rendre le ton plus doux</li>
             <li class="exemple-chip" onclick="ajouterExemple(this)">Mentionner notre ville natale</li>
             <li class="exemple-chip" onclick="ajouterExemple(this)">Le refrain est parfait, garder tel quel</li>
             <li class="exemple-chip" onclick="ajouterExemple(this)">Ajouter un souvenir de Noël ensemble</li>
           </ul>
         </div>
-
         <div class="modifs-champ">
-          <textarea
-            id="modifications"
-            placeholder="Ex. : J'aimerais qu'on mentionne son jardin et ses rosiers. Le deuxième couplet est parfait, ne le changez pas. Peut-être adoucir le bridge un peu…"
-          ></textarea>
+          <textarea id="modifications" placeholder="Ex. : J'aimerais qu'on mentionne son jardin et ses rosiers. Le deuxième couplet est parfait, ne le changez pas…"></textarea>
           <div class="champ-hint">Soyez aussi précis que possible — chaque détail aide à personnaliser davantage.</div>
         </div>
-
         <label class="option-sans-modif" for="sans-modif">
           <input type="checkbox" id="sans-modif" onchange="toggleSansModif()" />
-          <div class="checkbox-custom">
-            <svg width="10" height="8" viewBox="0 0 10 8" fill="none" style="display:none" id="check-icone">
-              <path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
+          <div class="checkbox-custom"><svg width="10" height="8" viewBox="0 0 10 8" fill="none" style="display:none" id="check-icone"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <span class="sans-modif-label">Ces paroles me conviennent — procéder à la création de la chanson sans modification.</span>
         </label>
       </div>
 
-      <!-- BOUTON -->
       <button class="btn-soumettre" id="btn-soumettre" onclick="soumettre()">
         Confirmer et créer ma chanson
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
       <div class="btn-sous-note">Votre chanson sera créée dans les prochaines minutes.</div>
     </div>
 
     <!-- SOUMISSION CONFIRMÉE -->
     <div id="etat-soumission">
-      <div class="soumission-icone">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-      </div>
+      <div class="soumission-icone"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
       <div class="soumission-titre">Merci. Votre chanson est en création.</div>
       <div class="soumission-sous">Vous serez redirigé dans un instant vers la page de suivi.</div>
     </div>
-
   </main>
 
   <script>
     'use strict';
 
-    /* ⚠️ REMPLACE par ton webhook Make B (update Airtable + Suno + GHL). */
-    const WEBHOOK_MAKE = 'https://hook.us1.make.com/jyxke1vgiin3l9b6vzy9b1s1nu5o7szh';
-    /* ⚠️ REMPLACE par l'URL de ta page d'attente. */
-    const URL_ATTENTE  = '/attente-chanson';
+    /* ── CONFIG ─────────────────────────────────────── */
+    const URL_ATTENTE = '/attente-chanson';   // page suivante après confirmation
+    /* Webhook Make B : reçoit la confirmation / les modifications de paroles. */
+    const WEBHOOK_MAKE_B = 'https://hook.us1.make.com/jyxke1vgiin3l9b6vzy9b1s1nu5o7szh';
 
-    /* Helper : récupère un élément sans planter s'il manque */
+    /* ── 1. LE TOKEN VIENT DE L'URL ── */
+    const token = new URLSearchParams(location.search).get('id');
+
+    /* ── Polling : config ── */
+    const POLL_INTERVAL = 5000;   // 5 sec
+    const MAX_ESSAIS    = 24;     // 24 × 5 sec = 2 min puis on arrête
+    const STATUTS_PRETS = ['lyrics_generated', 'audio_generated', 'validated'];
+
+    let essais    = 0;
+    let pollTimer = null;
+    let fini      = false;        // verrou : une fois true, plus aucun ping
+    let derniereData = null;
+
     function el(id) { return document.getElementById(id); }
-
-    /* Helper : écrit du texte dans un élément seulement s'il existe */
-    function setTexte(id, texte) {
-      var node = el(id);
-      if (node) node.textContent = texte;
-    }
-
-    /* ── RÉCUPÉRER LES DONNÉES DU SESSIONSTORAGE ── */
-    function getDonnees() {
-      try {
-        var raw = sessionStorage.getItem('cm_souvenirs');
-        return raw ? JSON.parse(raw) : null;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    /* ── AFFICHER / MASQUER LES ÉTATS ──
-       On force "block" (et non "") : plusieurs de ces sections sont
-       display:none dans le CSS, donc "" les laisserait cachées. */
+    function setTexte(id, t) { var n = el(id); if (n) n.textContent = t; }
     function montrer(id) {
-      ['etat-chargement', 'etat-erreur', 'contenu', 'etat-soumission'].forEach(function (i) {
-        var node = el(i);
-        if (node) node.style.display = (i === id ? 'block' : 'none');
+      ['etat-chargement','etat-erreur','contenu','etat-soumission'].forEach(function(i){
+        var n = el(i); if (n) n.style.display = (i === id ? 'block' : 'none');
       });
     }
 
-    /* ── AFFICHER LES PAROLES À L'ÉCRAN ── */
-    function afficherParoles(titre, paroles) {
-      setTexte('titre-chanson-affiche', titre);
-      setTexte('nom-chanson-header', titre);
-      setTexte('paroles-affichees', paroles);
-      setTexte('compteur', paroles.length + ' caractères');
+    function afficherParoles(d) {
+      derniereData = d;
+      setTexte('titre-chanson-affiche', d.titre || 'votre chanson');
+      setTexte('nom-chanson-header',   d.titre || '');
+      setTexte('paroles-affichees',    d.paroles || '');
       montrer('contenu');
     }
 
-    /* ── GÉNÉRER LES PAROLES ──
-       forcer = true  -> on régénère même si déjà en mémoire (bouton Réessayer) */
-    async function genererParoles(forcer) {
-      /* 1. Si on a déjà des paroles en mémoire et qu'on ne force pas : afficher direct. */
-      if (!forcer) {
-        var dejaParoles = sessionStorage.getItem('cm_paroles');
-        var dejaTitre   = sessionStorage.getItem('cm_titre');
-        if (dejaParoles) {
-          afficherParoles(dejaTitre || 'votre chanson', dejaParoles);
-          return;
-        }
-      }
+    function afficherAttenteLongue() {
+      setTexte('erreur-detail', "La création prend un peu plus de temps que prévu. Nous vous enverrons un courriel dès que vos paroles seront prêtes — vous pourrez revenir avec le lien reçu.");
+      montrer('etat-erreur');
+    }
 
-      /* 2. Sinon, on génère via la fonction Netlify. */
-      montrer('etat-chargement');
+    function arreterPolling() {
+      fini = true;
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = null;
+    }
 
-      var donnees = getDonnees();
-      if (!donnees) {
-        setTexte('erreur-detail', 'Vos informations de souvenirs sont introuvables. Veuillez recommencer depuis le début.');
-        montrer('etat-erreur');
-        return;
-      }
+    /* ── 2. POLLING : lit /api/lire-projet jusqu'à ce que les paroles soient prêtes ── */
+    async function checkStatut() {
+      if (fini) return;
+      if (document.hidden) return;   // onglet caché : on saute ce tour
+      essais++;
 
       try {
-        var res = await fetch('/api/generate-lyrics', {
+        var res = await fetch('/api/lire-projet', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(donnees)
+          body: JSON.stringify({ token: token })
         });
+        var d = await res.json();
 
-        var data = await res.json();
-
-        if (!res.ok || data.error) {
-          throw new Error(data.error || 'Erreur serveur');
+        if (res.ok && STATUTS_PRETS.indexOf(d.statut) !== -1 && d.paroles) {
+          arreterPolling();          // STOP définitif : les paroles sont là
+          afficherParoles(d);
+          return;
         }
+      } catch (e) { /* erreur réseau ponctuelle : le prochain tour réessaiera */ }
 
-        /* Stocker pour la soumission et pour un éventuel rechargement */
-        sessionStorage.setItem('cm_paroles', data.lyrics || '');
-        sessionStorage.setItem('cm_titre', data.title || '');
-
-        afficherParoles(data.title || 'votre chanson', data.lyrics || '');
-
-      } catch (err) {
-        setTexte('erreur-detail', (err && err.message) ? err.message : 'Une erreur inattendue est survenue.');
-        montrer('etat-erreur');
+      if (essais >= MAX_ESSAIS) {
+        arreterPolling();
+        afficherAttenteLongue();
       }
     }
 
-    /* ── CHIPS EXEMPLES ── */
+    /* ── CHIPS / TOGGLE (inchangés) ── */
     function ajouterExemple(chip) {
-      var ta = el('modifications');
-      if (!ta) return;
-      var texte = chip.textContent.trim();
-      ta.value = ta.value ? ta.value + '\n' + texte : texte;
+      var ta = el('modifications'); if (!ta) return;
+      var t = chip.textContent.trim();
+      ta.value = ta.value ? ta.value + '\n' + t : t;
       ta.focus();
     }
-
-    /* ── TOGGLE SANS MODIFICATION ── */
     function toggleSansModif() {
-      var checkbox = el('sans-modif');
-      if (!checkbox) return;
-      var checked  = checkbox.checked;
-      var ta       = el('modifications');
-      var icone    = el('check-icone');
-      var cbCustom = document.querySelector('.checkbox-custom');
-
-      if (ta) {
-        ta.disabled = checked;
-        ta.style.opacity = checked ? '0.4' : '1';
-      }
-      if (icone)    icone.style.display = checked ? 'block' : 'none';
-      if (cbCustom) {
-        cbCustom.style.background  = checked ? 'var(--mauve)' : 'white';
-        cbCustom.style.borderColor = checked ? 'var(--mauve)' : 'var(--mauve-doux)';
-      }
+      var cb = el('sans-modif'); if (!cb) return;
+      var ta = el('modifications'), icone = el('check-icone'), cbCustom = document.querySelector('.checkbox-custom');
+      if (ta) { ta.disabled = cb.checked; ta.style.opacity = cb.checked ? '0.4' : '1'; }
+      if (icone) icone.style.display = cb.checked ? 'block' : 'none';
+      if (cbCustom) { cbCustom.style.background = cb.checked ? 'var(--mauve)' : 'white'; cbCustom.style.borderColor = cb.checked ? 'var(--mauve)' : 'var(--mauve-doux)'; }
     }
 
-    /* ── SOUMETTRE ── */
+    /* ── 3. SOUMETTRE : envoie le TOKEN à Make B (plus de record_id, plus de sessionStorage) ── */
     async function soumettre() {
       var btn = el('btn-soumettre');
       if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
 
-      var paroles       = sessionStorage.getItem('cm_paroles') || '';
-      var titre         = sessionStorage.getItem('cm_titre') || '';
-      var champModif    = el('modifications');
-      var checkbox      = el('sans-modif');
-      var modifications = champModif ? champModif.value.trim() : '';
-      var sansModif     = checkbox ? checkbox.checked : false;
-      var donnees       = getDonnees() || {};
+      var champModif = el('modifications');
+      var checkbox   = el('sans-modif');
+      var sansModif  = checkbox ? checkbox.checked : false;
+      var modifs     = (champModif && !sansModif) ? champModif.value.trim() : '';
 
-      var payload = Object.assign({}, donnees, {
-        record_id:          sessionStorage.getItem('cm_record_id') || '',
-        paroles_initiales:  paroles,
-        titre_chanson:      titre,
-        modifications:      sansModif ? '' : modifications,
-        sans_modification:  sansModif
-      });
+      var payload = {
+        token:             token,
+        modifications:     modifs,
+        sans_modification: sansModif
+      };
 
       try {
-        await fetch(WEBHOOK_MAKE, {
+        await fetch(WEBHOOK_MAKE_B, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-      } catch (err) {
-        console.error('Webhook error:', err);
-      }
-
-      /* Nettoyer */
-      sessionStorage.removeItem('cm_souvenirs');
-      sessionStorage.removeItem('cm_paroles');
-      sessionStorage.removeItem('cm_titre');
-      sessionStorage.removeItem('cm_record_id');
+      } catch (err) { console.error('Webhook B error:', err); }
 
       montrer('etat-soumission');
-
-      setTimeout(function () {
-        window.location.href = URL_ATTENTE;
+      setTimeout(function() {
+        window.location.href = URL_ATTENTE + '?id=' + encodeURIComponent(token);
       }, 2500);
     }
 
     /* ── INIT ── */
-    genererParoles(false);
+    if (!token) {
+      setTexte('erreur-detail', "Lien invalide ou expiré. Veuillez recommencer depuis le début.");
+      montrer('etat-erreur');
+    } else {
+      montrer('etat-chargement');
+      checkStatut();                                  // 1er check immédiat
+      pollTimer = setInterval(checkStatut, POLL_INTERVAL);
+    }
   </script>
 </body>
 </html>
