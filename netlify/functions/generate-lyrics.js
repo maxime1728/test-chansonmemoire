@@ -93,9 +93,7 @@ In "lyrics", use real line breaks between lines and between sections. Title and 
         max_tokens: 2000,
         system: systemPrompt,
         messages: [
-          { role: 'user', content: userPrompt },
-          // Pré-remplir le début force un JSON propre (pas de préambule bavard).
-          { role: 'assistant', content: '{"title":' }
+          { role: 'user', content: userPrompt }
         ]
       })
     });
@@ -112,15 +110,22 @@ In "lyrics", use real line breaks between lines and between sections. Title and 
       };
     }
 
-    // On a forcé la réponse à continuer après {"title": — on recolle le début.
-    const suite = (data.content || [])
+    // Le modèle renvoie le JSON complet dans le texte.
+    const raw = (data.content || [])
       .filter(b => b.type === 'text')
       .map(b => b.text)
       .join('')
       .trim();
 
-    let raw = '{"title":' + suite;
-    const clean = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+    // On nettoie d'éventuels backticks markdown.
+    let clean = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    // Filet : si du texte traîne avant/après, on isole le 1er objet { ... }.
+    const debut = clean.indexOf('{');
+    const fin   = clean.lastIndexOf('}');
+    if (debut !== -1 && fin !== -1 && fin > debut) {
+      clean = clean.slice(debut, fin + 1);
+    }
 
     let parsed;
     try {
