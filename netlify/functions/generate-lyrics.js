@@ -13,7 +13,13 @@ exports.handler = async (event) => {
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  // ── DIAGNOSTIC : est-ce que la clé est là ? ──
+  console.log('Clé présente ?', apiKey ? 'OUI' : 'NON');
+  console.log('Début de la clé :', apiKey ? apiKey.slice(0, 7) : 'aucune');
+
   if (!apiKey) {
+    console.log('ERREUR : aucune clé API trouvée dans process.env.ANTHROPIC_API_KEY');
     return { statusCode: 500, body: JSON.stringify({ error: 'Configuration serveur manquante' }) };
   }
 
@@ -96,8 +102,14 @@ Dans "lyrics", utilise de vrais sauts de ligne entre les vers et entre les secti
       })
     });
 
+    // ── DIAGNOSTIC : qu'a répondu Anthropic ? ──
+    console.log('Statut réponse Anthropic :', res.status);
+
     const data = await res.json();
+
     if (!res.ok) {
+      // On écrit la VRAIE erreur d'Anthropic dans le log
+      console.log('ERREUR Anthropic :', JSON.stringify(data));
       return { statusCode: 502, body: JSON.stringify({ error: 'Erreur de génération' }) };
     }
 
@@ -116,6 +128,8 @@ Dans "lyrics", utilise de vrais sauts de ligne entre les vers et entre les secti
       parsed = { title: `Pour ${nom}`, lyrics: clean };
     }
 
+    console.log('Succès : paroles générées,', (parsed.lyrics || '').length, 'caractères');
+
     return {
       statusCode: 200,
       headers: { 'content-type': 'application/json' },
@@ -125,6 +139,8 @@ Dans "lyrics", utilise de vrais sauts de ligne entre les vers et entre les secti
       })
     };
   } catch (err) {
+    // On écrit l'erreur technique exacte dans le log
+    console.log('ERREUR technique :', err.message);
     return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
   }
 };
