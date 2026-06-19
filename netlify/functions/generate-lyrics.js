@@ -194,7 +194,9 @@ ${modifications}`;
 
       const parsed = parseModel(r.data);
       if (!parsed || !parsed.lyrics || !String(parsed.lyrics).trim()) {
-        return { statusCode: 422, body: JSON.stringify({ error: 'invalid_input' }) };
+        // DEBUG TEMPORAIRE : on renvoie la réponse brute de Claude pour voir pourquoi le parse échoue.
+        const brut = (r.data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+        return { statusCode: 422, body: JSON.stringify({ error: 'invalid_input', debug_raw: brut.slice(0, 800) }) };
       }
 
       const suggestions = normSuggestions(parsed.suggestions);
