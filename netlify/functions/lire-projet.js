@@ -6,6 +6,20 @@ const BASE_ID = process.env.AIRTABLE_BASE_ID;   // variable d'environnement Netl
 const TOKEN   = process.env.AIRTABLE_TOKEN;     // variable d'environnement Netlify
 const API     = `https://api.airtable.com/v0/${BASE_ID}`;
 
+// Format d'un token légitime : UUID v4 généré par crypto.randomUUID() côté page.
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// Échappe une valeur pour un littéral filterByFormula Airtable.
+// Airtable n'offre PAS d'échappement type \" : on encadre avec le guillemet
+// absent de la valeur. Si la valeur contient les deux types, on retourne null
+// plutôt que de produire une formule ambiguë (défense en profondeur).
+function formulaLiteral(v) {
+  const s = String(v);
+  if (!s.includes('"')) return `"${s}"`;
+  if (!s.includes("'")) return `'${s}'`;
+  return null;
+}
+
 exports.handler = async (event) => {
   // On accepte seulement le POST
   if (event.httpMethod !== 'POST') {
@@ -22,11 +36,19 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Token manquant' }) };
   }
 
+  // Valide le format AVANT tout appel Airtable. Ferme l'injection de formule
+  // filterByFormula (un token légitime ne contient ni guillemet ni opérateur)
+  // et garantit l'inguessabilité (UUID v4 = 122 bits). Un token malformé ne
+  // peut être qu'invalide ou malveillant -> 400 nu, sans révéler pourquoi.
+  if (!UUID_V4.test(token)) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Token invalide' }) };
+  }
+
   const headers = { Authorization: `Bearer ${TOKEN}` };
 
   try {
-    // 1. Trouver le Project par token
-    const formule = encodeURIComponent(`{token}="${token}"`);
+    // 1. Trouver le Project par token (token déjà validé UUID -> littéral sûr)
+    const formule = encodeURIComponent(`{token}=${formulaLiteral(token)}`);
     const rP = await fetch(`${API}/Projects?filterByFormula=${formule}&maxRecords=1`, { headers });
     const dP = await rP.json();
 
@@ -39,7 +61,13 @@ exports.handler = async (event) => {
     const projetId = projet.id;
 
     // 2. Trouver la Generation la plus récente de ce projet (tri par generation_no desc)
-    const formuleG = encodeURIComponent(`{project}="${projet.fields.project}"`);
+    //    La valeur {project} vient d'Airtable, pas de l'utilisateur, mais on
+    //    l'échappe quand même (défense en profondeur). Valeur inexploitable -> 500.
+    const projLit = formulaLiteral(projet.fields.project);
+    if (projLit === null) {
+      return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
+    }
+    const formuleG = encodeURIComponent(`{project}=${projLit}`);
     const rG = await fetch(
       `${API}/Generations?filterByFormula=${formuleG}` +
       `&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=1`,
@@ -57,7 +85,7 @@ exports.handler = async (event) => {
         paroles:           gen.lyrics || '',
         statut:            gen.generation_status || '',     // lyrics_generated / audio_generated / validated
         audio_url:         gen.cloudinary_audio_url || '',
-        suggestions:       gen.suggestions || '[]',         // JSON string des bulles dynamiques
+        suggestions:       gen.suggestions || '[]',         // bulles dynamiques — exposition INTENTIONNELLE (au-delà des 5 champs §6 ; à refléter dans CLAUDE.md §6)
         commercial_status: projet.fields.commercial_status || 'preview_only'
         // PAS d'email, PAS de stripe_*, PAS d'attribution. Volontaire.
       })
