@@ -27,15 +27,23 @@ unicite, souvenirs, souvenir_garder, voix`. Au load : génère le token. Submit 
 
 **revision (paroles)** — Netlify lit `titre/paroles/statut` par token. Le client approuve
 les paroles avant production audio. (`voix` n'entre pas dans le prompt paroles, il va à Suno.)
+La **régénération des paroles vit ici** (appel Anthropic direct, déjà en place, **non plafonnée**) :
+le client ne repasse PAS par le survey à cette étape. Approbation → lance la production chanson.
 
-**attente (génération Suno ~5 min)** — VRAIE attente. Suno génère la chanson **complète**,
-stockée comme lien sur Airtable (Generation). Le preview 60s est une **troncature** de cette
-piste complète. Page d'attente digne + poll du statut. **Filet :** si le client quitte,
-un courriel le ramène quand c'est prêt. **Si Suno échoue/dépasse :** alerte (voir §6).
+**attente (génération Suno ~5 min)** — VRAIE attente. Suno renvoie **2 pistes** ; on ne garde
+QUE **la piste [0]**, uploadée sur Cloudinary (asset complet). Le preview 60s est une **troncature
+Cloudinary** de cette piste complète (pas un 2e fichier). Page d'attente digne + poll du statut
+jusqu'à `audio_generated`. **Filet :** si le client quitte, un courriel le ramène quand c'est prêt.
+**Si Suno échoue/dépasse :** alerte (voir §6). Modèle Suno : **V5_5**.
 
-**apercu (preview)** — sert le clip 60s tronqué, jamais l'URL complète dans la réponse.
-Régénération possible, **plafond 3** (compteur `regenerations_count`, régens *client* seulement).
-Au 3e : message affiché, plus de régen → incitation à l'achat. Divulgation IA au point d'achat.
+**apercu (preview)** — sert le clip **60s tronqué** (transformation Cloudinary), jamais l'URL
+complète dans la réponse. **Régénération de la CHANSON possible, plafond 5** (compteur
+`song_regenerations_count`, pré-achat). La régén passe par le **formulaire pré-rempli**
+(`souvenirs` alimenté par `lire-survey.js`) : le client peut changer style/ambiance et ajouter
+du contenu → nouvelles paroles (Anthropic) → approbation (`revision`) → nouvelle chanson.
+Confirmation « êtes-vous sûr de vouloir régénérer ? » avant chaque régén (coût Suno réel).
+Au 5e : message affiché, plus de régen → incitation à l'achat. Divulgation IA au point d'achat.
+Les **paroles** ne sont **pas plafonnées** (régén. paroles sur `revision`, déjà en place).
 
 **achat (Stripe Checkout + order bumps)** — order bumps digitaux :
 - PDF des paroles (généré depuis paroles stockées — trivial).
@@ -72,7 +80,13 @@ limite d'hébergement de 1 an acceptable.
 
 - **Make écrit** : upsert Client, create Project, paroles (HTTP), Generation, statut, audio link.
 - **Netlify lit** : `lire-projet.js`, expose **uniquement** `titre/paroles/statut/audio_url/
-  commercial_status`. Jamais email, Stripe IDs, attribution, photos.
+  suggestions/commercial_status`. Jamais email, Stripe IDs, attribution, photos.
+- **Netlify lit (pré-remplissage)** : `lire-survey.js` — fonction **séparée**, lecture seule,
+  même sécurité (UUID + `404` nu). Expose **uniquement** les champs du formulaire nécessaires au
+  pré-remplissage de la régén chanson : `prenom_defunt, relation, style_musical, ambiance, voix,
+  unicite, souvenirs, souvenir_garder`. Jamais email, Stripe, attribution, consentement.
+  (Chiffrement inutile : c'est le navigateur du client qui relit ses propres réponses ; la
+  protection = minimisation des champs + token inguessable + rétention Loi 25.)
 - **Validation token** : regex UUID v4 stricte en amont, `400` avant tout appel Airtable.
 - **Révélation complète** : gated sur `commercial_status` payé, vérif serveur.
 
@@ -88,6 +102,24 @@ limite d'hébergement de 1 an acceptable.
   - ⚠ `instrumental_url` n'est valide que **14 jours** → copier sur Cloudinary **immédiatement** au callback.
   - ⚠ Facturé à chaque appel, sans cache → générer **une seule fois**, à l'achat de l'order bump, puis stocker.
   - ⚠ Dépendance tierce (reseller, pas Suno officiel) → point de fragilité, prévoir un plan B.
+
+---
+
+## 5b. Production audio & cover (API Suno — sunoapi.org, modèle V5_5)
+
+Réf. API : `generate-music`, `generate-music-callbacks`, `upload-and-cover-audio`,
+`upload-and-cover-audio-callbacks` (docs.sunoapi.org). Détails de mapping dans `CM_make_plan.md`.
+
+- **Génération chanson** : `POST /api/v1/generate`, `customMode=true`, `instrumental=false`,
+  `model=V5_5`, `prompt` = **paroles**, `style` = chaîne du **Data Store** (`style_musical × ambiance`,
+  mini-prompt de directives musicales), `title` = `song_title`, `vocalGender` = `m`/`f` ← `voix`,
+  `callBackUrl` = webhook Make. Renvoie `taskId`. **On ne garde QUE la piste [0]** du callback.
+- **Cover (post-achat)** : `POST /api/v1/generate/upload-cover`, `uploadUrl` = piste complète
+  existante, nouveau `prompt` (paroles ajustées). **Garde la mélodie/style**, change les paroles.
+- **Décortique (post-livraison seulement)** : Anthropic route les demandes libres du client
+  (prononciation / paroles / style) → édition **ciblée** (garde les paroles existantes, applique
+  strictement la demande ; delta sur `style`). Pas de décortique à la génération initiale.
+- **2 identifiants distincts** : `suno_task_id` (matche le callback) ≠ `song_id` (id de la piste [0]).
 
 ---
 
@@ -113,8 +145,8 @@ Patron unique réutilisé à chaque jonction, plutôt que re-spécifié à chaqu
 - Case `🔁 Relancer génération` (couvre J1–J3) : un scénario Make la surveille → relit les
   inputs stockés du Project → relance HTTP paroles + Suno → écrit nouvelle Generation → décoche.
 - Case `📨 Forcer livraison` (couvre J4–J5) : re-bascule statut payé + ré-envoie le courriel.
-- **Compteur séparé** : le replay admin ne brûle JAMAIS une des 3 régens du client. Une panne
-  système ne doit pas punir le client.
+- **Compteur séparé** : le replay admin ne brûle JAMAIS une des régénérations chanson du client
+  (plafond 5 pré-achat / 5 post-achat). Une panne système ne doit pas punir le client.
 
 ---
 
@@ -131,6 +163,10 @@ Patron unique réutilisé à chaque jonction, plutôt que re-spécifié à chaqu
 ## 8. Loi 25 & divulgation IA
 
 - Preuve de consentement (`cgv_acceptees_at`) capturée au point d'achat.
+- Preuve d'acceptation/livraison (signature + horodatages, §9b) = données perso → divulgation +
+  rétention. ⚠️ Portée juridique (remboursement / droit de résolution LPC) à **faire valider**.
+- Données du survey relues par `lire-survey.js` (pré-remplissage) : minimisées, token-gated,
+  soumises à la rétention (purge des projets non convertis).
 - Divulgation IA présente au **point de décision d'achat** (avant clic Stripe), pas seulement index.
 - Rétention : purge des Projets/Générations non-convertis selon politique définie ; Clients préservés.
   Modèle de possession et rétention 1 an : voir §9. (⚠ exception permanente pour pages liées à un QR physique.)
@@ -154,6 +190,45 @@ Principe fondateur : **séparer ce qui est possédé de ce qui est hébergé.**
 - **⚠ Tension à résoudre AVANT de vendre des plaques QR** : une plaque physique permanente dont le
   QR pointe vers une page garantie 1 an = promesse brisée. Les pages liées à un QR exigent un palier
   d'hébergement **permanent**, distinct du 1 an de base, et exclues de la purge.
+
+---
+
+## 9b. Livraison gatée + preuve d'acceptation
+
+Objectif : preuve serveur que le client a **reçu et accepté** le produit digital (défense en cas de
+demande de remboursement). Le **verrou = l'acceptation signée**, pas le téléchargement.
+
+**Flux page de livraison (post-achat) :**
+1. Gate : bouton **« Recevoir ma chanson »** (intention) → horodaté `recevoir_clicked_at`.
+2. **Signature électronique obligatoire** (nom saisi/tracé) → `accepter-livraison.js` :
+   valide UUID → vérifie **serveur** `commercial_status = purchased` → écrit la preuve sur **Project**.
+3. La page se **révèle** (chanson + bouton télécharger) → `delivery_accessed_at`. **Téléchargement
+   libre ensuite** (non bloqué). L'accès post-signature = preuve de réception en soi.
+
+**Champs preuve (Project, horodatés) :** `recevoir_clicked_at`, `delivery_signature_name`,
+`delivery_signature_at`, `delivery_accessed_at`, `delivery_acceptance_text_version`, `acceptance_ip`,
+`acceptance_user_agent`. Bonus : `downloaded_at` (1er téléchargement), `download_count`.
+
+> ⚠️ **GARDE-FOU LÉGAL (BLOQUANT — §2).** « Réception/téléchargement = acceptation / renonciation au
+> remboursement » touche la **Loi sur la protection du consommateur (Québec)** et le droit de
+> résolution des contrats à distance / biens numériques. Le **mécanisme de preuve** est construit ;
+> le **texte** des CGV et de l'écran d'acceptation est un **point de départ à faire valider** par un
+> pro — jamais un avis juridique, jamais une affirmation d'exécutabilité. Loi 25 : signature + IP =
+> données perso → couvrir dans la politique de confidentialité + rétention. Copy **solution-first**.
+
+---
+
+## 9c. Régénération post-achat (3 actions, plafond 5 — compteur séparé)
+
+Après achat, depuis la page perso, le client peut (compteur `post_purchase_regenerations_count`,
+plafond **5**, couvrant régén-chanson **et** cover ensemble) :
+1. **Régénérer les paroles** — même principe que `revision` (appel Anthropic direct).
+2. **Régénérer la chanson** (`generate`, V5_5) — s'il n'aime pas la mélodie. Nouvelle mélodie,
+   mêmes paroles (sauf édition demandée).
+3. **Générer un cover** (`upload-cover`) — garde la mélodie/style, change les paroles au besoin.
+
+Les demandes libres (prononciation / paroles / style) passent par le **décortique Anthropic**
+(édition ciblée) avant l'appel Suno (voir §5b).
 
 ---
 

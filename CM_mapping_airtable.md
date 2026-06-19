@@ -42,7 +42,7 @@
 | `project` | Primary · Formula | ✅ | Auto | — | `{deceased_name} & " – " & DATETIME_FORMAT({created_date},'YYYY-MM-DD')` |
 | **`token`** | Single line text | ➕ **LAUNCH-BLOCKER** | Survey → Make écrit la valeur reçue | Netlify (filterByFormula) | UUID v4. La clé de tout. |
 | `client` | Link → Clients | ✅ | Make (**Record ID** de l'Upsert, jamais l'email) | — | Tableau de record IDs |
-| `task_id` | Single line text | ⚠️ | ? | ? | **À confirmer l'usage.** Si c'est le task ID Suno async → devrait plutôt vivre sur Generations. À clarifier. |
+| ~~`task_id`~~ | Single line text | ⚠️ **À RETIRER de Projects** | — | — | **Tranché** : le task ID Suno vit sur **Generations** (`suno_task_id`), pas ici. Retirer de Projects. |
 | `deceased_name` | Single line text | ✅ | Make ← survey `prenom_defunt` | Netlify |  |
 | `relationship` | Single select | ✅ | Make ← survey `relation` |  | Valeurs \= options du survey |
 | `music_style` | Single select | ✅ | Make ← survey `style_musical` |  |  |
@@ -60,7 +60,8 @@
 | `generations` | Link → Generations | ✅ | Auto via lien |  |  |
 | `generations_count` | Rollup (count) sur generations | ✅ | Auto |  | Compte TOUT (preview \+ regen) — indicateur, pas un blocage |
 | `previews_count` | Rollup (count) filtré type=preview | ✅ | Auto |  |  |
-| **`regenerations_count`** | Rollup (count) filtré type=regeneration | ➕ | Auto | Make (filtre limite 5\) | Sert à l'enforcement de la limite côté Make |
+| **`song_regenerations_count`** | Rollup (count) filtré type=song_regeneration ET post_purchase=false | ➕ | Auto | Make (filtre limite 5\) | Plafond **5 pré-achat**. Les **paroles** ne sont PAS plafonnées. |
+| **`post_purchase_regenerations_count`** | Rollup (count) filtré (type=song_regeneration OU cover) ET post_purchase=true | ➕ | Auto | Make (filtre limite 5\) | Plafond **5 post-achat** (régén chanson + cover ensemble). |
 | `upsells` | Link → Upsells | ✅ | Auto via lien |  |  |
 | `utm_source` | Single line text | ✅ | Make ← survey |  | Attribution |
 | `utm_medium` | Single line text | ✅ | Make ← survey |  |  |
@@ -74,6 +75,17 @@
 | **`stripe_session_id`** | Single line text | ✅ (ajouté) | Make (webhook Stripe) |  |  |
 | \~\~`payment_intent`\~\~ | Single line text | ⚠️ **À SUPPRIMER** | — | — | Doublon de `stripe_payment_intent`. En garder un seul. |
 | **`stripe_payment_intent`** | Single line text | ✅ (ajouté) | Make (webhook Stripe) |  | Le champ à garder. Anti double-traitement \+ remboursement. |
+| **`recevoir_clicked_at`** | Date/heure | ➕ | `accepter-livraison.js` | — | Clic « Recevoir ma chanson » (intention). |
+| **`delivery_signature_name`** | Single line text | ➕ | `accepter-livraison.js` | — | Signature électronique (nom saisi/tracé). Preuve d'acceptation. |
+| **`delivery_signature_at`** | Date/heure | ➕ | `accepter-livraison.js` | — | Horodatage signature. |
+| **`delivery_accessed_at`** | Date/heure | ➕ | `accepter-livraison.js` | — | Page révélée = preuve de réception. |
+| **`delivery_acceptance_text_version`** | Single line text | ➕ | `accepter-livraison.js` | — | Version du texte d'acceptation accepté (traçabilité). |
+| **`acceptance_ip`** | Single line text | ➕ | `accepter-livraison.js` | — | Loi 25 : donnée perso (preuve). Rétention + divulgation. |
+| **`acceptance_user_agent`** | Single line text | ➕ | `accepter-livraison.js` | — | Métadonnée de preuve. |
+| `downloaded_at` | Date/heure | ➕ (bonus) | `telecharger.js` | — | 1er téléchargement. Le verrou reste la signature, pas le download. |
+| `download_count` | Number | ➕ (bonus) | `telecharger.js` | — | Incrémenté à chaque téléchargement. |
+
+> ⚠️ **Légal (BLOQUANT)** : la portée juridique de la signature/téléchargement (remboursement / droit de résolution LPC Québec) est un **point de départ à faire valider**, jamais un avis. Le schéma ne fait que **capturer la preuve**.
 
 ---
 
@@ -84,11 +96,14 @@
 | `generation` | Primary · Formula | ✅ | Auto |  | `{project} & " – g" & {generation_no}` |
 | `project` | Link → Projects | ✅ | Make (Record ID du Project) | Netlify | Tableau de record IDs |
 | `generation_no` | Number | ✅ | Make (1, 2, 3…) | Netlify (tri desc) | Sert à trouver la PLUS récente |
-| `type` | Single select : preview / regeneration / cover | ✅ | Make |  |  |
+| `type` | Single select : lyrics / lyrics\_regeneration / song / song\_regeneration / cover | ✅ | Make |  | Distingue **paroles** vs **chanson**. Le plafond compte `song_regeneration` + `cover`. |
+| **`post_purchase`** | Checkbox | ➕ | Make (true si créée après achat) | — | Sépare les compteurs pré/post-achat (voir Projects). |
+| **`suno_task_id`** | Single line text | ➕ | Make (au lancement Suno) | Make (match callback) | `data.task_id` du callback. **Matche** le callback à CETTE Generation. |
+| **`song_id`** | Single line text | ➕ | Make (callback) | — | `data.data[0].id` = la piste [0] gardée. ≠ `suno_task_id`. |
 | `lyrics` | Long text | ✅ | Make (après API Anthropic) | Netlify |  |
 | `song_title` | Single line text | ✅ | Make (après API Anthropic) | Netlify |  |
 | `requested_changes` | Long text | ✅ | Make ← revision `modifications` |  | Pour les regenerations |
-| `generation_status` | Single select : lyrics\_generated / audio\_generated / validated | ✅ | Make | Netlify (polling) | **Orthographe EXACTE critique** — le polling attend ces valeurs |
+| `generation_status` | Single select : lyrics\_generated / audio\_pending / audio\_generated / validated | ✅ | Make | Netlify (polling) | **Orthographe EXACTE critique** — le polling attend ces valeurs. `audio_pending` = Suno lancé, callback pas encore reçu. |
 | \~\~`suno_audio_url`\~\~ | URL | ⚠️ | Make (callback Suno) | — | Source brute Suno, **temporaire**. NE PAS exposer au navigateur. Garder pour debug ou supprimer. |
 | **`cloudinary_audio_url`** | URL | ➕ / à confirmer le nom exact | Make (après upload Cloudinary) | Netlify | **Ce que le client écoute** (permanent). C'est ce que `lire-projet.js` renvoie. |
 | \~\~`preview_slug`\~\~ | Single line text | ⚠️ **À TRANCHER** | — | — | Redondant avec `token` (routage par token). Recommandation : retirer ou laisser vide. |
@@ -115,10 +130,12 @@
 
 1. ➕ Créer `token` (Projects) — launch-blocker.  
 2. ➕ Créer `cgv_acceptees_at` (Projects) — Loi 25\.  
-3. ➕ Créer `regenerations_count` (Projects, rollup filtré type=regeneration).  
+3. ➕ Créer `song_regenerations_count` **et** `post_purchase_regenerations_count` (Projects, rollups filtrés) — plafonds 5 pré/post-achat (chanson, pas paroles).  
 4. ➕ Créer/renommer `cloudinary_audio_url` (Generations) — **confirmer le nom exact au caractère près**.  
 5. ➕ Créer `delivery_url` (Upsells).  
 6. ⚠️ Supprimer `payment_intent` (garder `stripe_payment_intent`).  
 7. ⚠️ Trancher `preview_slug` / `full_slug` (recommandation : retirer).  
-8. ⚠️ Confirmer l'usage de `task_id` (Projects).
+8. ✅ Tranché : retirer `task_id` (Projects) ; le task ID Suno = `suno_task_id` sur Generations.  
+9. ➕ Generations : `suno_task_id`, `song_id`, `post_purchase` (checkbox) ; étendre `type` (lyrics / lyrics_regeneration / song / song_regeneration / cover) ; `generation_status` += `audio_pending`.  
+10. ➕ Projects : champs preuve de livraison — `recevoir_clicked_at`, `delivery_signature_name`, `delivery_signature_at`, `delivery_accessed_at`, `delivery_acceptance_text_version`, `acceptance_ip`, `acceptance_user_agent`, `downloaded_at`, `download_count`.
 
