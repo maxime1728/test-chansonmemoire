@@ -1,0 +1,67 @@
+{
+  "_note": "Corps HTTP prets a coller dans les modules Make 'HTTP > Make a request'. Les {{...}} sont des references Make a mapper. Aucune cle en dur.",
+
+  "suno_generate": {
+    "method": "POST",
+    "url": "https://api.sunoapi.org/api/v1/generate",
+    "headers": {
+      "Authorization": "Bearer {{SUNO_API_KEY}}",
+      "content-type": "application/json"
+    },
+    "body": {
+      "customMode": true,
+      "instrumental": false,
+      "model": "V5_5",
+      "prompt": "{{lyrics_de_la_derniere_generation}}",
+      "style": "{{style_du_data_store}}",
+      "title": "{{song_title}}",
+      "vocalGender": "{{m_ou_f_depuis_voix}}",
+      "callBackUrl": "{{URL_DU_WEBHOOK_MAKE_C_cb}}"
+    },
+    "_returns": "data.taskId -> a stocker dans Generations.suno_task_id"
+  },
+
+  "suno_upload_cover": {
+    "_usage": "Post-achat uniquement. Garde la melodie/style, change les paroles.",
+    "method": "POST",
+    "url": "https://api.sunoapi.org/api/v1/generate/upload-cover",
+    "headers": {
+      "Authorization": "Bearer {{SUNO_API_KEY}}",
+      "content-type": "application/json"
+    },
+    "body": {
+      "uploadUrl": "{{cloudinary_audio_url_piste_existante}}",
+      "customMode": true,
+      "instrumental": false,
+      "model": "V5_5",
+      "prompt": "{{paroles_ajustees}}",
+      "style": "{{style_du_data_store}}",
+      "title": "{{song_title}}",
+      "callBackUrl": "{{URL_DU_WEBHOOK_MAKE_C_cb}}"
+    },
+    "_returns": "data.taskId -> Generations.suno_task_id (type=cover)"
+  },
+
+  "anthropic_decortique": {
+    "_usage": "Post-livraison uniquement. Route les demandes libres (prononciation/paroles/style) en parametres Suno. Edition CIBLEE : garde les paroles existantes, applique strictement la demande.",
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": {
+      "x-api-key": "{{ANTHROPIC_API_KEY}}",
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json"
+    },
+    "body": {
+      "model": "claude-sonnet-4-6",
+      "max_tokens": 2000,
+      "system": "Voir anthropic_decortique_prompt.md. Reponds UNIQUEMENT en JSON valide: {\"prompt\":\"...paroles ajustees...\",\"style\":\"...style ajuste ou inchange...\"} sans aucun texte avant ou apres.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Paroles actuelles:\n{{lyrics_actuelles}}\n\nStyle actuel:\n{{style_actuel}}\n\nDemande du client (libre):\n{{demande_client}}"
+        }
+      ]
+    },
+    "_returns": "content[0].text -> Parse JSON -> {prompt, style} pour l'appel Suno"
+  }
+}
