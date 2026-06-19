@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Votre chanson — Chanson Mémoire</title>
+<!-- Livraison post-achat. Verrou = acceptation signée (preuve serveur), puis téléchargement libre.
+     Domaine .ca / chemins relatifs uniquement. -->
+<style>
+  :root{
+    --plum-dark:#5C2D4A; --plum:#7A3E62; --paper:#FBF7F4; --ink:#3a2f37; --muted:#7a6b75;
+    --line:#e7dde4;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.6 Mulish,system-ui,sans-serif;}
+  .wrap{max-width:640px;margin:0 auto;padding:48px 20px;}
+  h1{font:600 28px/1.25 Fraunces,Georgia,serif;color:var(--plum-dark);margin:0 0 8px;}
+  p.lead{color:var(--muted);margin:0 0 28px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;margin:18px 0;}
+  label{display:block;font-weight:600;margin:0 0 6px;color:var(--plum-dark);}
+  input[type=text]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;}
+  .accept{font-size:14px;color:var(--muted);margin:14px 0;}
+  .btn{display:inline-block;border:none;border-radius:999px;padding:14px 28px;font:600 16px/1 Mulish,sans-serif;
+       background:var(--plum-dark);color:#fff;cursor:pointer;text-decoration:none;}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;}
+  .btn-ghost{background:none;border:1px solid var(--plum-dark);color:var(--plum-dark);}
+  .hidden{display:none;}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+  .err{color:#b3261e;font-size:14px;margin-top:8px;}
+  audio{width:100%;margin-top:8px;}
+  .muted-note{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 id="title">Votre chanson est prête</h1>
+  <p class="lead">Une dernière étape pour la recevoir — puis elle est à vous.</p>
+
+  <!-- ÉTAPE 1 : gate « Recevoir ma chanson » -->
+  <div class="card" id="gate">
+    <button class="btn" id="btnRecevoir" type="button">Recevoir ma chanson</button>
+  </div>
+
+  <!-- ÉTAPE 2 : signature (acceptation) -->
+  <div class="card hidden" id="signCard">
+    <label for="sigName">Votre nom (signature)</label>
+    <input type="text" id="sigName" autocomplete="name" placeholder="Prénom et nom">
+    <p class="accept" id="acceptText">
+      En signant, je confirme recevoir le produit numérique (la chanson) et l'accepter.
+      Voir les <a href="/condition-de-vente" target="_blank" rel="noopener">conditions de vente</a>.
+    </p>
+    <button class="btn" id="btnSigner" type="button">Confirmer et recevoir</button>
+    <p class="err hidden" id="sigErr">Merci d'inscrire votre nom pour confirmer.</p>
+  </div>
+
+  <!-- ÉTAPE 3 : chanson révélée -->
+  <div class="hidden" id="songCard">
+    <div class="card">
+      <audio id="player" controls preload="none"></audio>
+      <div class="actions">
+        <button class="btn" id="btnDownload" type="button">Télécharger ma chanson</button>
+      </div>
+      <p class="muted-note">La chanson vous appartient. Téléchargez-la pour la garder pour toujours.</p>
+    </div>
+
+    <!-- Actions post-achat -->
+    <div class="card">
+      <label>Envie d'ajustements ?</label>
+      <div class="actions">
+        <a class="btn btn-ghost" id="actLyrics" href="#">Modifier les paroles</a>
+        <button class="btn btn-ghost" id="actSong" type="button">Régénérer la chanson</button>
+        <button class="btn btn-ghost" id="actCover" type="button">Créer un cover</button>
+      </div>
+
+      <!-- Formulaire cover (garde la mélodie, ajuste les paroles) -->
+      <div class="hidden" id="coverForm" style="margin-top:14px;">
+        <label for="coverNotes">Vos ajustements (paroles, prononciation, style)</label>
+        <input type="text" id="coverNotes" placeholder="Ex : remplacer « maman » par « ma mère », garder la même mélodie…">
+        <div class="actions" style="margin-top:10px;">
+          <button class="btn" id="coverSubmit" type="button">Lancer le cover</button>
+        </div>
+      </div>
+
+      <p class="muted-note">Plafond de 5 régénérations (chanson + cover) après l'achat.</p>
+      <p class="muted-note hidden" id="actMsg"></p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var ACCEPT_TEXT_VERSION = 'cgv-livraison-v1-2026-06';
+  /* Webhook du scénario MAKE C-gen (créé dans Make, dossier « Chanson Mémoire », inactif). */
+  var MAKE_C_GEN_WEBHOOK = 'https://hook.us1.make.com/uxpwxw1xqjm3x7mt35qjvdm2t8y9fvv4';
+  var UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  var token = new URLSearchParams(window.location.search).get('id') || '';
+
+  var gate     = document.getElementById('gate');
+  var signCard = document.getElementById('signCard');
+  var songCard = document.getElementById('songCard');
+
+  if(!UUID_V4.test(token)){
+    document.getElementById('title').textContent = 'Lien invalide';
+    gate.classList.add('hidden');
+    return;
+  }
+
+  /* Étape 1 -> 2 */
+  document.getElementById('btnRecevoir').addEventListener('click', function(){
+    gate.classList.add('hidden');
+    signCard.classList.remove('hidden');
+  });
+
+  /* Étape 2 : signature -> accepter-livraison.js (écrit la preuve serveur) */
+  document.getElementById('btnSigner').addEventListener('click', function(){
+    var name = document.getElementById('sigName').value.trim();
+    var err  = document.getElementById('sigErr');
+    if(name.length < 2){ err.classList.remove('hidden'); return; }
+    err.classList.add('hidden');
+
+    var btn = document.getElementById('btnSigner');
+    btn.disabled = true; btn.textContent = 'Un instant…';
+
+    fetch('/api/accepter-livraison', {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ token: token, signature_name: name, text_version: ACCEPT_TEXT_VERSION })
+    })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(res){
+      if(!res || !res.ok){ throw new Error('refus'); }
+      revealSong();
+    })
+    .catch(function(){
+      btn.disabled = false; btn.textContent = 'Confirmer et recevoir';
+      err.textContent = 'Une erreur est survenue. Veuillez réessayer.';
+      err.classList.remove('hidden');
+    });
+  });
+
+  /* Étape 3 : révèle la chanson (lecture via lire-projet, gaté payé côté serveur) */
+  function revealSong(){
+    signCard.classList.add('hidden');
+    songCard.classList.remove('hidden');
+
+    fetch('/api/lire-projet', {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ token: token })
+    })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(d && d.titre){ document.getElementById('title').textContent = d.titre; }
+      if(d && d.audio_url){ document.getElementById('player').src = d.audio_url; }
+    })
+    .catch(function(){});
+
+    /* Modifier les paroles = page revision existante (régén paroles directe, non plafonnée). */
+    document.getElementById('actLyrics').href = '/revision?id=' + encodeURIComponent(token);
+  }
+
+  /* Déclenche une (re)génération Suno via MAKE C-gen. Plafond 5 post-achat enforced SERVEUR. */
+  function triggerSuno(payload, btn){
+    btn.disabled = true;
+    fetch(MAKE_C_GEN_WEBHOOK, {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify(payload)
+    })
+    .then(function(){
+      showActMsg('Votre nouvelle version est en cours — vous la recevrez par courriel et elle apparaîtra ici dans quelques minutes.');
+    })
+    .catch(function(){
+      btn.disabled = false;
+      showActMsg('Une erreur est survenue. Veuillez réessayer.');
+    });
+  }
+  function showActMsg(t){ var m=document.getElementById('actMsg'); m.textContent=t; m.classList.remove('hidden'); }
+
+  /* Régénérer la chanson : nouvelle mélodie, mêmes paroles. */
+  document.getElementById('actSong').addEventListener('click', function(){
+    if(!window.confirm('Régénérer créera une nouvelle mélodie à partir des mêmes paroles. Continuer ?')) return;
+    triggerSuno({ token: token, mode: 'song_regeneration', post_purchase: true }, this);
+  });
+  /* Cover : garde la mélodie, ajuste les paroles (décortique Anthropic côté Make). */
+  document.getElementById('actCover').addEventListener('click', function(){
+    document.getElementById('coverForm').classList.toggle('hidden');
+  });
+  document.getElementById('coverSubmit').addEventListener('click', function(){
+    var notes = document.getElementById('coverNotes').value.trim();
+    triggerSuno({ token: token, mode: 'cover', post_purchase: true, demande_client: notes }, this);
+  });
+
+  /* Téléchargement gaté + journalisé -> renvoie l'URL complète */
+  document.getElementById('btnDownload').addEventListener('click', function(){
+    var btn = this; btn.disabled = true;
+    fetch('/api/telecharger', {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ token: token })
+    })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(res){
+      btn.disabled = false;
+      if(res && res.audio_url){ window.location.href = res.audio_url; }
+    })
+    .catch(function(){ btn.disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>

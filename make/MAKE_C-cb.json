@@ -1,0 +1,52 @@
+{
+  "scenario": "MAKE C-cb — Callback Suno (async)",
+  "trigger": "Webhook Make appele par Suno (callBackUrl). Creer CE webhook d'abord, son URL va dans callBackUrl de generate/upload-cover.",
+  "callback_payload_attendu": {
+    "code": "200 = succes ; 400/451/500 = echec",
+    "data": {
+      "callbackType": "text | first | complete | error",
+      "task_id": "= taskId de la requete d'origine",
+      "data": "[ piste0, piste1 ] (2 pistes ; on garde [0])"
+    }
+  },
+  "modules": [
+    {
+      "n": 1,
+      "module": "Webhook (custom)",
+      "out": "data.task_id, data.callbackType, data.data[]"
+    },
+    {
+      "n": 2,
+      "module": "Filter",
+      "config": "Continuer UNIQUEMENT si data.callbackType = 'complete' ET code = 200. (Ignorer 'text'/'first'.)",
+      "else_error": "Si callbackType='error' ou code!=200 -> patron alerte (§6) : courriel a Maxime + token + etape ; statut Generation non avance."
+    },
+    {
+      "n": 3,
+      "module": "Airtable > Search Records",
+      "config": "Table Generations, filterByFormula {suno_task_id}=\"{{data.task_id}}\", maxRecords 1",
+      "out": "Generation a mettre a jour"
+    },
+    {
+      "n": 4,
+      "module": "HTTP > Get a file",
+      "config": "Telecharge data.data[0].audio_url (PISTE [0] UNIQUEMENT)"
+    },
+    {
+      "n": 5,
+      "module": "Cloudinary > Upload",
+      "config": "Upload du fichier -> URL permanente (asset COMPLET)",
+      "note": "Le preview 60s n'est PAS un 2e fichier : c'est une transformation Cloudinary (offset duree 60s) appliquee a cette meme URL, servie par lire-projet.js tant que non paye."
+    },
+    {
+      "n": 6,
+      "module": "Airtable > Update Generation",
+      "config": "cloudinary_audio_url = {{url Cloudinary}}, song_id = {{data.data[0].id}}, generation_status = 'audio_generated'"
+    }
+  ],
+  "garde_fous": [
+    "On ne garde QUE data.data[0]. Jamais melanger les 2 pistes.",
+    "Matching par data.task_id <-> Generations.suno_task_id (pas le song_id).",
+    "Repondre HTTP 200 au callback en < 15s (exigence Suno)."
+  ]
+}

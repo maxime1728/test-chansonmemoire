@@ -12,6 +12,7 @@
     nom:    p.get('name')    || '',
     email:  p.get('email')   || '',
     taskid: p.get('taskid')  || '',
+    id:     p.get('id')      || '',   /* token UUID — clé de régénération */
     mp3:    p.get('preview1')|| ''
   };
   /* Titre de l'onglet personnalisé */
@@ -1145,6 +1146,41 @@ body {
     var el = document.getElementById(id);
     if (el) el.addEventListener('click', goStripe);
   });
+})();
+
+/* ── RÉGÉNÉRER LA CHANSON ────────────────────────────
+   Repasse par le formulaire pré-rempli pour changer le style / bonifier les paroles.
+   Confirmation (coût + plafond). Plafond 5 enforced SERVEUR (MAKE C-gen) ; ici, UX seulement. */
+(function() {
+  var token = (window._CM && window._CM.id) || '';
+  if (!token) return;                 /* pas de token => aperçu legacy, on n'affiche rien */
+  var anchor = document.getElementById('cm-pricing-root');
+  if (!anchor) return;
+
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'text-align:center;margin:18px auto 0;';
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'Régénérer la chanson';
+  btn.setAttribute('aria-label', 'Régénérer la chanson en repassant par le formulaire');
+  btn.style.cssText = 'background:none;border:1px solid var(--cm-plum-dark,#5C2D4A);color:var(--cm-plum-dark,#5C2D4A);'
+    + 'border-radius:999px;padding:10px 22px;font:600 15px/1 Mulish,sans-serif;cursor:pointer;';
+  var note = document.createElement('p');
+  note.textContent = 'Vous pourrez ajuster le style et bonifier les paroles.';
+  note.style.cssText = 'margin:8px 0 0;font:400 13px/1.4 Mulish,sans-serif;color:#7a6b75;';
+
+  btn.addEventListener('click', function() {
+    /* Confirmation digne, solution-first (jamais sur la perte). */
+    var ok = window.confirm(
+      'Régénérer créera une nouvelle version de la chanson à partir du formulaire.\n'
+      + 'La version actuelle sera remplacée. Voulez-vous continuer ?'
+    );
+    if (ok) window.location.href = '/souvenirs?id=' + encodeURIComponent(token);
+  });
+
+  wrap.appendChild(btn);
+  wrap.appendChild(note);
+  anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
 })();
 
 /* ── FAQ accordion ──────────────────────────────────── */

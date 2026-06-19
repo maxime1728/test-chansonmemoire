@@ -1,0 +1,58 @@
+{
+  "scenario": "MAKE C-gen — Lancement de la chanson (Suno generate)",
+  "trigger": "Appel depuis le site : (a) approbation paroles /revision, (b) regen chanson /apercu (via formulaire pre-rempli), (c) post-achat (regen chanson / cover).",
+  "input_webhook": {
+    "token": "uuid v4",
+    "mode": "song | song_regeneration | cover",
+    "post_purchase": "boolean",
+    "demande_client": "texte libre, optionnel (post-livraison: declenche le decortique)"
+  },
+  "modules": [
+    {
+      "n": 1,
+      "module": "Airtable > Search Records",
+      "config": "Table Projects, filterByFormula {token}=\"<token>\", maxRecords 1",
+      "out": "Project (commercial_status, project, song_regenerations_count, post_purchase_regenerations_count)"
+    },
+    {
+      "n": 2,
+      "module": "Router/Filter — plafond (base sur suno_task_id non vide + post_purchase)",
+      "config": "Si post_purchase=false: song_regenerations_count < 6 (1re chanson + 5 regen). Si post_purchase=true: post_purchase_regenerations_count < 5.",
+      "else": "Stop + reponse 'plafond atteint' (pas d'appel Suno, pas de cout)"
+    },
+    {
+      "n": 3,
+      "module": "Airtable > Search Records",
+      "config": "Table Generations, derniere generation du Project (tri generation_no desc, maxRecords 1)",
+      "out": "lyrics, song_title"
+    },
+    {
+      "n": 4,
+      "module": "HTTP — Anthropic decortique (CONDITIONNEL: demande_client non vide)",
+      "config": "Voir http_bodies.json#anthropic_decortique. Parse JSON -> {prompt, style}.",
+      "note": "Post-livraison seulement. Sinon: prompt = lyrics, style = Data Store."
+    },
+    {
+      "n": 5,
+      "module": "Data Store > Get a record",
+      "config": "Cle = style_musical + '|' + ambiance -> chaine style Suno (ton mini-prompt)",
+      "note": "Ignore si le decortique a deja fourni un style ajuste."
+    },
+    {
+      "n": 6,
+      "module": "HTTP — Suno generate (mode song/song_regeneration) OU upload-cover (mode cover)",
+      "config": "Voir http_bodies.json#suno_generate / #suno_upload_cover",
+      "out": "data.taskId"
+    },
+    {
+      "n": 7,
+      "module": "Airtable > Create Generation",
+      "config": "type = (mode=='cover' ? 'cover' : 'regeneration') [options existantes ; le compteur se base sur suno_task_id, pas sur type], generation_no +1, suno_task_id = {{data.taskId}}, generation_status = 'audio_pending', post_purchase = {{post_purchase}}"
+    }
+  ],
+  "garde_fous": [
+    "Plafond verifie SERVEUR (module 2), pas seulement cote client.",
+    "SUNO_API_KEY/ANTHROPIC_API_KEY en variables Make, jamais en dur.",
+    "Base Airtable de TEST uniquement."
+  ]
+}

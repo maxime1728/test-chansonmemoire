@@ -263,10 +263,17 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   const MAKE_WEBHOOK_A = 'https://hook.us1.make.com/1dyhk11x8yf1biy8mawnepdt3k1rcqvq';
   const MIN_CHARS = 3; /* minimum léger anti-vide / anti-1-lettre */
 
-  /* ── TOKEN : clé de tout le parcours ── */
-  const token = (window.crypto && crypto.randomUUID)
-    ? crypto.randomUUID()
-    : 'cm-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  /* ── TOKEN : clé de tout le parcours ──
+     Régénération chanson : si on arrive avec ?id=TOKEN (UUID v4 existant), on RÉUTILISE
+     ce token (même Project) et on pré-remplit le formulaire. Sinon, nouveau token. */
+  const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const idParam = new URLSearchParams(window.location.search).get('id') || '';
+  const isRegen = UUID_V4.test(idParam);
+  const token = isRegen
+    ? idParam
+    : ((window.crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : 'cm-' + Date.now() + '-' + Math.random().toString(16).slice(2));
 
   /* ── ATTRIBUTION META ── */
   function getParam(n){ return new URLSearchParams(window.location.search).get(n) || ''; }
@@ -275,6 +282,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   /* ── ÉTAT : noms = champs Airtable ── */
   const data = {
     token:            token,
+    regeneration:     isRegen,   /* token existant => MAKE A cree une nouvelle Generation, pas un nouveau Project */
     deceased_name:    '',
     relationship:     '',
     music_style:      '',
@@ -329,6 +337,41 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   bindChoices('choices-music_style',  'music_style',  4);
   bindChoices('choices-voice',        'voice',        5);
   bindChoices('choices-mood',         'mood',         6);
+
+  /* ── PRÉ-REMPLISSAGE (régénération chanson) ──
+     Relit les réponses précédentes via lire-survey.js (champs minimisés) et les réinjecte.
+     Le client peut alors changer style/ambiance et bonifier le contenu avant régénération. */
+  function setVal(id, v){ var el=document.getElementById(id); if(el && v) el.value = v; }
+  function selectChoice(containerId, dataKey, value){
+    if(!value) return;
+    var c=document.getElementById(containerId); if(!c) return;
+    c.querySelectorAll('.cm-choice').forEach(function(b){
+      if(b.dataset.value === value){ b.classList.add('selected'); data[dataKey] = value; }
+    });
+  }
+  if(isRegen){
+    fetch('/api/lire-survey', {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ token: token })
+    })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(s){
+      if(!s) return;
+      setVal('input-deceased_name',    s.prenom_defunt);
+      setVal('input-what_made_unique', s.unicite);
+      setVal('input-memories',         s.souvenirs);
+      setVal('input-memory_to_keep',   s.souvenir_garder);
+      data.deceased_name    = s.prenom_defunt   || '';
+      data.what_made_unique = s.unicite         || '';
+      data.memories         = s.souvenirs       || '';
+      data.memory_to_keep   = s.souvenir_garder || '';
+      selectChoice('choices-relationship', 'relationship', s.relation);
+      selectChoice('choices-music_style',  'music_style',  s.style_musical);
+      selectChoice('choices-voice',        'voice',        s.voix);
+      selectChoice('choices-mood',         'mood',         s.ambiance);
+    })
+    .catch(function(){ /* pré-remplissage best-effort : si échec, formulaire vierge */ });
+  }
 
   document.querySelectorAll('.cm-btn-prev').forEach(function(btn){
     btn.addEventListener('click', function(){ goTo(parseInt(btn.dataset.target)); });

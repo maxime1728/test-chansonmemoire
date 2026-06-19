@@ -460,16 +460,18 @@ function seekTrack(track, e){
    ou
    { "ready": false }
 ════════════════════════════════════════ */
-var MAKE_WEBHOOK_URL = "https://hook.us1.make.com/TON_WEBHOOK_ICI";
-var REDIRECT_BASE    = "https://chansonmemoire.com/preview-chanson-memoire/";
+/* Polling par TOKEN sur lire-projet.js (Netlify lit). Redirige vers /apercu?id=TOKEN
+   quand statut = audio_generated. Domaine .ca / relatif — JAMAIS .com (garde-fou). */
+var REDIRECT_BASE = "/apercu";   /* relatif => reste sur le domaine .ca courant */
 
-var redirected       = false;
-var attempts         = 0;
-var maxAttempts      = 24; /* 24 x 20s = ~8 minutes */
+var UUID_V4    = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+var redirected = false;
+var attempts   = 0;
+var maxAttempts = 24; /* 24 x 20s = ~8 minutes */
 var pollingInterval;
 
-function getEmail(){
-  try{ return new URLSearchParams(window.location.search).get("email"); }
+function getToken(){
+  try{ return new URLSearchParams(window.location.search).get("id"); }
   catch(e){ return null; }
 }
 
@@ -486,13 +488,19 @@ function checkReady(){
   }
 
   attempts++;
-  var email = getEmail();
-  if(!email) return;
+  var token = getToken();
+  if(!token || !UUID_V4.test(token)) return;
 
-  fetch(MAKE_WEBHOOK_URL + "?email=" + encodeURIComponent(email), { cache: "no-store" })
-    .then(function(r){ return r.json(); })
+  fetch("/api/lire-projet", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: token }),
+    cache: "no-store"
+  })
+    .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(data){
-      if(data && data.ready === true && !redirected){
+      /* audio_pending = Suno lancé, pas encore prêt -> on continue de sonder. */
+      if(data && data.statut === "audio_generated" && !redirected){
         clearInterval(pollingInterval);
         redirected = true;
 
@@ -503,14 +511,8 @@ function checkReady(){
           msg.innerHTML = "Sa chanson est prête — on t'amène à sa page.";
         }
 
-        var p = new URLSearchParams();
-        p.set("email",    data.email    || email);
-        p.set("preview1", data.preview1 || "");
-        p.set("preview2", data.preview2 || "");
-        p.set("name",     data.name     || "");
-
         setTimeout(function(){
-          window.location.href = REDIRECT_BASE + "?" + p.toString();
+          window.location.href = REDIRECT_BASE + "?id=" + encodeURIComponent(token);
         }, 1500);
       }
     })
