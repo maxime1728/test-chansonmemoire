@@ -56,16 +56,19 @@
     .modifs-label { font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--or); font-weight:500; margin-bottom:8px; }
     .modifs-titre { font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--encre); margin-bottom:6px; }
     .modifs-description { font-size:13.5px; color:var(--encre-doux); font-weight:300; line-height:1.65; margin-bottom:20px; }
-    .modifs-exemples { background:var(--mauve-pale); border-top:1px solid #D8CEE8; border-bottom:1px solid #D8CEE8; padding:14px 24px; }
-    .exemples-titre { font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--mauve); font-weight:500; margin-bottom:10px; }
-    .exemples-liste { list-style:none; display:flex; flex-wrap:wrap; gap:8px; }
-    /* GARDE-FOU CSS : bulle qui ne casse jamais la mise en page, même longue. Lecture seule (inspiration). */
+    .modifs-exemples { background:var(--mauve-pale); border-top:1px solid #D8CEE8; border-bottom:1px solid #D8CEE8; padding:16px 24px; }
+    .exemples-titre { font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--mauve); font-weight:500; margin-bottom:12px; }
+    .exemples-liste { list-style:none; display:flex; flex-direction:column; gap:8px; }
+    /* Pistes en bullet points texte (lecture seule, pas des boutons) */
     .exemple-chip {
-      background:white; border:1px solid #D8CEE8; border-radius:20px; padding:6px 14px;
-      font-size:12.5px; color:var(--encre-doux); user-select:none;
-      max-width:100%; white-space:normal; word-break:break-word; line-height:1.35; text-align:left;
+      position:relative; padding-left:18px; font-size:13.5px; color:var(--encre-doux);
+      line-height:1.5; white-space:normal; word-break:break-word;
+    }
+    .exemple-chip::before {
+      content:'•'; position:absolute; left:2px; top:0; color:var(--mauve); font-size:15px; line-height:1.4;
     }
     .exemple-chip.vide { color:#B8A8C8; font-style:italic; }
+    .exemple-chip.vide::before { color:#B8A8C8; }
     .modifs-champ { padding:20px 24px; }
     textarea#modifications { width:100%; min-height:120px; padding:16px; border:1.5px solid var(--papier-alt); border-radius:8px; font-family:'Inter',sans-serif; font-size:14px; color:var(--encre); background:var(--papier); resize:vertical; outline:none; line-height:1.6; }
     textarea#modifications::placeholder { color:#B8A8C8; font-style:italic; }
