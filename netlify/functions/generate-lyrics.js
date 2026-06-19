@@ -15,10 +15,11 @@ const AT_API         = `https://api.airtable.com/v0/${BASE_ID}`;
 
 /* ───────────────────── Bloc suggestions (commun aux 2 prompts) ───────────────────── */
 const SUGGESTIONS_RULES = `
-SUGGESTIONS — also produce exactly 3 revision suggestions in Québec French, addressed TO THE CLIENT (using "vous"/"votre"/"sa"):
+SUGGESTIONS — also produce between 2 and 5 revision suggestions in Québec French, addressed TO THE CLIENT (using "vous"/"votre"/"sa"):
 - Base them STRICTLY on the raw details the client actually provided (the "what made them unique", "memories", "what to keep", relationship). NEVER base a suggestion on the lyrics themselves, and NEVER invent a detail the client did not write.
 - Each suggestion INVITES the client to expand on one real element they mentioned. Examples of the right FORM (not content): "Renchérir sur vos étés au chalet", "Parlez davantage de sa passion pour l'automobile", "Ajoutez un mot sur sa cuisine du dimanche".
-- If the client gave very few details, it is better to return fewer suggestions (even just 1) than to invent. Quality over quantity. Never fabricate to reach 3.
+- The NUMBER depends on how much the client gave: if they provided rich details, give up to 5; if they gave little, give only 2. Never fabricate to reach a number. Quality over quantity.
+- These are read-only invitations the client reflects on, then writes their own changes. They are NOT clickable instructions.
 - Forbidden: generic suggestions about tone, length, rhyme, or structure. Forbidden: anything not directly traceable to what the client wrote.
 - About the LYRICS content only — never about music, rhythm, or voice.
 - Maximum 7 words each. Warm, in Québec French, second person.`;
@@ -203,7 +204,7 @@ ${modifications}`;
 
       // 4. Écrire la NOUVELLE Generation (numéro +1)
       const gen = await createGeneration({
-        Project:           [projet.id],
+        project:           [projet.id],
         generation_no:     dernierNo + 1,
         type:              'regeneration',
         lyrics:            parsed.lyrics,
