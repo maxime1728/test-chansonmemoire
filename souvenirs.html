@@ -283,6 +283,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   const data = {
     token:            token,
     regeneration:     isRegen,   /* token existant => MAKE A cree une nouvelle Generation, pas un nouveau Project */
+    mode:             new URLSearchParams(window.location.search).get('mode') || '',  /* '' | 'cover' — MAKE branche upload-cover si 'cover' */
     deceased_name:    '',
     relationship:     '',
     music_style:      '',
