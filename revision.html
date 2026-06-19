@@ -59,15 +59,13 @@
     .modifs-exemples { background:var(--mauve-pale); border-top:1px solid #D8CEE8; border-bottom:1px solid #D8CEE8; padding:14px 24px; }
     .exemples-titre { font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--mauve); font-weight:500; margin-bottom:10px; }
     .exemples-liste { list-style:none; display:flex; flex-wrap:wrap; gap:8px; }
-    /* GARDE-FOU CSS : bulle qui ne casse jamais la mise en page, même longue */
+    /* GARDE-FOU CSS : bulle qui ne casse jamais la mise en page, même longue. Lecture seule (inspiration). */
     .exemple-chip {
       background:white; border:1px solid #D8CEE8; border-radius:20px; padding:6px 14px;
-      font-size:12.5px; color:var(--encre-doux); cursor:pointer; transition:all 0.15s; user-select:none;
+      font-size:12.5px; color:var(--encre-doux); user-select:none;
       max-width:100%; white-space:normal; word-break:break-word; line-height:1.35; text-align:left;
     }
-    .exemple-chip:hover { background:var(--mauve); color:white; border-color:var(--mauve); }
-    .exemple-chip.vide { color:#B8A8C8; font-style:italic; cursor:default; }
-    .exemple-chip.vide:hover { background:white; color:#B8A8C8; border-color:#D8CEE8; }
+    .exemple-chip.vide { color:#B8A8C8; font-style:italic; }
     .modifs-champ { padding:20px 24px; }
     textarea#modifications { width:100%; min-height:120px; padding:16px; border:1.5px solid var(--papier-alt); border-radius:8px; font-family:'Inter',sans-serif; font-size:14px; color:var(--encre); background:var(--papier); resize:vertical; outline:none; line-height:1.6; }
     textarea#modifications::placeholder { color:#B8A8C8; font-style:italic; }
@@ -162,7 +160,7 @@
           <p class="modifs-description">Décrivez ce que vous aimeriez ajouter, retirer ou reformuler. Les nouvelles paroles garderont tout ce qui fonctionne et n'appliqueront que vos changements.</p>
         </div>
         <div class="modifs-exemples">
-          <div class="exemples-titre">Suggestions inspirées de vos paroles</div>
+          <div class="exemples-titre">Quelques pistes, inspirées de vos réponses</div>
           <ul class="exemples-liste" id="liste-suggestions">
             <li class="exemple-chip vide">Les suggestions apparaîtront ici…</li>
           </ul>
@@ -245,9 +243,8 @@
       }
       arr.forEach(function(s){
         var li=document.createElement('li');
-        li.className='exemple-chip';
+        li.className='exemple-chip';   // non cliquable : pure inspiration
         li.textContent=s;
-        li.onclick=function(){ ajouterSuggestion(s); };
         ul.appendChild(li);
       });
     }
