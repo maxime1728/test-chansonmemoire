@@ -334,11 +334,19 @@
     async function confirmerProd(){
       fermerPopup();
       try {
-        await fetch(WEBHOOK_MAKE_B,{
+        var res = await fetch(WEBHOOK_MAKE_B,{
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({ token:token, sans_modification:true, mode:'song', post_purchase:false })
         });
+        var data = {};
+        try { data = await res.json(); } catch(e){}
+        if(data && data.status === 'plafond'){
+          // Plafond atteint -> on affiche le message « nous contacter », pas de redirection.
+          setTexte('erreur-detail', data.message || "Vous avez atteint la limite de régénérations. Écrivez-nous et nous vous aiderons avec plaisir.");
+          montrer('etat-erreur');
+          return;
+        }
       } catch(e){ console.error('Webhook B error:', e); }
       montrer('etat-soumission');
       setTimeout(function(){ window.location.href=URL_ATTENTE+'?id='+encodeURIComponent(token); }, 2500);

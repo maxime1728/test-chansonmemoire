@@ -169,7 +169,14 @@
       method:'POST', headers:{ 'Content-Type':'application/json' },
       body:JSON.stringify(payload)
     })
-    .then(function(){
+    .then(function(r){ return r.json().catch(function(){ return {}; }); })
+    .then(function(res){
+      if(res && res.status === 'plafond'){
+        // Plafond atteint -> message « nous contacter », on réactive le bouton.
+        btn.disabled = false;
+        showActMsg(res.message || 'Vous avez atteint la limite de régénérations. Écrivez-nous et nous vous aiderons avec plaisir.');
+        return;
+      }
       showActMsg('Votre nouvelle version est en cours — vous la recevrez par courriel et elle apparaîtra ici dans quelques minutes.');
     })
     .catch(function(){
