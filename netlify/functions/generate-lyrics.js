@@ -217,7 +217,7 @@ ${modifications}`;
       const gen = await createGeneration({
         project:           [projet.id],
         generation_no:     dernierNo + 1,
-        type:              'lyrics_regeneration',
+        type:              'regeneration',
         lyrics:            parsed.lyrics,
         song_title:        nouveauTitre,
         requested_changes: modifications,
