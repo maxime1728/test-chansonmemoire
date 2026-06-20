@@ -1185,14 +1185,14 @@ body {
 /* ── STRIPE — tous les boutons ──────────────────────── */
 (function() {
   var email   = (window._CM && window._CM.email)  || '';
-  var taskid  = (window._CM && window._CM.taskid) || '';
+  var token   = (window._CM && window._CM.id)     || '';   /* UUID = clé pour MAKE D (Stripe → Project) */
   var baseUrl = 'https://buy.stripe.com/7sYdR90kSdrc5367Xl9Ve00';
 
   function goStripe() {
     if (window._cmFunnel) window._cmFunnel('checkout_started');   /* intention d'achat (avant redirection) */
     window.location.href = baseUrl
       + '?prefilled_email='     + encodeURIComponent(email)
-      + '&client_reference_id=' + encodeURIComponent(taskid);
+      + '&client_reference_id=' + encodeURIComponent(token);   /* token => MAKE D retrouve le Project */
   }
 
   ['stripeBtnPricing', 'stripeBtnBottom', 'stripeBtnSticky'].forEach(function(id) {
