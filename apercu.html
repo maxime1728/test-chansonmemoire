@@ -1096,6 +1096,40 @@ body {
   });
 })();
 
+/* ── CHARGE L'AUDIO PAR TOKEN (lire-projet) ─────────────
+   La redirection arrive avec ?id=TOKEN (sans preview1). On recupere l'audio via
+   lire-projet et on l'injecte dans le lecteur. Preview 60s = transformation
+   Cloudinary (du_60) tant que la chanson n'est pas achetee. */
+(function() {
+  var token = (window._CM && window._CM.id) || '';
+  if (!token) return;
+
+  function preview60(url) {
+    if (!url) return url;
+    var parts = url.split('/upload/');
+    return (parts.length === 2) ? (parts[0] + '/upload/du_60/' + parts[1]) : url;
+  }
+
+  fetch('/api/lire-projet', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token })
+  })
+  .then(function(r) { return r.ok ? r.json() : null; })
+  .then(function(d) {
+    if (!d || !d.audio_url) return;
+    var url = (d.commercial_status === 'purchased') ? d.audio_url : preview60(d.audio_url);
+    var wrap = document.querySelector('.cm-player-wrap');
+    if (!wrap) return;
+    var audio  = wrap.querySelector('.cm-audio');
+    var source = audio ? audio.querySelector('source') : null;
+    var btn    = wrap.querySelector('.cm-play-btn');
+    if (source) { source.src = url; audio.load(); }
+    wrap.style.opacity = '1';
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class="fa-solid fa-play"></i>'; }
+  })
+  .catch(function() {});
+})();
+
 /* ── PERSONNALISATION NOM ───────────────────────────── */
 (function() {
   var nom = (window._CM && window._CM.nom) ? window._CM.nom : '';
