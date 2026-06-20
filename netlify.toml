@@ -3,6 +3,10 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # CLOUDINARY_CLOUD_NAME = nom public Cloudinary (présent dans toutes les URLs d'assets, ex. index.html).
+  # Ce n'est PAS un secret -> on l'exclut du scanner de secrets Netlify, qui sinon fait échouer le build.
+  # Les vraies clés (CLOUDINARY_API_SECRET, AIRTABLE_TOKEN, ANTHROPIC_API_KEY…) restent scannées.
+  SECRETS_SCAN_OMIT_KEYS = "CLOUDINARY_CLOUD_NAME"
 
 [[redirects]]
   from = "/api/*"
