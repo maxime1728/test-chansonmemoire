@@ -144,7 +144,7 @@
       <div class="erreur-icone">✦</div>
       <div class="erreur-titre">Quelque chose s'est passé</div>
       <div class="erreur-msg" id="erreur-detail">Une erreur inattendue est survenue.</div>
-      <button class="btn-reessayer" onclick="location.reload()">Réessayer</button>
+      <button class="btn-reessayer" onclick="reessayer()">Réessayer</button>
     </div>
 
     <!-- CONTENU -->
@@ -305,6 +305,25 @@
     }
     function arreterPolling(){ fini=true; if(pollTimer) clearInterval(pollTimer); pollTimer=null; }
 
+    /* ── RÉESSAYER : UNE relance réelle (régénère depuis les réponses stockées), pas une boucle ── */
+    async function reessayer(){
+      var btn = document.querySelector('.btn-reessayer');
+      if(btn){ btn.disabled = true; btn.textContent = 'Un instant…'; }
+      setTexte('erreur-detail', 'Nous relançons la création de vos paroles…');
+      try {
+        var res = await fetch('/api/generate-lyrics', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ mode:'retry', token: token })
+        });
+        var d = await res.json();
+        if(res.ok && d && d.paroles){ arreterPolling(); afficher(d); return; }
+        throw new Error('retry');
+      } catch(e){
+        setTexte('erreur-detail', "La création n'a pas pu aboutir cette fois. Nous finalisons vos paroles et vous enverrons un courriel dès qu'elles seront prêtes — vous pourrez revenir avec le lien reçu.");
+        if(btn){ btn.disabled = false; btn.textContent = 'Réessayer'; }
+      }
+    }
+
     async function checkStatut(){
       if(fini) return;
       if(document.hidden) return;
@@ -383,7 +402,7 @@
 
     /* expose pour les onclick inline */
     window.regenerer=regenerer; window.ouvrirPopup=ouvrirPopup; window.fermerPopup=fermerPopup; window.confirmerProd=confirmerProd;
-    window.ajustementRapide=ajustementRapide;
+    window.ajustementRapide=ajustementRapide; window.reessayer=reessayer;
 
     /* ── INIT ── */
     if(!token){

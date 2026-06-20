@@ -166,6 +166,75 @@ exports.handler = async (event) => {
 
   const mode = d.mode || 'create';
 
+  /* ═══════════════ MODE RETRY (bouton « Réessayer » de revision) ═══════════════
+     Relance UNE fois la création des paroles à partir des inputs déjà stockés sur le
+     Project (cas : MAKE A a échoué -> Project orphelin sans Generation). Anti-doublon :
+     si une Generation avec paroles existe déjà (MAKE A juste lent), on la renvoie. */
+  if (mode === 'retry') {
+    const token = (d.token || '').trim();
+    if (!token) return { statusCode: 400, body: JSON.stringify({ error: 'Token manquant' }) };
+    try {
+      const projet = await findProjectByToken(token);
+      if (!projet) return { statusCode: 404, body: JSON.stringify({ error: 'Introuvable' }) };
+
+      const derniere = await findLastGeneration(projet.fields.project);
+      if (derniere && derniere.fields.lyrics && String(derniere.fields.lyrics).trim()) {
+        let sugg = [];
+        try { sugg = JSON.parse(derniere.fields.suggestions || '[]'); } catch (_) {}
+        return {
+          statusCode: 200, headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            titre:       derniere.fields.song_title || '',
+            paroles:     derniere.fields.lyrics,
+            suggestions: normSuggestions(sugg),
+            statut:      derniere.fields.generation_status || 'lyrics_generated'
+          })
+        };
+      }
+
+      // Aucune Generation utilisable -> on (re)génère depuis les réponses du Project.
+      const p = projet.fields;
+      const userPrompt =
+`Provided information:
+- In memory of: ${p.deceased_name || 'cette personne'}
+- Relationship to the person ordering: ${p.relationship || ''}
+- Musical style: ${p.music_style || ''}
+- Mood: ${p.mood || ''}
+- What made them unique: ${p.what_made_unique || ''}
+- Shared memories: ${p.memories || ''}
+- What we want to keep and pass on: ${p.memory_to_keep || ''}`;
+
+      const r = await callAnthropic(systemCreate(), userPrompt, apiKey);
+      if (!r.ok) return { statusCode: 502, body: JSON.stringify({ error: 'Erreur de génération' }) };
+      const parsed = parseModel(r.data);
+      if (!parsed || parsed.error === 'invalid_input' || !parsed.lyrics || !String(parsed.lyrics).trim()) {
+        return { statusCode: 422, body: JSON.stringify({ error: 'invalid_input' }) };
+      }
+      const suggestions = normSuggestions(parsed.suggestions);
+      const titre = parsed.title || `Pour ${p.deceased_name || 'cette personne'}`;
+      const dernierNo = derniere ? (Number(derniere.fields.generation_no) || 0) : 0;
+
+      const gen = await createGeneration({
+        project:           [projet.id],
+        generation_no:     dernierNo + 1,
+        type:              'lyrics',
+        lyrics:            parsed.lyrics,
+        song_title:        titre,
+        generation_status: 'lyrics_generated',
+        suggestions:       JSON.stringify(suggestions)
+      });
+      if (!gen.ok) return { statusCode: 502, body: JSON.stringify({ error: 'Écriture Airtable échouée' }) };
+      await updateProject(projet.id, { funnel_step: 'lyrics_generated' });
+
+      return {
+        statusCode: 200, headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ titre: titre, paroles: parsed.lyrics, suggestions: suggestions, statut: 'lyrics_generated' })
+      };
+    } catch (err) {
+      return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
+    }
+  }
+
   /* ═══════════════ MODE RÉGÉNÉRATION ═══════════════ */
   if (mode === 'regenerate') {
     const token = (d.token || '').trim();
