@@ -351,7 +351,13 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
       if(b.dataset.value === value){ b.classList.add('selected'); data[dataKey] = value; }
     });
   }
-  if(isRegen){
+  // Pré-remplir UNIQUEMENT sur un vrai clic « Régénérer » (param regen=1), pas sur un retour-arrière.
+  var wantPrefill = isRegen && (new URLSearchParams(window.location.search).get('regen') === '1');
+  // Recharge un formulaire vierge si la page est restaurée depuis le cache (bouton précédent).
+  window.addEventListener('pageshow', function(e){ if(e.persisted) location.reload(); });
+  if(wantPrefill){
+    // On retire regen=1 de l'URL pour qu'un retour-arrière ne re-déclenche pas le pré-remplissage.
+    try { history.replaceState({}, '', '/souvenirs?id=' + encodeURIComponent(token)); } catch(e){}
     fetch('/api/lire-survey', {
       method:'POST', headers:{ 'Content-Type':'application/json' },
       body:JSON.stringify({ token: token })
