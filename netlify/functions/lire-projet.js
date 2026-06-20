@@ -20,6 +20,14 @@ function formulaLiteral(v) {
   return null;
 }
 
+// Force le https sur l'URL audio servie au navigateur. Filet défensif : certaines
+// Generations existantes ont pu stocker une URL Cloudinary en http (avant le fix
+// `secure_url` côté Make C-cb) -> cadenas barré « contenu non sécurisé ». Cloudinary
+// sert le même chemin en https, donc la réécriture est sûre. No-op si déjà https/vide.
+function toHttps(u) {
+  return (typeof u === 'string') ? u.replace(/^http:\/\//i, 'https://') : u;
+}
+
 exports.handler = async (event) => {
   // On accepte seulement le POST
   if (event.httpMethod !== 'POST') {
@@ -84,7 +92,7 @@ exports.handler = async (event) => {
         titre:             gen.song_title || '',
         paroles:           gen.lyrics || '',
         statut:            gen.generation_status || '',     // lyrics_generated / audio_generated / validated
-        audio_url:         gen.cloudinary_audio_url || '',
+        audio_url:         toHttps(gen.cloudinary_audio_url || ''),
         suggestions:       gen.suggestions || '[]',         // bulles dynamiques — exposition INTENTIONNELLE (au-delà des 5 champs §6 ; à refléter dans CLAUDE.md §6)
         commercial_status: projet.fields.commercial_status || 'preview_only'
         // PAS d'email, PAS de stripe_*, PAS d'attribution. Volontaire.

@@ -16,6 +16,14 @@ function formulaLiteral(v) {
   return null;
 }
 
+// Force le https sur l'URL audio servie au navigateur. Filet défensif : une
+// Generation peut avoir stocké une URL Cloudinary en http (avant le fix
+// `secure_url` côté Make C-cb) -> cadenas barré. Cloudinary sert le même chemin
+// en https, donc la réécriture est sûre. No-op si déjà https/vide.
+function toHttps(u) {
+  return (typeof u === 'string') ? u.replace(/^http:\/\//i, 'https://') : u;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Méthode non permise' }) };
@@ -80,7 +88,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audio_url: audioUrl })
+      body: JSON.stringify({ audio_url: toHttps(audioUrl) })
     };
 
   } catch (err) {
