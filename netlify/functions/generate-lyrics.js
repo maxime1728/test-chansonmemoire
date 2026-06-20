@@ -140,6 +140,17 @@ async function createGeneration(fields) {
   return { ok: r.ok, data: await r.json() };
 }
 
+// Met à jour le Project (best-effort, ne bloque jamais la réponse au client).
+async function updateProject(recordId, fields) {
+  try {
+    await fetch(`${AT_API}/Projects/${recordId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields })
+    });
+  } catch (_) { /* le suivi de parcours ne doit jamais casser la génération */ }
+}
+
 /* ───────────────────── HANDLER ───────────────────── */
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -216,6 +227,9 @@ ${modifications}`;
       if (!gen.ok) {
         return { statusCode: 502, body: JSON.stringify({ error: 'Écriture Airtable échouée', detail: gen.data }) };
       }
+
+      // Suivi du parcours : paroles régénérées
+      await updateProject(projet.id, { funnel_step: 'regenerated' });
 
       // 5. Renvoyer à la page
       return {
