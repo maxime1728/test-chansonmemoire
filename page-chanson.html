@@ -95,8 +95,8 @@
 (function(){
   'use strict';
   var ACCEPT_TEXT_VERSION = 'cgv-livraison-v1-2026-06';
-  /* Proxy serveur (cache l'URL du webhook Make + secret). Plus d'URL de webhook dans la page. */
-  var MAKE_C_GEN_WEBHOOK = '/api/lancer-chanson';
+  /* Webhook direct CM - MAKE C-gen. (Proxy remis a la fin, une fois le coeur teste.) */
+  var MAKE_C_GEN_WEBHOOK = 'https://hook.us1.make.com/uxpwxw1xqjm3x7mt35qjvdm2t8y9fvv4';
   var UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   var token = new URLSearchParams(window.location.search).get('id') || '';
 

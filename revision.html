@@ -214,9 +214,9 @@
 
     /* ── CONFIG ── */
     const URL_ATTENTE     = '/attente-chanson';
-    /* Confirmation des paroles -> proxy serveur /api/lancer-chanson (cache l'URL du webhook
-       Make + ajoute le secret). Plus aucune URL de webhook dans le code source. */
-    const WEBHOOK_MAKE_B  = '/api/lancer-chanson';
+    /* Confirmation des paroles -> webhook direct CM - MAKE C-gen.
+       (Proxy /api/lancer-chanson remis a la fin, une fois le coeur teste + env vars Netlify.) */
+    const WEBHOOK_MAKE_B  = 'https://hook.us1.make.com/uxpwxw1xqjm3x7mt35qjvdm2t8y9fvv4';
 
     const token = new URLSearchParams(location.search).get('id');
 
