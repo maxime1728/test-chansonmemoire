@@ -1177,7 +1177,7 @@ body {
       'Régénérer créera une nouvelle version de la chanson à partir du formulaire.\n'
       + 'La version actuelle sera remplacée. Voulez-vous continuer ?'
     );
-    if (ok) window.location.href = '/souvenirs?id=' + encodeURIComponent(token);
+    if (ok) window.location.href = '/souvenirs?id=' + encodeURIComponent(token) + '&regen=1';
   });
 
   wrap.appendChild(btn);
