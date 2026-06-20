@@ -41,7 +41,7 @@ TENSE: past for facts, present for what remains. Never future for the person.
 
 TRUTH — ABSOLUTE RULE: use ONLY the information provided. NEVER invent a name, place, memory, or event. If a field is empty or vague, stay general. Prioritize concrete, unique details. A special phrase provided MUST appear in the chorus or bridge.
 
-INVALID INPUT: if the information is meaningless, random keystrokes, or gibberish with no usable detail, do NOT write a song and do NOT ask questions. Respond ONLY with: {"error":"invalid_input"}.
+INVALID INPUT — LAST RESORT ONLY: return {"error":"invalid_input"} ONLY when the inputs are pure gibberish or random keystrokes (e.g. "asdfgh", "kkkk", "....") with NO usable detail at all. A first name plus even ONE short detail, brief answers, or typos (e.g. "ete au chalet", "conduite cowwwboy") are ENOUGH — write the song from what is there, correcting obvious typos. When in doubt, WRITE THE SONG. Never refuse just because the answers are short.
 
 STRUCTURE (in order, sections not named in the text):
 Verse 1: who they were, concrete, past tense. Verse 2: specific memories (place, moment, habit). Pre-chorus: lift toward gratitude. Chorus: celebrate the person, first name if natural. Bridge: most intimate, what went unsaid. Outro: how they live on, end on peace.
@@ -178,7 +178,10 @@ exports.handler = async (event) => {
       if (!projet) return { statusCode: 404, body: JSON.stringify({ error: 'Introuvable' }) };
 
       const derniere = await findLastGeneration(projet.fields.project);
-      if (derniere && derniere.fields.lyrics && String(derniere.fields.lyrics).trim()) {
+      const parolesValides = derniere && derniere.fields.lyrics
+        && String(derniere.fields.lyrics).trim()
+        && !String(derniere.fields.lyrics).includes('"invalid_input"');   // ignore une Generation cassée
+      if (parolesValides) {
         let sugg = [];
         try { sugg = JSON.parse(derniere.fields.suggestions || '[]'); } catch (_) {}
         return {

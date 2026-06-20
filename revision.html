@@ -303,6 +303,11 @@
       setTexte('erreur-detail', "La création prend un peu plus de temps que prévu. Nous vous enverrons un courriel dès que vos paroles seront prêtes — vous pourrez revenir avec le lien reçu.");
       montrer('etat-erreur');
     }
+    /* Paroles non générables (réponses trop minces) : message utile + Réessayer relance la génération. */
+    function afficherInputInsuffisant(){
+      setTexte('erreur-detail', "Les réponses fournies étaient un peu courtes pour composer la chanson. Cliquez « Réessayer » pour relancer, ou recommencez le formulaire en ajoutant un souvenir ou ce qui rendait la personne unique.");
+      montrer('etat-erreur');
+    }
     function arreterPolling(){ fini=true; if(pollTimer) clearInterval(pollTimer); pollTimer=null; }
 
     /* ── RÉESSAYER : UNE relance réelle (régénère depuis les réponses stockées), pas une boucle ── */
@@ -333,6 +338,7 @@
         var d=await res.json();
         if(res.ok && STATUTS_PRETS.indexOf(d.statut)!==-1 && d.paroles){
           arreterPolling();
+          if(String(d.paroles).indexOf('invalid_input')!==-1){ afficherInputInsuffisant(); return; }  // paroles = erreur, pas du contenu
           afficher(d);
           return;
         }
