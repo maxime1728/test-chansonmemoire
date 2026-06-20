@@ -75,15 +75,15 @@
 
 ## 4. ⚠️ EN SUSPENS / NON RÉSOLU / À SURVEILLER (le plus important)
 
-1. **🔑 CRITIQUE — clé Suno à re-saisir.** C-gen a été réécrit via MCP → le header du **module 8 (HTTP api.sunoapi.org)**
-   contient `Bearer VOTRE_CLE_SUNO` (placeholder). **Tant que Maxime n'a pas remis sa vraie clé, AUCUNE chanson ne se génère.**
-   (Le module 8 est HTTP → ses champs s'affichent normalement dans l'éditeur, éditable tout de suite.)
+1. **🔑 RÉSOLU (2026-06-20) — clé Suno en place.** Le header du **module 8 (HTTP api.sunoapi.org)** porte désormais une vraie
+   clé `Bearer …` (plus de placeholder). **Prouvé par usage** : exéc. C-gen `4792851` du 2026-06-20 17:28 (9 ops, vrai appel
+   Suno) → callback C-cb `4792855` OK → Project test `guigluig` (token `29ddc7fc…`) arrivé à `funnel_step=preview_played`.
 
-2. **🔧 Token Airtable sans scope `schema.bases:read`.** La connexion Make-Airtable (token PAT) a `data.records:read/write`
-   (donc ça TOURNE) mais **pas le scope schéma** → l'éditeur Make **affiche les champs Airtable VIDES** sur les modules
-   Create/Update Record. **DANGER : sauver un module qui semble vide EFFACE les mappings** (c'est ce qui a cassé C-cb avant).
-   **Fix : ajouter `schema.bases:read` au PAT + reconnecter la connexion dans Make.** Tant que non fait, ne PAS éditer/sauver
-   les modules Airtable dans l'UI. (Les scénarios C-cb/C-gen/MAKE A tournent malgré l'affichage vide — mappés par field ID.)
+2. **🔧 RÉSOLU (2026-06-20) — scope `schema.bases:read` présent.** La connexion câblée dans TOUS les scénarios CM est
+   `4766682` « Maxime's Connection » (**Airtable OAuth**, pas un PAT). Scopes réels vérifiés via MCP : `schema.bases:read` +
+   `data.records:read` + `data.records:write`. → L'éditeur Make affiche désormais les champs ; **éditer/sauver un module
+   Airtable ne vide plus les mappings** ; garde-fou « ne pas toucher les modules Airtable » = **LEVÉ**.
+   (Hygiène : 2 connexions Airtable orphelines `4804199`/`4804205` créées pendant le fix, non utilisées — à supprimer.)
 
 3. **MAKE D pas activé.** À faire : importer `CM-D-REBUILD.blueprint.json` → créer le webhook (module 1) → coller son URL
    dans **Stripe Dashboard → Webhooks** (événement `checkout.session.completed`) → mettre la **clé Stripe restreinte TEST**
@@ -101,12 +101,14 @@
    *(NB : `generate-lyrics` retourne la 422 invalid_input en `text/plain` → côté Make `{{5.data}}` est une STRING, d'où le
    filtre sur `statusCode` et non sur `data.lyrics`.)*
 
-6. **Phase 5 — CONFIRMÉE ✅.** Preview 60 s joue + URL = `…/authenticated/s--…--/du_60/cm_….mp3` vérifiée (du_60 présent
-   dans la source audio). Fuite fermée : retirer `/du_60/` invalide la signature → 401 (asset authenticated, du_60 dans le toSign).
-   Spot-check optionnel restant : confirmer le 401 en retirant `/du_60/` à la main. Si un jour 401 sur un preview légitime :
-   ajuster le `toSign` (le plus probable = enlever `.mp3`).
-   **Algo = SHA-1** (imposé par Cloudinary ; alerte CodeQL « weak crypto » = **faux positif**, à dismiss en « Won't fix » —
-   NE PAS accepter la suggestion Copilot HMAC/SHA-256 qui casserait la signature).
+6. **Phase 5 — VÉRIFIÉE ✅ (tests live 2026-06-20, token `29ddc7fc…`).** Trois GET en direct :
+   (a) URL signée `…/authenticated/s--…--/du_60/cm_….mp3` → **200** (le preview joue) ;
+   (b) même URL **sans** `/du_60/` → **401** (signature cassée — fuite fermée, `du_60` est dans le `toSign`) ;
+   (c) `/api/telecharger` sur projet `preview_only` → **403** (chanson complète gatée `purchased`).
+   **Reste 1 geste manuel** : dismiss les **2 alertes CodeQL « weak crypto »** (SHA-1 sur `lire-projet.js`~l.52 et
+   `telecharger.js`~l.43) en **« Won't fix »** — SHA-1 est imposé par le schéma d'URL signée Cloudinary (faux positif).
+   **NE PAS** accepter la suggestion Copilot HMAC/SHA-256 (casserait la signature → 401 sur tous les previews).
+   Si un jour 401 sur un preview légitime : ajuster le `toSign` (le plus probable = enlever `.mp3`).
 
 7. **Phase 6 — choix de version à l'achat** : pas commencé. Garder toutes les versions, `lire-projet` renvoie la liste,
    sélecteur sur apercu, l'achat enregistre la version choisie. ⚠️ touche la chaîne argent → incrémental.
@@ -134,12 +136,11 @@
 ---
 
 ## 5. PROCHAINES ÉTAPES (ordre recommandé)
-1. **Maxime : re-saisir la clé Suno** dans C-gen module 8 (sinon rien ne génère).
-2. **Maxime : ajouter `schema.bases:read` au token Airtable + reconnecter** (rend l'éditeur Make utilisable sans casser).
-3. **Test end-to-end d'une NOUVELLE chanson** : survey → paroles → confirme → C-gen (Suno) → callback → **C-cb met
-   `audio_generated`** → `/attente-chanson` **redirige vers `/apercu`** → preview signé joue. Confirmer aussi le funnel.
-4. **Finir la vérif Phase 5** : du_60 présent dans l'URL + strip du_60 → 401 + dismiss l'alerte CodeQL SHA-1.
-5. **Activer MAKE D** (webhook Stripe + clé restreinte TEST) → tester un achat 1 $ → `purchased` + courriel + déblocage livraison.
+1. ✅ **FAIT** — clé Suno en place dans C-gen module 8 (génère, vérifié 2026-06-20).
+2. ✅ **FAIT** — `schema.bases:read` présent sur la connexion Airtable `4766682` (éditeur Make sûr).
+3. ✅ **FAIT** — end-to-end NOUVELLE chanson vert : Project `guigluig` arrivé à `preview_played` (preview signé joué).
+4. ✅ **VÉRIFIÉE** — Phase 5 : tests live 200 / 401 / 403 OK (voir §4.6). *Reste : dismiss manuel des 2 alertes CodeQL.*
+5. **→ PROCHAIN : Activer MAKE D** (webhook Stripe + clé restreinte TEST) → tester un achat 1 $ → `purchased` + courriel + déblocage livraison.
 6. **CAPI** « Lead » (MAKE A) puis « Purchase » (MAKE D) quand les identifiants Meta sont dispo (+ valider le flag Loi 25).
 7. **Phase 6** (choix de version) + chaîne **cover** réelle.
 
@@ -161,6 +162,6 @@
 | Scénario | État | Note |
 |---|---|---|
 | MAKE A (4789787) | ✅ rebuild A+B + funnel ; garde invalid_input **à confirmer appliqué** | `{{0+1}}`, parseNumber, formatDate |
-| C-gen (4792851) | ✅ réécrit (field IDs) | **🔑 clé Suno = placeholder à remettre** |
+| C-gen (4792851) | ✅ réécrit (field IDs) ; **clé Suno en place** (génère, vérifié 2026-06-20) | OK |
 | C-cb (4792855) | ✅ patché (status + song_id + authenticated + funnel + email) | OK |
 | MAKE D | ⏳ bâti, **pas importé/activé** | webhook Stripe + clé TEST requis |
