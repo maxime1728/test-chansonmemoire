@@ -80,6 +80,16 @@ exports.handler = async (event) => {
       return { statusCode: 502, body: JSON.stringify({ error: 'Écriture impossible' }) };
     }
 
+    // 3b. Suivi du parcours (best-effort, PATCH SÉPARÉ) : ne jamais coupler la preuve de
+    //     livraison à l'option single-select funnel_step (un 422 ici n'empêche pas la révélation).
+    try {
+      await fetch(`${API}/Projects/${projet.id}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { funnel_step: 'delivery_accepted' } })
+      });
+    } catch (_) { /* le suivi ne doit jamais bloquer la livraison */ }
+
     // 4. Succès → la page peut se révéler.
     return {
       statusCode: 200,

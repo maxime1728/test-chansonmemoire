@@ -22,6 +22,22 @@
     document.title = 'Aperçu pour ' + window._CM.nom + ' — Chanson Mémoire';
   }
 })();
+
+/* ── SUIVI FUNNEL (best-effort, ne casse jamais l'UX) ──
+   Envoie un événement de parcours à /api/suivi-funnel. sendBeacon survit à la navigation
+   (utile pour checkout_started juste avant la redirection Stripe). */
+window._cmFunnel = function(evt) {
+  try {
+    var t = (window._CM && window._CM.id) || '';
+    if (!t) return;                                  /* pas de token => aperçu legacy, on ne track pas */
+    var payload = JSON.stringify({ token: t, event: evt });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/suivi-funnel', new Blob([payload], { type: 'application/json' }));
+    } else {
+      fetch('/api/suivi-funnel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(function(){});
+    }
+  } catch (e) {}
+};
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Mulish:wght@400;500;600;700;800&family=Sora:wght@400;600&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
@@ -1071,7 +1087,7 @@ body {
     btn.addEventListener('click', function() {
       if (!source.src) return;
       if (audio.paused) {
-        audio.play().then(function() { btn.innerHTML='<i class="fa-solid fa-pause"></i>'; eq.classList.add('active'); }).catch(function(e){console.error(e);});
+        audio.play().then(function() { btn.innerHTML='<i class="fa-solid fa-pause"></i>'; eq.classList.add('active'); if(window._cmFunnel && !window._cmPreviewPinged){ window._cmPreviewPinged=true; window._cmFunnel('preview_played'); } }).catch(function(e){console.error(e);});
       } else { audio.pause(); btn.innerHTML='<i class="fa-solid fa-play"></i>'; eq.classList.remove('active'); }
     });
 
@@ -1173,6 +1189,7 @@ body {
   var baseUrl = 'https://buy.stripe.com/7sYdR90kSdrc5367Xl9Ve00';
 
   function goStripe() {
+    if (window._cmFunnel) window._cmFunnel('checkout_started');   /* intention d'achat (avant redirection) */
     window.location.href = baseUrl
       + '?prefilled_email='     + encodeURIComponent(email)
       + '&client_reference_id=' + encodeURIComponent(taskid);

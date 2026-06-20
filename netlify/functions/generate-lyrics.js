@@ -228,8 +228,8 @@ ${modifications}`;
         return { statusCode: 502, body: JSON.stringify({ error: 'Écriture Airtable échouée', detail: gen.data }) };
       }
 
-      // Suivi du parcours : paroles régénérées
-      await updateProject(projet.id, { funnel_step: 'regenerated' });
+      // Suivi du parcours : régén paroles = retour à l'étape « paroles » du funnel (best-effort).
+      await updateProject(projet.id, { funnel_step: 'lyrics_generated' });
 
       // 5. Renvoyer à la page
       return {
