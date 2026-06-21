@@ -96,25 +96,27 @@ exports.handler = async (event) => {
     const projet  = dP.records[0];
     const projetId = projet.id;
 
-    // 2. Trouver la Generation la plus récente de ce projet (tri par generation_no desc)
-    //    La valeur {project} vient d'Airtable, pas de l'utilisateur, mais on
-    //    l'échappe quand même (défense en profondeur). Valeur inexploitable -> 500.
+    // 2. Choisir la bonne Generation : après achat -> la version ACHETÉE (purchased_generation_no) ;
+    //    sinon -> la plus récente. {project} vient d'Airtable mais on l'échappe (défense en profondeur).
+    const isPaid   = (projet.fields.commercial_status || 'preview_only') === 'purchased';
+    const boughtNo = isPaid ? parseInt(projet.fields.purchased_generation_no, 10) : NaN;
+
     const projLit = formulaLiteral(projet.fields.project);
     if (projLit === null) {
       return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
     }
-    const formuleG = encodeURIComponent(`{project}=${projLit}`);
-    const rG = await fetch(
-      `${API}/Generations?filterByFormula=${formuleG}` +
-      `&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=1`,
-      { headers }
-    );
+    const formuleG = Number.isInteger(boughtNo)
+      ? encodeURIComponent(`AND({project}=${projLit}, {generation_no}=${boughtNo})`)   // version achetée
+      : encodeURIComponent(`{project}=${projLit}`);                                     // sinon la plus récente
+    const triG = Number.isInteger(boughtNo)
+      ? ''
+      : '&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc';
+    const rG = await fetch(`${API}/Generations?filterByFormula=${formuleG}${triG}&maxRecords=1`, { headers });
     const dG = await rG.json();
     const gen = (dG.records && dG.records[0]) ? dG.records[0].fields : {};
 
     // Audio = URL Cloudinary SIGNÉE générée côté serveur. Si payé -> complète ; sinon -> preview 60s
     // (du_60 inclus DANS la signature -> non contournable). L'URL complète n'est jamais exposée avant achat.
-    const isPaid   = (projet.fields.commercial_status || 'preview_only') === 'purchased';
     const audioUrl = buildAudioUrl(gen.cloudinary_audio_url || '', isPaid ? '' : 'du_60');
 
     // 3. Réponse FILTRÉE — uniquement l'utile pour l'affichage

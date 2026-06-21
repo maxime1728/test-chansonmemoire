@@ -78,15 +78,17 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: JSON.stringify({ error: 'Non autorisé' }) };
     }
 
-    // 3. Generation la plus récente → URL Cloudinary complète.
+    // 3. Generation ACHETÉE (purchased_generation_no) si connue ; sinon la plus récente. → URL complète.
     const projLit = formulaLiteral(projet.fields.project);
     if (projLit === null) return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
-    const formuleG = encodeURIComponent(`{project}=${projLit}`);
-    const rG = await fetch(
-      `${API}/Generations?filterByFormula=${formuleG}` +
-      `&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=1`,
-      { headers }
-    );
+    const boughtNo = parseInt(projet.fields.purchased_generation_no, 10);
+    const formuleG = Number.isInteger(boughtNo)
+      ? encodeURIComponent(`AND({project}=${projLit}, {generation_no}=${boughtNo})`)
+      : encodeURIComponent(`{project}=${projLit}`);
+    const triG = Number.isInteger(boughtNo)
+      ? ''
+      : '&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc';
+    const rG = await fetch(`${API}/Generations?filterByFormula=${formuleG}${triG}&maxRecords=1`, { headers });
     const dG = await rG.json();
     const gen = (dG.records && dG.records[0]) ? dG.records[0].fields : {};
     const audioUrl = gen.cloudinary_audio_url || '';
