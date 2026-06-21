@@ -111,7 +111,9 @@ exports.handler = async (event) => {
 
     // 5. Renvoie l'URL complète SIGNÉE (authenticated). Fallback toHttps acceptable ici car déjà
     //    gaté `purchased` (un client payant peut recevoir l'URL même avant la bascule authenticated).
-    const fullUrl = buildAudioUrl(audioUrl, '') || toHttps(audioUrl);
+    // fl_attachment -> Cloudinary répond Content-Disposition: attachment => le navigateur TÉLÉCHARGE
+    // le fichier (au lieu d'ouvrir/jouer la page Cloudinary). Le flag est inclus dans la signature.
+    const fullUrl = buildAudioUrl(audioUrl, 'fl_attachment:chanson-memoire') || toHttps(audioUrl);
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
