@@ -801,6 +801,65 @@ body {
   text-decoration: underline;
   opacity: 0.7;
 }
+
+/* ════════════════════════════════════════════
+   RÉGÉNÉRATION — 2 boutons + modal « autre style »
+════════════════════════════════════════════ */
+.cm-regen-actions { display: flex; flex-direction: column; gap: 10px; max-width: 340px; margin: 18px auto 0; text-align: center; }
+.cm-regen-btn {
+  border-radius: 999px; padding: 12px 22px; font: 600 15px/1.2 'Mulish', sans-serif; cursor: pointer;
+  border: 1.5px solid var(--cm-plum-dark); background: none; color: var(--cm-plum-dark);
+  transition: background .15s, color .15s;
+}
+.cm-regen-btn:hover { background: var(--cm-plum-dark); color: #fff; }
+.cm-regen-btn-sec { border-color: var(--cm-mauve); color: var(--cm-plum-mid); }
+.cm-regen-btn-sec:hover { background: var(--cm-plum-mid); color: #fff; }
+.cm-regen-note { font-size: 13px; color: var(--cm-text-sub); margin-top: 2px; }
+
+.cm-modal-overlay {
+  position: fixed; inset: 0; z-index: 100; display: none;
+  align-items: center; justify-content: center; padding: 20px;
+  background: rgba(46,26,40,0.55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+.cm-modal-overlay.show { display: flex; }
+.cm-modal {
+  position: relative; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto;
+  background: var(--cm-white); border-radius: 20px; padding: 28px 24px;
+  box-shadow: 0 12px 48px rgba(46,26,40,0.30); font-family: 'Mulish', sans-serif;
+}
+.cm-modal-close {
+  position: absolute; top: 10px; right: 16px; background: none; border: none;
+  font-size: 26px; line-height: 1; color: var(--cm-text-sub); cursor: pointer;
+}
+.cm-modal-title { font-family: 'Fraunces', serif; font-style: italic; font-size: 22px; color: var(--cm-plum-dark); margin-bottom: 6px; }
+.cm-modal-sub { font-size: 14px; line-height: 1.5; color: var(--cm-text-sub); margin-bottom: 8px; }
+.cm-modal-label {
+  display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--cm-gold); margin: 16px 0 6px;
+}
+.cm-modal-opt { color: var(--cm-text-sub); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.cm-modal-select {
+  width: 100%; padding: 11px 36px 11px 14px; border-radius: 12px;
+  border: var(--cm-border-w) solid var(--cm-mauve); background-color: var(--cm-white);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238B4A6E' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat; background-position: right 14px center;
+  color: var(--cm-text); font-family: 'Mulish', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;
+}
+.cm-modal-select:focus { outline: none; border-color: var(--cm-plum-mid); }
+.cm-modal-textarea {
+  width: 100%; padding: 12px 14px; border-radius: 12px;
+  border: var(--cm-border-w) solid var(--cm-mauve); background: var(--cm-white);
+  font-family: 'Mulish', sans-serif; font-size: 14px; color: var(--cm-text); resize: vertical;
+}
+.cm-modal-textarea:focus { outline: none; border-color: var(--cm-plum-mid); }
+.cm-modal-hint { font-size: 12px; line-height: 1.5; color: var(--cm-text-sub); margin: 8px 0 0; }
+.cm-modal-actions { display: flex; gap: 12px; margin-top: 22px; }
+.cm-modal-cancel, .cm-modal-confirm { flex: 1; border-radius: 999px; padding: 13px 18px; font: 700 15px/1 'Mulish', sans-serif; cursor: pointer; }
+.cm-modal-cancel { background: none; border: 1.5px solid var(--cm-mauve); color: var(--cm-plum-dark); }
+.cm-modal-confirm { background: var(--cm-plum-dark); border: none; color: #fff; }
+.cm-modal-confirm:disabled { opacity: 0.6; cursor: default; }
+.cm-modal-note { font-size: 12px; color: var(--cm-text-sub); margin-top: 12px; text-align: center; min-height: 1em; }
 </style>
 </head>
 <body>
@@ -1067,6 +1126,34 @@ body {
   <button class="cm-sticky-btn" id="stripeBtnSticky">Obtenir la chanson complète</button>
 </div>
 
+<!-- ══ MODAL : ESSAYER UN AUTRE STYLE ════════════════════ -->
+<div class="cm-modal-overlay" id="cm-style-overlay" aria-hidden="true">
+  <div class="cm-modal" role="dialog" aria-modal="true" aria-labelledby="cm-style-modal-title">
+    <button type="button" class="cm-modal-close" id="cm-style-close" aria-label="Fermer">&times;</button>
+    <div class="cm-modal-title" id="cm-style-modal-title">Essayer un autre style</div>
+    <p class="cm-modal-sub">Même personne, même chanson — on ajuste l'habillage musical.</p>
+
+    <label class="cm-modal-label" for="cm-style-musique">Style musical</label>
+    <select class="cm-modal-select" id="cm-style-musique"></select>
+
+    <label class="cm-modal-label" for="cm-style-voix">Voix</label>
+    <select class="cm-modal-select" id="cm-style-voix"></select>
+
+    <label class="cm-modal-label" for="cm-style-ambiance">Ambiance</label>
+    <select class="cm-modal-select" id="cm-style-ambiance"></select>
+
+    <label class="cm-modal-label" for="cm-style-souvenirs">Ajouter ou retirer un souvenir <span class="cm-modal-opt">(optionnel)</span></label>
+    <textarea class="cm-modal-textarea" id="cm-style-souvenirs" rows="3" placeholder="Ex. : ajoutez un mot sur ses étés au chalet, ou retirez la mention de la pêche."></textarea>
+    <p class="cm-modal-hint">Sans nouveau souvenir, on garde les mêmes paroles et on change seulement la musique. Avec un souvenir, on réécrit d'abord les paroles pour votre approbation.</p>
+
+    <div class="cm-modal-actions">
+      <button type="button" class="cm-modal-cancel" id="cm-style-cancel">Annuler</button>
+      <button type="button" class="cm-modal-confirm" id="cm-style-confirm">Créer cette version</button>
+    </div>
+    <p class="cm-modal-note" id="cm-style-status" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════
      SCRIPTS
 ═══════════════════════════════════════════════════════ -->
@@ -1252,39 +1339,118 @@ body {
   });
 })();
 
-/* ── RÉGÉNÉRER LA CHANSON ────────────────────────────
-   Repasse par le formulaire pré-rempli pour changer le style / bonifier les paroles.
-   Confirmation (coût + plafond). Plafond 5 enforced SERVEUR (MAKE C-gen) ; ici, UX seulement. */
+/* ── RÉGÉNÉRER : 2 actions ───────────────────────────
+   (1) « Essayer un autre style » → popup in-page (style/voix/ambiance + souvenir optionnel),
+       MÊME personne / même projet. Sans nouveau souvenir : nouvelle chanson directe (mêmes
+       paroles, nouvelle musique). Avec souvenir : on réécrit d'abord les paroles → /revision.
+   (2) « Créer une chanson pour quelqu'un d'autre » → nouveau survey, NOUVEAU projet/token.
+   Plafond enforced SERVEUR (MAKE C-gen) ; ici, UX seulement. */
 (function() {
   var token = (window._CM && window._CM.id) || '';
-  if (!token) return;                 /* pas de token => aperçu legacy, on n'affiche rien */
+  if (!token) return;                 /* aperçu legacy → on n'affiche rien */
   var anchor = document.getElementById('cm-pricing-root');
   if (!anchor) return;
 
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'text-align:center;margin:18px auto 0;';
-  var btn = document.createElement('button');
-  btn.type = 'button';
-  btn.textContent = 'Régénérer la chanson';
-  btn.setAttribute('aria-label', 'Régénérer la chanson en repassant par le formulaire');
-  btn.style.cssText = 'background:none;border:1px solid var(--cm-plum-dark,#5C2D4A);color:var(--cm-plum-dark,#5C2D4A);'
-    + 'border-radius:999px;padding:10px 22px;font:600 15px/1 Mulish,sans-serif;cursor:pointer;';
-  var note = document.createElement('p');
-  note.textContent = 'Vous pourrez ajuster le style et bonifier les paroles.';
-  note.style.cssText = 'margin:8px 0 0;font:400 13px/1.4 Mulish,sans-serif;color:#7a6b75;';
+  /* Options EXACTES du survey (doivent matcher les single-selects Airtable). */
+  var STYLES = ['Pop','Country','R&B','Rock','Jazz','Acoustique','Douce Mélodie','Orchestre Gospel','Hip-Hop','Cinématographique','Latin / Salsa','Reggae','Électronique / Dance'];
+  var MOODS  = ['Émotionnelle','Tendre','Paisible','Inspirante','Reconnaissante','Festive','Optimiste','Mélancolique'];
+  var VOICES = ['Masculin','Féminin'];
+  var C_GEN_WEBHOOK = 'https://hook.us1.make.com/uxpwxw1xqjm3x7mt35qjvdm2t8y9fvv4';
 
-  btn.addEventListener('click', function() {
-    /* Confirmation digne, solution-first (jamais sur la perte). */
-    var ok = window.confirm(
-      'Régénérer créera une nouvelle version de la chanson à partir du formulaire.\n'
-      + 'La version actuelle sera remplacée. Voulez-vous continuer ?'
-    );
-    if (ok) window.location.href = '/souvenirs?id=' + encodeURIComponent(token) + '&regen=1';
+  /* Les 2 boutons, sous le bloc pricing. */
+  var actions = document.createElement('div');
+  actions.className = 'cm-regen-actions';
+  var b1 = document.createElement('button');
+  b1.type = 'button'; b1.className = 'cm-regen-btn'; b1.textContent = 'Essayer un autre style';
+  var b2 = document.createElement('button');
+  b2.type = 'button'; b2.className = 'cm-regen-btn cm-regen-btn-sec';
+  b2.textContent = "Créer une chanson pour quelqu'un d'autre";
+  var note = document.createElement('p');
+  note.className = 'cm-regen-note';
+  note.textContent = "Ajustez le style, la voix ou l'ambiance — ou bonifiez un souvenir.";
+  actions.appendChild(b1); actions.appendChild(b2); actions.appendChild(note);
+  anchor.parentNode.insertBefore(actions, anchor.nextSibling);
+
+  /* Modal. */
+  var overlay  = document.getElementById('cm-style-overlay');
+  var selMus   = document.getElementById('cm-style-musique');
+  var selVoix  = document.getElementById('cm-style-voix');
+  var selAmb   = document.getElementById('cm-style-ambiance');
+  var taSouv   = document.getElementById('cm-style-souvenirs');
+  var statusEl = document.getElementById('cm-style-status');
+  var btnConf  = document.getElementById('cm-style-confirm');
+
+  function fill(sel, arr) { arr.forEach(function(v){ var o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); }); }
+  if (selMus)  fill(selMus, STYLES);
+  if (selVoix) fill(selVoix, VOICES);
+  if (selAmb)  fill(selAmb, MOODS);
+
+  function setStatus(t){ if (statusEl) statusEl.textContent = t || ''; }
+  function openModal(){
+    if (!overlay) return;
+    setStatus(''); if (btnConf) btnConf.disabled = false;
+    overlay.classList.add('show'); overlay.setAttribute('aria-hidden','false');
+    /* Pré-sélectionne les valeurs actuelles (lire-survey, lecture seule minimisée). */
+    fetch('/api/lire-survey', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token }) })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){ if(!d) return;
+        if (d.style_musical && selMus)  selMus.value  = d.style_musical;
+        if (d.voix          && selVoix) selVoix.value = d.voix;
+        if (d.ambiance      && selAmb)  selAmb.value  = d.ambiance;
+      })
+      .catch(function(){});
+  }
+  function closeModal(){ if(!overlay) return; overlay.classList.remove('show'); overlay.setAttribute('aria-hidden','true'); }
+
+  b1.addEventListener('click', openModal);
+  b2.addEventListener('click', function(){
+    var ok = window.confirm("Créer une chanson pour une autre personne ? Vous recommencerez un nouveau formulaire. Vos versions actuelles restent accessibles par le lien que vous avez reçu.");
+    if (ok) window.location.href = '/souvenirs';
   });
 
-  wrap.appendChild(btn);
-  wrap.appendChild(note);
-  anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
+  var closeBtn  = document.getElementById('cm-style-close');
+  var cancelBtn = document.getElementById('cm-style-cancel');
+  if (closeBtn)  closeBtn.addEventListener('click', closeModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+  if (overlay)   overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+
+  if (btnConf) btnConf.addEventListener('click', function(){
+    var music_style = selMus ? selMus.value : '';
+    var voice       = selVoix ? selVoix.value : '';
+    var mood        = selAmb ? selAmb.value : '';
+    var souvenirs   = (taSouv && taSouv.value || '').trim();
+    btnConf.disabled = true; setStatus('Un instant…');
+
+    /* 1. Applique le style choisi sur le Project (relu ensuite par C-gen). */
+    fetch('/api/essayer-style', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token, music_style: music_style, mood: mood, voice: voice })
+    })
+    .then(function(rS){ if (!rS.ok) throw new Error('style');
+      if (souvenirs) {
+        /* 2a. Nouveau souvenir → réécrit les paroles (différentes) → /revision pour accepter. */
+        return fetch('/api/generate-lyrics', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ mode:'regenerate', token: token, modifications: souvenirs })
+        }).then(function(rL){ return rL.json().then(function(dL){
+          if (!rL.ok || !dL || !dL.paroles) throw new Error('lyrics');
+          window.location.href = '/revision?id=' + encodeURIComponent(token);
+        }); });
+      }
+      /* 2b. Sans nouveau souvenir → nouvelle chanson directe (mêmes paroles, nouvelle musique). */
+      return fetch(C_GEN_WEBHOOK, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, mode:'song', post_purchase:false })
+      }).then(function(rG){ return rG.json().catch(function(){ return {}; }).then(function(dG){
+        if (dG && dG.status === 'plafond') {
+          setStatus(dG.message || "Vous avez atteint la limite de versions. Écrivez-nous et nous vous aiderons avec plaisir.");
+          btnConf.disabled = false; return;
+        }
+        window.location.href = '/attente-chanson?id=' + encodeURIComponent(token);
+      }); });
+    })
+    .catch(function(){ setStatus("Un souci est survenu. Réessayez dans un instant."); btnConf.disabled = false; });
+  });
 })();
 
 /* ── FAQ accordion ──────────────────────────────────── */
