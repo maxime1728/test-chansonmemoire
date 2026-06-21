@@ -95,6 +95,28 @@ exports.handler = async (event) => {
     params.append('metadata[token]', token);
     params.append('metadata[generation_no]', String(generationNo));
     if (songId) params.append('metadata[song_id]', songId);
+
+    // Order bumps (cases INDÉPENDANTES) — prix FIXÉS serveur. Livraison NON immédiate : la metadata
+    // est lue à l'ACCEPTATION (signature) pour fulfillment depuis la version acceptée (couche B).
+    const bumps = body.bumps || {};
+    let li = 1;
+    if (bumps.instrumental) {
+      params.append(`line_items[${li}][quantity]`, '1');
+      params.append(`line_items[${li}][price_data][currency]`, CURRENCY);
+      params.append(`line_items[${li}][price_data][unit_amount]`, '999');   // 9,99 $
+      params.append(`line_items[${li}][price_data][product_data][name]`, 'Version instrumentale');
+      li += 1;
+    }
+    if (bumps.paroles_vivantes) {
+      params.append(`line_items[${li}][quantity]`, '1');
+      params.append(`line_items[${li}][price_data][currency]`, CURRENCY);
+      params.append(`line_items[${li}][price_data][unit_amount]`, '799');   // 7,99 $
+      params.append(`line_items[${li}][price_data][product_data][name]`, 'Paroles vivantes');
+      li += 1;
+    }
+    params.append('metadata[bump_instrumental]',     bumps.instrumental ? '1' : '0');
+    params.append('metadata[bump_paroles_vivantes]', bumps.paroles_vivantes ? '1' : '0');
+
     params.append('success_url', `${SITE}/page-chanson?id=${encodeURIComponent(token)}`);
     params.append('cancel_url',  `${SITE}/apercu?id=${encodeURIComponent(token)}`);
     if (email && email.includes('@')) params.append('customer_email', email);

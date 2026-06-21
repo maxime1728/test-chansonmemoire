@@ -436,6 +436,18 @@ body {
 }
 #cm-pricing-root .cm-buy-version-select:focus { outline: none; border-color: var(--cm-plum-mid); }
 
+/* Order bumps (cases indépendantes, au-dessus du bouton payer) */
+#cm-pricing-root .cm-bumps { display: flex; flex-direction: column; gap: 10px; margin: 0 0 18px; text-align: left; }
+#cm-pricing-root .cm-bump {
+  display: flex; align-items: flex-start; gap: 11px; cursor: pointer;
+  font-family: 'Mulish', sans-serif; font-size: 14px; line-height: 1.4; color: var(--cm-text);
+  padding: 12px 14px; border: 1.5px solid rgba(92,45,74,0.18); border-radius: 12px; background: var(--cm-white);
+}
+#cm-pricing-root .cm-bump:hover { border-color: var(--cm-mauve); }
+#cm-pricing-root .cm-bump input { margin-top: 1px; width: 18px; height: 18px; accent-color: var(--cm-plum-dark); flex-shrink: 0; cursor: pointer; }
+#cm-pricing-root .cm-bump-price { color: var(--cm-plum-dark); font-weight: 700; white-space: nowrap; }
+#cm-pricing-root .cm-bump-desc { display: block; font-size: 12px; color: var(--cm-text-sub); margin-top: 3px; }
+
 #cm-pricing-root .cm-trust {
   display: flex; flex-wrap: wrap; align-items: center;
   justify-content: center; gap: 6px; margin-top: 16px;
@@ -960,6 +972,18 @@ body {
         <label class="cm-buy-version-label" for="cm-buy-version">Version à recevoir</label>
         <select class="cm-buy-version-select" id="cm-buy-version" aria-label="Choisir la version à acheter"></select>
       </div>
+      <div class="cm-bumps" id="cm-bumps">
+        <label class="cm-bump">
+          <input type="checkbox" id="cm-bump-instrumental">
+          <span>Version instrumentale <span class="cm-bump-price">+9,99 $</span>
+            <span class="cm-bump-desc">La musique seule, sans voix — pour la réécouter autrement.</span></span>
+        </label>
+        <label class="cm-bump">
+          <input type="checkbox" id="cm-bump-paroles">
+          <span>Paroles vivantes <span class="cm-bump-price">+7,99 $</span>
+            <span class="cm-bump-desc">Une vidéo où les paroles défilent au fil de la chanson.</span></span>
+        </label>
+      </div>
       <div class="cm-btn-wrap">
         <button id="stripeBtnPricing" class="stripe-btn">Obtenir la chanson complète</button>
       </div>
@@ -1392,9 +1416,13 @@ body {
     if (window._cmFunnel) window._cmFunnel('checkout_started');   /* intention d'achat (avant redirection) */
     chosenGenNo().then(function(genNo){
       if (!genNo) { busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant."); return; }
+      var bumps = {
+        instrumental:     !!(document.getElementById('cm-bump-instrumental') || {}).checked,
+        paroles_vivantes: !!(document.getElementById('cm-bump-paroles') || {}).checked
+      };
       return fetch('/api/creer-checkout', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ token: token, generation_no: genNo, email: email })
+        body: JSON.stringify({ token: token, generation_no: genNo, email: email, bumps: bumps })
       })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(d){
