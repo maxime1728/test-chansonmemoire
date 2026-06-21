@@ -31,6 +31,7 @@ exports.handler = async (event) => {
   const token         = (body.token || '').trim();
   const signatureName = (body.signature_name || '').trim();
   const textVersion   = (body.text_version || '').trim();
+  const acceptedNo    = parseInt(body.generation_no, 10);   // version choisie/acceptée (devient celle livrée)
 
   if (!token)         return { statusCode: 400, body: JSON.stringify({ error: 'Token manquant' }) };
   if (!UUID_V4.test(token)) return { statusCode: 400, body: JSON.stringify({ error: 'Token invalide' }) };
@@ -70,6 +71,8 @@ exports.handler = async (event) => {
     };
     // recevoir_clicked_at : ne pas écraser si déjà posé (1re intention).
     if (!projet.fields.recevoir_clicked_at) fields.recevoir_clicked_at = now;
+    // Version acceptée = celle qui sera livrée/téléchargée (lire-projet/telecharger servent purchased_generation_no).
+    if (Number.isInteger(acceptedNo) && acceptedNo >= 1) fields.purchased_generation_no = acceptedNo;
 
     const rPatch = await fetch(`${API}/Projects/${projet.id}`, {
       method: 'PATCH',

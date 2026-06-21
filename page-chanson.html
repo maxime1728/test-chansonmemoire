@@ -31,6 +31,7 @@
   .err{color:#b3261e;font-size:14px;margin-top:8px;}
   audio{width:100%;margin-top:8px;}
   .muted-note{font-size:13px;color:var(--muted);}
+  .pc-select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff;margin-bottom:10px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -44,15 +45,19 @@
     <button class="btn" id="btnRecevoir" type="button">Recevoir ma chanson</button>
   </div>
 
-  <!-- ÉTAPE 2 : signature (acceptation) -->
+  <!-- ÉTAPE 2 : choisir la version + signature (acceptation) -->
   <div class="card hidden" id="signCard">
-    <label for="sigName">Votre nom (signature)</label>
+    <label for="pcVersion">Choisissez la version à recevoir</label>
+    <select id="pcVersion" class="pc-select" aria-label="Choisir la version à recevoir"></select>
+    <audio id="pcPreview" controls preload="none"></audio>
+
+    <label for="sigName" style="margin-top:18px;">Votre nom (signature)</label>
     <input type="text" id="sigName" autocomplete="name" placeholder="Prénom et nom">
     <p class="accept" id="acceptText">
-      En signant, je confirme recevoir le produit numérique (la chanson) et l'accepter.
-      Voir les <a href="/condition-de-vente" target="_blank" rel="noopener">conditions de vente</a>.
+      En signant, je confirme recevoir le produit numérique (la chanson, dans la version choisie ci-dessus)
+      et l'accepter. Voir les <a href="/condition-de-vente" target="_blank" rel="noopener">conditions de vente</a>.
     </p>
-    <button class="btn" id="btnSigner" type="button">Confirmer et recevoir</button>
+    <button class="btn" id="btnSigner" type="button">Accepter cette version</button>
     <p class="err hidden" id="sigErr">Merci d'inscrire votre nom pour confirmer.</p>
   </div>
 
@@ -110,11 +115,41 @@
     return;
   }
 
-  /* Étape 1 -> 2 */
+  /* Étape 1 -> 2 : révèle le choix de version + signature */
   document.getElementById('btnRecevoir').addEventListener('click', function(){
     gate.classList.add('hidden');
     signCard.classList.remove('hidden');
+    chargerVersions();
   });
+
+  /* Remplit le menu de versions (audio complet post-achat) + lecteur d'écoute. */
+  function chargerVersions(){
+    var sel  = document.getElementById('pcVersion');
+    var prev = document.getElementById('pcPreview');
+    if(!sel) return;
+    fetch('/api/lire-versions', {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ token: token })
+    })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(!d || !Array.isArray(d.versions) || !d.versions.length) return;
+      sel.innerHTML = '';
+      d.versions.forEach(function(v){
+        var o = document.createElement('option');
+        o.value = String(v.generation_no);
+        var bits = [v.style, v.ambiance].filter(Boolean);
+        o.textContent = 'V' + v.v + (bits.length ? ' · ' + bits.join(' · ') : '');
+        o.setAttribute('data-url', v.audio_url || '');
+        sel.appendChild(o);
+      });
+      sel.selectedIndex = d.versions.length - 1;          /* plus récente par défaut */
+      function ecouter(){ var o = sel.options[sel.selectedIndex]; if(prev && o){ prev.src = o.getAttribute('data-url') || ''; } }
+      ecouter();
+      sel.addEventListener('change', ecouter);
+    })
+    .catch(function(){});
+  }
 
   /* Étape 2 : signature -> accepter-livraison.js (écrit la preuve serveur) */
   document.getElementById('btnSigner').addEventListener('click', function(){
@@ -128,7 +163,7 @@
 
     fetch('/api/accepter-livraison', {
       method:'POST', headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify({ token: token, signature_name: name, text_version: ACCEPT_TEXT_VERSION })
+      body:JSON.stringify({ token: token, signature_name: name, text_version: ACCEPT_TEXT_VERSION, generation_no: parseInt((document.getElementById('pcVersion')||{}).value, 10) || undefined })
     })
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(res){
