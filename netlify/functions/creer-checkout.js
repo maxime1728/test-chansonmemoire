@@ -103,14 +103,14 @@ exports.handler = async (event) => {
     if (bumps.instrumental) {
       params.append(`line_items[${li}][quantity]`, '1');
       params.append(`line_items[${li}][price_data][currency]`, CURRENCY);
-      params.append(`line_items[${li}][price_data][unit_amount]`, '999');   // 9,99 $
+      params.append(`line_items[${li}][price_data][unit_amount]`, '1999');   // 19,99 $
       params.append(`line_items[${li}][price_data][product_data][name]`, 'Version instrumentale');
       li += 1;
     }
     if (bumps.paroles_vivantes) {
       params.append(`line_items[${li}][quantity]`, '1');
       params.append(`line_items[${li}][price_data][currency]`, CURRENCY);
-      params.append(`line_items[${li}][price_data][unit_amount]`, '799');   // 7,99 $
+      params.append(`line_items[${li}][price_data][unit_amount]`, '1399');   // 13,99 $
       params.append(`line_items[${li}][price_data][product_data][name]`, 'Paroles vivantes');
       li += 1;
     }
