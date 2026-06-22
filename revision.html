@@ -237,11 +237,17 @@
 
     const token = new URLSearchParams(location.search).get('id');
 
-    /* ── Polling (chargement initial) ── */
+    /* ── Polling + auto-relance (chargement initial) ──
+       Fenêtre de 2 min. Voie normale : MAKE A écrit les paroles (~15-20s) → on sonde.
+       Si rien après le délai de grâce (MAKE A a échoué) → on RELANCE generate-lyrics en
+       arrière-plan, plusieurs fois au besoin, jusqu'à 2 min. Le mode retry est anti-doublon
+       (il renvoie les paroles de MAKE A si elles arrivent entre-temps, sinon (re)génère).
+       Au bout des 2 min sans succès → message « Réessayer » manuel (comme avant). */
     const POLL_INTERVAL = 5000;
-    const MAX_ESSAIS    = 12;   /* 12 x 5s = ~60s avant le message d'erreur (les paroles sont rapides ; au-delà = échec probable) */
+    const BUDGET_MS     = 120000;  /* 2 minutes — fenêtre totale avant le message manuel */
+    const GRACE_MS      = 30000;   /* ~30s : on laisse MAKE A (voie normale) finir avant de relancer en backend */
     const STATUTS_PRETS = ['lyrics_generated', 'audio_generated', 'validated'];
-    let essais = 0, pollTimer = null, fini = false;
+    let pollTimer = null, fini = false, debut = 0;
 
     function el(id){ return document.getElementById(id); }
     function setTexte(id,t){ var n=el(id); if(n) n.textContent=t; }
@@ -308,7 +314,7 @@
       setTexte('erreur-detail', "Les réponses fournies étaient un peu courtes pour composer la chanson. Cliquez « Réessayer » pour relancer, ou recommencez le formulaire en ajoutant un souvenir ou ce qui rendait la personne unique.");
       montrer('etat-erreur');
     }
-    function arreterPolling(){ fini=true; if(pollTimer) clearInterval(pollTimer); pollTimer=null; }
+    function arreterPolling(){ fini=true; if(pollTimer){ clearTimeout(pollTimer); pollTimer=null; } }
 
     /* ── RÉESSAYER : UNE relance réelle (régénère depuis les réponses stockées), pas une boucle ── */
     async function reessayer(){
@@ -329,21 +335,46 @@
       }
     }
 
-    async function checkStatut(){
-      if(fini) return;
-      if(document.hidden) return;
-      essais++;
+    function terminer(suite){ fini=true; if(pollTimer){ clearTimeout(pollTimer); pollTimer=null; } if(suite) suite(); }
+
+    /* Relance la création des paroles EN BACKEND (mode retry, anti-doublon côté serveur :
+       renvoie les paroles de MAKE A si arrivées entre-temps, sinon (re)génère depuis le survey). */
+    async function relancerParoles(){
       try {
-        var res=await fetch('/api/lire-projet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token})});
-        var d=await res.json();
-        if(res.ok && STATUTS_PRETS.indexOf(d.statut)!==-1 && d.paroles){
-          arreterPolling();
-          if(String(d.paroles).indexOf('invalid_input')!==-1){ afficherInputInsuffisant(); return; }  // paroles = erreur, pas du contenu
-          afficher(d);
-          return;
-        }
-      } catch(e){}
-      if(essais>=MAX_ESSAIS){ arreterPolling(); afficherAttenteLongue(); }
+        var res = await fetch('/api/generate-lyrics', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ mode:'retry', token: token })
+        });
+        var d = {}; try { d = await res.json(); } catch(e){}
+        return { ok: res.ok, status: res.status, data: d, paroles: d && d.paroles };
+      } catch(e){ return { ok:false, status:0, data:null, paroles:null }; }
+    }
+
+    async function boucle(){
+      if(fini) return;
+      var ecoule = Date.now() - debut;
+
+      if(ecoule < GRACE_MS){
+        // Voie normale : on attend que MAKE A écrive les paroles.
+        try {
+          var res = await fetch('/api/lire-projet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token})});
+          var d = await res.json();
+          if(!fini && res.ok && STATUTS_PRETS.indexOf(d.statut)!==-1 && d.paroles){
+            if(String(d.paroles).indexOf('invalid_input')!==-1) return terminer(afficherInputInsuffisant);
+            return terminer(function(){ afficher(d); });
+          }
+        } catch(e){}
+      } else {
+        // MAKE A n'a rien livré → on relance generate-lyrics en backend (plusieurs fois au besoin).
+        var r = await relancerParoles();
+        if(fini) return;
+        if(r.ok && r.paroles) return terminer(function(){ afficher(r.data); });
+        if(r.status === 422)  return terminer(afficherInputInsuffisant);   // inputs inexploitables : inutile d'insister
+        // 502 / réseau → on retentera au prochain tour, dans la fenêtre des 2 min
+      }
+
+      if(Date.now() - debut >= BUDGET_MS) return terminer(afficherAttenteLongue);
+      pollTimer = setTimeout(boucle, POLL_INTERVAL);
     }
 
     /* ── RÉGÉNÉRATION : boucle sur place ── */
@@ -416,8 +447,8 @@
       montrer('etat-erreur');
     } else {
       montrer('etat-chargement');
-      checkStatut();
-      pollTimer=setInterval(checkStatut, POLL_INTERVAL);
+      debut = Date.now();
+      boucle();
     }
   </script>
 </body>
