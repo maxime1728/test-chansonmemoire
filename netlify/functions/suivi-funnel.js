@@ -36,6 +36,56 @@ async function patchProject(id, fields, headers) {
   });
 }
 
+/* ── Meta CAPI (serveur, best-effort) ──────────────────────────────────────────────
+   ⚠️ TOKEN-SAFE (Loi 25) : on n'envoie JAMAIS le token client à Meta — ni dans l'URL
+   source, ni dans event_id (haché). Secrets en env (jamais en dur) ; no-op si absents. */
+const crypto       = require('crypto');
+const CAPI_TOKEN   = process.env.META_CAPI_TOKEN;     // secret — var d'env Netlify, JAMAIS en dur
+const CAPI_DATASET = process.env.META_DATASET_ID;     // ex. 909919758755200 — var d'env Netlify
+const CAPI_EVENT   = { preview_played: 'PreviewPlayed', checkout_started: 'InitiateCheckout' };
+
+function sha256(v) { return crypto.createHash('sha256').update(String(v).trim().toLowerCase()).digest('hex'); }
+
+// Lit le courriel du Client lié (best-effort), pour la qualité de matching (haché ensuite). Jamais exposé.
+async function clientEmailOf(projet, headers) {
+  try {
+    const link  = projet.fields.client;
+    const recId = Array.isArray(link) ? link[0] : null;
+    if (!recId) return '';
+    const r = await fetch(`${API}/Clients/${recId}`, { headers });
+    if (!r.ok) return '';
+    const d = await r.json();
+    return (d.fields && d.fields.email) || '';
+  } catch (_) { return ''; }
+}
+
+// Envoi best-effort d'un événement CAPI. Ne lève jamais. No-op si token/dataset/événement absents.
+async function sendCapi(evt, projet, clientEmail, ip, ua) {
+  if (!CAPI_TOKEN || !CAPI_DATASET || !CAPI_EVENT[evt]) return;
+  const f = projet.fields || {};
+  const user_data = {};
+  if (clientEmail && clientEmail.includes('@')) user_data.em = [sha256(clientEmail)];  // email HACHÉ
+  if (f.fbc) user_data.fbc = f.fbc;                 // fbc/fbp/IP/UA : NON hachés (spec Meta)
+  if (f.fbp) user_data.fbp = f.fbp;
+  if (ip)    user_data.client_ip_address = ip;
+  if (ua)    user_data.client_user_agent = ua;
+  const payload = { data: [{
+    event_name:       CAPI_EVENT[evt],
+    event_time:       Math.floor(Date.now() / 1000),
+    action_source:    'website',
+    event_id:         sha256(`${projet.id}.${evt}`),   // dédup — haché, JAMAIS le token brut
+    event_source_url: 'https://chansonmemoire.ca/apercu',  // SANS token (token-safe)
+    user_data:        user_data
+  }] };
+  try {
+    await fetch(`https://graph.facebook.com/v21.0/${CAPI_DATASET}/events?access_token=${encodeURIComponent(CAPI_TOKEN)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (_) { /* la CAPI ne casse jamais l'UX */ }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: '{}' };
 
@@ -71,6 +121,14 @@ exports.handler = async (event) => {
 
     // 2. funnel_step — PATCH séparé best-effort (un 422 « option inexistante » n'impacte pas les horodatages).
     try { await patchProject(projet.id, { funnel_step: EVENTS[evt] }, headers); } catch (_) {}
+
+    // 3. Meta CAPI (serveur, best-effort, token-safe). Ne bloque jamais la réponse.
+    try {
+      const ip = (event.headers['x-nf-client-connection-ip'] || event.headers['x-forwarded-for'] || '').split(',')[0].trim();
+      const ua = event.headers['user-agent'] || '';
+      const email = await clientEmailOf(projet, headers);
+      await sendCapi(evt, projet, email, ip, ua);
+    } catch (_) { /* CAPI best-effort */ }
 
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true }) };
   } catch (_) {
