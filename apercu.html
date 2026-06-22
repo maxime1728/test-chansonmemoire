@@ -1177,6 +1177,7 @@ body {
     <div class="cm-modal-title" id="cm-style-modal-title">Essayer un autre style</div>
     <p class="cm-modal-sub">Même personne, même chanson — on ajuste l'habillage musical.</p>
 
+    <div id="cm-style-form">
     <label class="cm-modal-label" for="cm-style-musique">Style musical</label>
     <select class="cm-modal-select" id="cm-style-musique"></select>
 
@@ -1194,7 +1195,19 @@ body {
       <button type="button" class="cm-modal-cancel" id="cm-style-cancel">Annuler</button>
       <button type="button" class="cm-modal-confirm" id="cm-style-confirm">Créer cette version</button>
     </div>
+    </div><!-- /#cm-style-form -->
     <p class="cm-modal-note" id="cm-style-status" role="status" aria-live="polite"></p>
+
+    <!-- Popup au cap (plafond serveur atteint) : message chaleureux + box courriel + alerte -->
+    <div id="cm-cap-help" style="display:none;">
+      <p class="cm-modal-hint" id="cm-cap-msg">Vous avez exploré plusieurs versions pour cette personne — c'est la limite ici. On aimerait vous aider à créer LA version qui lui ressemble : laissez-nous votre courriel et on vous accompagne avec plaisir.</p>
+      <label class="cm-modal-label" for="cm-cap-email">Votre courriel</label>
+      <input class="cm-modal-select" id="cm-cap-email" type="email" inputmode="email" placeholder="vous@exemple.ca">
+      <div class="cm-modal-actions">
+        <button type="button" class="cm-modal-confirm" id="cm-cap-send">On m'aide avec plaisir</button>
+      </div>
+      <p class="cm-modal-note" id="cm-cap-status" role="status" aria-live="polite"></p>
+    </div>
   </div>
 </div>
 
@@ -1491,6 +1504,8 @@ body {
   function openModal(){
     if (!overlay) return;
     setStatus(''); if (btnConf) btnConf.disabled = false;
+    var _f=document.getElementById('cm-style-form'); if(_f) _f.style.display='';
+    var _c=document.getElementById('cm-cap-help'); if(_c) _c.style.display='none';
     overlay.classList.add('show'); overlay.setAttribute('aria-hidden','false');
     /* Pré-sélectionne les valeurs actuelles (lire-survey, lecture seule minimisée). */
     fetch('/api/lire-survey', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token }) })
@@ -1545,13 +1560,33 @@ body {
         body: JSON.stringify({ token: token, mode:'song', post_purchase:false })
       }).then(function(rG){ return rG.json().catch(function(){ return {}; }).then(function(dG){
         if (dG && dG.status === 'plafond') {
-          setStatus(dG.message || "Vous avez atteint la limite de versions. Écrivez-nous et nous vous aiderons avec plaisir.");
-          btnConf.disabled = false; return;
+          showCapHelp(dG.message); return;
         }
         window.location.href = '/attente-chanson?id=' + encodeURIComponent(token);
       }); });
     })
     .catch(function(){ setStatus("Un souci est survenu. Réessayez dans un instant."); btnConf.disabled = false; });
+  });
+
+  /* ── Popup au cap (plafond serveur atteint) : message chaleureux + box courriel + alerte ── */
+  function showCapHelp(msg){
+    setStatus('');
+    var f=document.getElementById('cm-style-form'); if(f) f.style.display='none';
+    if (msg){ var m=document.getElementById('cm-cap-msg'); if(m) m.textContent=msg; }
+    var c=document.getElementById('cm-cap-help'); if(c) c.style.display='block';
+  }
+  var capSend=document.getElementById('cm-cap-send'), capEmail=document.getElementById('cm-cap-email'), capStatus=document.getElementById('cm-cap-status');
+  if (capSend) capSend.addEventListener('click', function(){
+    var email=(capEmail && capEmail.value || '').trim();
+    if (!email || email.indexOf('@') < 1){ if(capStatus) capStatus.textContent='Entrez un courriel valide.'; return; }
+    capSend.disabled=true; if(capStatus) capStatus.textContent='Un instant…';
+    fetch('/api/aide-plafond', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, email: email }) })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(res){
+        if (res && res.ok){ if(capEmail) capEmail.style.display='none'; capSend.style.display='none'; if(capStatus) capStatus.textContent='Merci ✓ On vous écrit très bientôt pour vous aider à créer votre version.'; }
+        else { capSend.disabled=false; if(capStatus) capStatus.textContent='Un souci est survenu. Réessayez.'; }
+      })
+      .catch(function(){ capSend.disabled=false; if(capStatus) capStatus.textContent='Un souci est survenu. Réessayez.'; });
   });
 })();
 
