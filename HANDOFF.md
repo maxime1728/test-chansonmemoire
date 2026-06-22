@@ -1,167 +1,106 @@
-# HANDOFF — Chanson Mémoire · production musicale (état au 2026-06-20, fin de session)
+# HANDOFF — Chanson Mémoire · production musicale (état au 2026-06-21)
 
-> À lire EN PREMIER par la nouvelle session, avec `CLAUDE.md`, `CM_spine_spec.md`,
-> `CM_mapping_airtable.md`, `CM_make_plan.md`. Ce fichier = état réel + ce qui reste.
-> La mémoire auto (`MEMORY.md` → `cm-production-musicale-build.md`) contient le détail granulaire.
-
----
-
-## 0. Contexte
-- Repo : `maxime1728/chansonmemoire` · dossier local : `C:\Users\PC\cm-audit`.
-- Produit : chansons hommage IA, B2C Québec, domaine **`.ca` (jamais `.com`)**.
-- **Le parcours fonctionne** : survey → paroles → revision → confirmation → chanson (Suno) →
-  callback → Cloudinary → page d'attente → **aperçu signé qui joue (preview 60 s testé OK le 2026-06-20)**.
-
-## 1. Garde-fous (NON négociables — voir CLAUDE.md)
-- **Loi 25 / légal** : prix, témoignages, allégations de résultats = STOP + signaler. Aucun témoignage/prix fabriqué.
-- **Credentials test-only** : jamais Stripe live, jamais la prod du freelancer, jamais le flux live sans go humain.
-- **`.ca` par défaut partout** (jamais `.com`).
-- **Voix solution-first** : jamais ouvrir un copy sur le deuil/la perte.
-- **GitHub : branche + PR toujours, jamais de commit direct sur `main`. Aucun effet de bord sans diff + « go ».**
-- Tags de confiance : [Certain] / [Probable] / [Spéculation].
-- **🚫 Dossier Make « SONG » = NE JAMAIS TOUCHER.** On travaille dans **« Chanson Mémoire »** (folderId 321788).
-- Airtable base `appIADNKzDOVtpjWj` = **pré-lancement, traitée comme test** (OK d'écrire).
+> **À LIRE EN PREMIER** par toute nouvelle session Claude Code, AVANT d'agir.
+> Ordre de lecture : ce fichier → `CLAUDE.md` → `CM_spine_spec.md` → `CM_mapping_airtable.md` → `CM_make_plan.md`.
+> La **mémoire auto** (`MEMORY.md` → `cm-production-musicale-build.md`, `cm-post-achat-plan.md`, `project-guardrails.md`, `working-protocol.md`) contient le détail granulaire et se charge automatiquement.
 
 ---
 
-## 2. Infra / IDs utiles
-- **Make** : org 1059466, team 422966, dossier « Chanson Mémoire » 321788.
-  - **MAKE A — Lyrics** : id `4789787`, hook `2749752`.
-  - **C-gen — generate song** : id `4792851`, hook `2751751`, webhook `…amlfm9tapjjewz2kec1eirs8oylb812g` (callback Suno).
-  - **C-cb — callback Suno** : id `4792855`, hook `2751754`.
-  - **MAKE D — Stripe (achat)** : **BÂTI mais PAS encore importé/activé** (blueprint `CM-D-REBUILD.blueprint.json`).
-  - Connexions Make : Airtable `4766682`, Cloudinary `4732918` (cloud `dcx1tfm47`), Gmail `3661126`, keychain Anthropic `92227`.
-  - Data Store « Songs styles » `86715` (clé Style Musical × Ambiance × Cadeau/Mémoire → `Prompt Complet`).
-- **Airtable** `appIADNKzDOVtpjWj` : Clients `tblQbF1OlE3uRxFra`, Projects `tblh7O8eoog7RyTMJ`,
-  Generations `tblfrHFe1zH9apNlp`, Upsells `tbl0Z52D8l4555Has`.
-- **Env vars Netlify** : `AIRTABLE_BASE_ID`, `AIRTABLE_TOKEN`, `ANTHROPIC_API_KEY`,
-  `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (tous présents).
-  `netlify.toml` → `SECRETS_SCAN_OMIT_KEYS = "CLOUDINARY_CLOUD_NAME"` (cloud name public, sinon le build échoue).
-- Clés (Suno, Stripe) vivent **dans Make** (header / connexion), **jamais dans le repo**.
+## 0. PROMPT DE REDÉMARRAGE (à coller comme premier message)
+
+```
+Je reprends le projet Chanson Mémoire. Dossier : C:\Users\PC\cm-audit · Repo : maxime1728/chansonmemoire.
+
+AVANT TOUTE ACTION : lis HANDOFF.md (le plus à jour), puis CLAUDE.md, CM_spine_spec.md,
+CM_mapping_airtable.md, CM_make_plan.md. Lis aussi ta mémoire (cm-production-musicale-build.md
+et cm-post-achat-plan.md). Reformule les 4 garde-fous critiques du CLAUDE.md pour confirmer
+qu'ils sont chargés.
+
+OÙ ON EN EST (voir HANDOFF.md §3-4) : le parcours complet fonctionne, achat (MAKE D) testé,
+order bumps au checkout faits. Phases A+B (titre + page acceptation refondue) MERGÉES.
+Phase C (page-memoire : livraison + cadeaux + teasers) BÂTIE, branche `feat/page-memoire`
+à merger. Prochain bloqueur = Phase D (fulfillment Canva des cadeaux).
+
+PROTOCOLE (strict) : branche + PR, jamais de commit direct sur main. Aucun effet de bord sans
+me montrer un diff et attendre mon « go ». Tags [Certain]/[Probable]/[Spéculation]. Pour Make :
+scenarios_get pour LIRE avant d'éditer ; ne jamais scenarios_update un scénario qui contient une
+vraie clé (C-gen=Suno, MAKE D=Stripe) → édition manuelle. Dossier Make « SONG » = NE PAS TOUCHER.
+Les MCP (Airtable/Make) peuvent être déconnectés : ne suppose pas l'accès, nomme le MCP + pourquoi.
+Bug build/déploiement Netlify : exige le log, n'infère pas.
+
+Commence par : confirmer les garde-fous, puis propose un PLAN COURT pour la prochaine étape
+prioritaire (merger Phase C, puis Phase D) et attends mon go.
+```
 
 ---
 
-## 3. CE QUI A ÉTÉ FAIT cette session (toutes les PR sont mergées dans `main`)
-- **Phase 1 — http→https** ✅ : helper `toHttps` (lire-projet, telecharger) + C-cb `secure_url`.
-- **Phase 2 — suggestions fixes + type C-gen** ✅ : `revision.html` boutons « Allonger »/« Raccourcir » (injectent une
-  consigne, réutilisent `ajouterSuggestion`) ; C-gen `type` = formule `if(mode=cover…; if(song_regenerations_count>=1; song_regeneration; song))`.
-- **Phase 4 A+B — rebuild MAKE A** ✅ : plus de doublon de Project (Search Project par token → router NEW vs REGEN),
-  `generation_no` correct (NEW `{{0+1}}`, REGEN `{{parseNumber(ifempty(10.generation_no;0);".")+1}}`),
-  dédup Client par email (`email` primaire) + `consent_date`/`first_contact_date` préservés via `formatDate(ifempty(2.x; now); "YYYY-MM-DD")`.
-- **Phase 3 — funnel** ✅ (partiel) : audit single-select = **chemin Mémoire PROPRE** (survey↔Airtable↔Data Store
-  identiques ; Data Store = 195 records = grille complète 13 styles × (7 Cadeau + 8 Mémoire)). `funnel_step` redéfini
-  (lyrics_generated → lyrics_approved? → song_generating → preview_ready → preview_played → checkout_started → purchased
-  → delivery_accepted, + refunded). Écritures : `suivi-funnel.js` (preview_played + checkout_started via sendBeacon),
-  `accepter-livraison.js` (delivery_accepted), `generate-lyrics.js` (lyrics_generated), MAKE A (lyrics_generated),
-  C-gen (song_generating, module 13), C-cb (preview_ready, module 7). **`purchased` = en attente de MAKE D.**
-- **MAKE D — Stripe** : blueprint bâti avec **anti-forge** (re-fetch de la session Stripe via HTTP GET authentifié avant
-  de marquer `purchased`), anti-double webhook, courriel de livraison `.ca`. `apercu.html` passe le **token** comme
-  `client_reference_id` à Stripe. **PAS encore activé** (voir §5).
-- **Phase 5 — Cloudinary signé** ✅ **TESTÉ** : assets uploadés en **`authenticated`** (C-cb module 4) ; `lire-projet`/
-  `telecharger` génèrent des **URL signées côté serveur** (crypto natif `require('crypto')`, SHA-1, `du_60` inclus dans
-  la signature → non contournable). `buildAudioUrl` détecte le type (`upload` public ancien vs `authenticated` nouveau).
-  **Le preview 60 s joue ✅** (signature SHA-1 validée). `apercu.html` ne tronque plus côté client.
-- **Fixes divers** : prompt `invalid_input` assoupli (dernier recours seulement) + garde-fous page/retry ;
-  bouton « Réessayer » de revision = **vraie relance** (`generate-lyrics` mode `retry`, anti-doublon) ;
-  `netlify.toml` SECRETS_SCAN ; `require('crypto')` (pas `node:crypto`).
-- **Champs Airtable créés** : `checkout_started_at`, `preview_played_at`, `preview_play_count` (Projects),
-  `cloudinary_public_id` (Generations), `page_url` (Projects, **formule dynamique** → lien vers l'étape courante selon `funnel_step`).
-- **Scénarios réparés via MCP `scenarios_update`** (2026-06-20 après-midi) :
-  - **C-cb** : module 5 écrit `cloudinary_audio_url` + `cloudinary_public_id` + **`song_id`** + **`generation_status=audio_generated`**
-    (par field ID) ; upload `authenticated` ; module 7 `funnel_step=preview_ready` ; email fallback propre.
-  - **C-gen** : réécrit proprement, **mappings par field ID** (stables), logique préservée. **⚠️ clé Suno = PLACEHOLDER.**
+## 1. Contexte produit
+- **Chanson Mémoire** : chansons hommage IA, ~139,97 $ CAD, produit digital. B2C **Québec francophone** (deuil/commémoration), sous LabMarketing.
+- Domaine **`.ca` (jamais `.com`)** partout. Repo `maxime1728/chansonmemoire`, local `C:\Users\PC\cm-audit`.
+- **Équipe** : Maxime (stratégie+build, seul à promouvoir en prod) · Freelancer (backend, owner Airtable prod) · Brigitte (non-technique, relation client).
+- **Voix de marque** : identité québécoise, **SOLUTION-FIRST** (jamais ouvrir sur le deuil), sobre/digne, palette mauve/papier pâle.
 
----
+## 2. Garde-fous (NON négociables — voir CLAUDE.md)
+1. **Loi 25 / légal = BLOQUANT** : prix, témoignages, allégations de résultats → STOP + signaler. Jamais fabriquer témoignage/avis/prix de référence. `cgv_acceptees_at` = preuve consentement, minimisation des données.
+2. **Credentials test/preview seulement** : jamais Stripe live, jamais la base Airtable de prod du freelancer, jamais le flux live sans go humain. Aucun secret committé.
+3. **`.ca` par défaut** partout (URLs, canonical, courriels, redirections).
+4. **Voix solution-first** (jamais ouvrir sur la perte).
++ **GitHub branche + PR toujours** · **diff avant tout effet de bord, attendre « go »** · tags **[Certain]/[Probable]/[Spéculation]** · **dossier Make « SONG » = NE PAS TOUCHER** (on travaille dans « Chanson Mémoire », folderId 321788) · flag sécurité **énumération clients** (audit avant launch).
 
-## 4. ⚠️ EN SUSPENS / NON RÉSOLU / À SURVEILLER (le plus important)
+## 3. CE QUI EST FAIT + MERGÉ dans `main`
+- **Parcours complet** : survey → paroles (Anthropic) → revision → chanson (Suno V5_5) → callback → Cloudinary → attente → **aperçu signé qui joue**.
+- **Phase 5 — Cloudinary signé** ✅ : URLs signées SHA-1 côté serveur, `du_60` dans la signature (preview non contournable, **401** si on le retire), `telecharger` gaté `purchased` (403 avant achat). Alerte CodeQL SHA-1 = faux positif (« Won't fix »).
+- **MAKE D — chaîne argent** ✅ ACTIVÉ + TESTÉ (achat 1$ → `purchased` + `funnel_step=purchased` + amount + stripe IDs + courriel livraison ; anti-forge re-fetch session + anti-double). Lien Stripe = **TEST** (`buy.stripe.com/test_…`) ; flip LIVE = juste la clé/lien au launch.
+- **Achat par version (Phase 3)** ✅ : session Checkout **serveur** `creer-checkout.js` (prix fixé serveur, libellé « Chanson Mémoire — V{rang} », metadata `generation_no`/bumps) ; `purchased_generation_no` (livre la version achetée). TEST/LIVE piloté par `STRIPE_SECRET_KEY` (env).
+- **Order bumps au checkout** ✅ : 2 cases indépendantes — **Version instrumentale 19,99 $** + **Paroles vivantes 13,99 $** (vidéo des paroles) ; metadata Stripe. Fulfillment = à venir (couche B).
+- **Sélecteur de versions** sur l'aperçu (lire-versions) + **régénération** « Essayer un autre style » (popup style/voix/ambiance + souvenirs) + « Créer pour quelqu'un d'autre ».
+- **Phase A** ✅ : **titre généré depuis les DÉTAILS** (pas les paroles), stable aux régén ; affiché dans le lecteur de l'aperçu.
+- **Phase B** ✅ : **page acceptation `page-chanson` refondue** — version achetée seulement (titre+style+ambiance), lecteur de l'aperçu plein format + message de chargement, **PAS de download ici**, **PAS de signature**, bouton « Accepter cette version et télécharger » → popup → redirige `/page-memoire`. `accepter-livraison` sans signature ni sélection de version ; `lire-projet` expose `style`+`ambiance`.
 
-1. **🔑 RÉSOLU (2026-06-20) — clé Suno en place.** Le header du **module 8 (HTTP api.sunoapi.org)** porte désormais une vraie
-   clé `Bearer …` (plus de placeholder). **Prouvé par usage** : exéc. C-gen `4792851` du 2026-06-20 17:28 (9 ops, vrai appel
-   Suno) → callback C-cb `4792855` OK → Project test `guigluig` (token `29ddc7fc…`) arrivé à `funnel_step=preview_played`.
+## 4. EN COURS — branche NON mergée
+- **`feat/page-memoire` (Phase C)** — **À MERGER.** Nouvelle `page-memoire.html` (livraison finale) : lecteur aperçu + **download** chanson (`fl_attachment`, seule page de download) + **cadeaux** (choix de 5 modèles PDF + 5 signets = placeholders « Modèle 1-5 » ; phrases suggérées via `phrases-signet.js` Claude ; message libre ; bouton « Préparer mes cadeaux » → `choix-memoire.js`) + **teaser Mémoire vivante** (waitlist) + **upsell vidéo** (waitlist). Endpoints `choix-memoire.js` + `phrases-signet.js`. +5 champs Projects (`pdf_template`, `signet_template`, `signet_text`, `waitlist_memoire`, `waitlist_video`).
 
-2. **🔧 RÉSOLU (2026-06-20) — scope `schema.bases:read` présent.** La connexion câblée dans TOUS les scénarios CM est
-   `4766682` « Maxime's Connection » (**Airtable OAuth**, pas un PAT). Scopes réels vérifiés via MCP : `schema.bases:read` +
-   `data.records:read` + `data.records:write`. → L'éditeur Make affiche désormais les champs ; **éditer/sauver un module
-   Airtable ne vide plus les mappings** ; garde-fou « ne pas toucher les modules Airtable » = **LEVÉ**.
-   (Hygiène : 2 connexions Airtable orphelines `4804199`/`4804205` créées pendant le fix, non utilisées — à supprimer.)
+## 5. PLAN POST-ACHAT VALIDÉ (roadmap — détail dans `cm-post-achat-plan.md`)
+- **A. Aperçu** ✅ : titre depuis détails, stable ; fonctions régén inchangées ; titre modifiable seulement post-achat via le box.
+- **B. Page acceptation** ✅ : version achetée seulement, pas de signature (bouton + popup → /page-memoire), fulfillment **bumps payés** au clic accepter (à brancher en D).
+- **C. page-memoire** (BÂTIE, à merger) : livraison + download + cadeaux (templates Canva) + teasers.
+- **D. Fulfillment cadeaux** (PROCHAIN) : génération **Canva** (5 PDF + 5 signets) du PDF paroles + signet → stockage → affiché téléchargeable + courriel « prêt » (24-48 h). Bumps payés : instrumentale (Suno stem-separation) + paroles vivantes (API que Maxime choisira) — au clic accepter (~24 h, réel ~1 h).
+- **E/F. Décortique + cover + approbation** : UN grand box → **Claude (API, 5 catégories** : paroles / style+ambiance / prononciation / souvenirs / titre**) + adapte le PROMPT STYLE** (règles dures : JAMAIS de noms d'artistes, TOUJOURS « Quebec French accent, Canadian French », rien qui contredise) → courriel client **Mailgun** (réf `[token8·V#]`) → **le client répond par courriel** → Make lit l'entrant → Claude génère paroles + prompt → **DIRECT Suno** (cover `upload-cover` par défaut, ou régén si `mode_correction`) → Airtable « à approuver » → **1 SEULE approbation Maxime** (édite + relance au besoin ; Brigitte idem) → publication site + courriel « version modifiée prête ». Champs Airtable à créer : `mode_correction`, `requested_changes`, `adjusted_lyrics`, `adjusted_style_prompt`, `approval_status`, `ref_id`.
+- **Plafond (versions SUNO only)** : pré-achat **4/projet** · global client pré-achat **10** (+10 par achat, bloqué au-delà) · **post-achat illimité**. **Popup au cap projet (4)** : « limite atteinte pour cette personne » + box courriel « on veut t'aider à créer ta version de rêve » + alerte Maxime. (À implémenter dans C-gen + rollups Client.)
+- **G. Upsells** : vidéo perso = **waitlist** d'abord (consentement photos explicite + géré AI), workflow vite après. Mémoire vivante = **waitlist** + features.
+- **CAPI Meta (serveur seul)** : Lead (MAKE A) + preview_played + « purchased link clicked » (InitiateCheckout) + Purchase (MAKE D), avec fbc/fbp + email haché. ⚠️ Loi 25 (transfert Meta) + token-safe (ne jamais envoyer le token). Pas encore branché.
 
-3. **MAKE D pas activé.** À faire : importer `CM-D-REBUILD.blueprint.json` → créer le webhook (module 1) → coller son URL
-   dans **Stripe Dashboard → Webhooks** (événement `checkout.session.completed`) → mettre la **clé Stripe restreinte TEST**
-   dans le module 2 → re-lier connexions. Tant que non fait : `commercial_status=purchased` et `funnel_step=purchased`
-   ne sont jamais écrits → la livraison ne se débloque pas.
+## 6. ARCHITECTURE & DONNÉES
+- **Make** (org 1059466, team 422966, dossier « Chanson Mémoire » 321788) :
+  - **MAKE A — Lyrics** id `4789787` (webhook `…1dyhk11x…`).
+  - **C-gen — generate song** id `4792851`, webhook trigger `…uxpwxw1x…`. **⚠️ contient la vraie clé Suno (module 8) → édition MANUELLE, jamais scenarios_update sans préserver la clé.** Module 10 écrit `gen_music_style`/`gen_mood`/`gen_voice` par version.
+  - **C-cb — callback Suno** id `4792855`, webhook callback `…amlfm9t…`.
+  - **MAKE D — Stripe (achat)** id `4793505`, hook `2752092`. **⚠️ contient la vraie clé Stripe restreinte TEST (module 2) → édition MANUELLE.**
+  - Connexions : Airtable OAuth `4766682` (scopes `schema.bases:read` + `data.records:read/write`), Cloudinary `4732918` (cloud `dcx1tfm47`), Gmail/Google `3661126`, keychain Anthropic `92227`. Data Store « Songs styles » `86715`.
+- **Airtable** base `appIADNKzDOVtpjWj` (pré-launch = test, OK d'écrire) : Clients `tblQbF1OlE3uRxFra`, Projects `tblh7O8eoog7RyTMJ`, Generations `tblfrHFe1zH9apNlp`, Upsells `tbl0Z52D8l4555Has`. Schéma autoritaire = `CM_mapping_airtable.md` + champs ajoutés en session (voir mémoire build).
+- **Netlify Functions** (`netlify/functions/`) : `lire-projet`, `lire-versions`, `lire-survey`, `generate-lyrics` (create/regenerate/retry), `telecharger` (fl_attachment), `creer-checkout`, `essayer-style`, `accepter-livraison`, `choix-memoire`, `phrases-signet`. Pages : `index`, `souvenirs`, `revision`, `attente-chanson`, `apercu`, `page-chanson`, `page-memoire`.
+- **Env vars Netlify** : `AIRTABLE_BASE_ID`, `AIRTABLE_TOKEN`, `ANTHROPIC_API_KEY`, `CLOUDINARY_CLOUD_NAME`/`_API_KEY`/`_API_SECRET`, `STRIPE_SECRET_KEY` (restreinte TEST). `netlify.toml` → `SECRETS_SCAN_OMIT_KEYS = "CLOUDINARY_CLOUD_NAME"`. **À AJOUTER (Phase D/E)** : Mailgun + Canva.
 
-4. **CAPI Meta en attente** : « Lead » (MAKE A, branche NEW seulement) + « Purchase » (MAKE D) + remboursement (`refunded`).
-   Nécessite **Pixel ID + access token Meta** (placeholders dans les blueprints). ⚠️ **Flag Loi 25** (CAPI = transfert de
-   données à Meta, email hashé sha256 + fbc/fbp → doit être couvert par consentement + politique de confidentialité).
+## 7. PRÉREQUIS MAXIME (à compléter pour la suite)
+- **Canva** (Phase C/D) : finir setup Autofill API + **designer les 5 PDF + 5 signets**.
+- **Mailgun** (Phase E) : finir setup + clé API (compte + domaine déjà vérifiés).
+- **Validation légale** (un pro) : retrait de la signature (preuve plus faible, LPC/droit de résolution), wording cadeaux/waitlist, consentement photos (vidéo).
+- **Vraie chaîne cover Suno** (`/api/v1/generate/upload-cover`) : pas encore branchée.
 
-5. **Garde-fou `invalid_input` dans MAKE A — à CONFIRMER appliqué.** Blueprint `CM-A-REBUILD.blueprint.json` ajoute :
-   filtre `{{5.statusCode}} number:equal 200` sur les Create Generation (modules 8 NEW + 11 REGEN) + 3e route email d'alerte
-   (`{{5.statusCode}} != 200`). **But** : ne pas écrire `{"error":"invalid_input"}` comme paroles quand l'API refuse.
-   Vérifier que Maxime l'a bien appliqué (sinon un survey « charabia » peut encore créer une Generation cassée).
-   *(NB : `generate-lyrics` retourne la 422 invalid_input en `text/plain` → côté Make `{{5.data}}` est une STRING, d'où le
-   filtre sur `statusCode` et non sur `data.lyrics`.)*
+## 8. PROCHAINES ÉTAPES (ordre)
+1. **Merger `feat/page-memoire`** (Phase C).
+2. **Phase D** : fulfillment Canva des cadeaux + fulfillment des bumps payés.
+3. **Phase E/F** : décortique + cover + approbation (Claude + Mailgun + Make).
+4. **Plafond 4/10** (C-gen + rollups Client) + popup au cap.
+5. **G** : upsells (waitlists branchées) + CAPI Meta serveur.
 
-6. **Phase 5 — VÉRIFIÉE ✅ (tests live 2026-06-20, token `29ddc7fc…`).** Trois GET en direct :
-   (a) URL signée `…/authenticated/s--…--/du_60/cm_….mp3` → **200** (le preview joue) ;
-   (b) même URL **sans** `/du_60/` → **401** (signature cassée — fuite fermée, `du_60` est dans le `toSign`) ;
-   (c) `/api/telecharger` sur projet `preview_only` → **403** (chanson complète gatée `purchased`).
-   **Reste 1 geste manuel** : dismiss les **2 alertes CodeQL « weak crypto »** (SHA-1 sur `lire-projet.js`~l.52 et
-   `telecharger.js`~l.43) en **« Won't fix »** — SHA-1 est imposé par le schéma d'URL signée Cloudinary (faux positif).
-   **NE PAS** accepter la suggestion Copilot HMAC/SHA-256 (casserait la signature → 401 sur tous les previews).
-   Si un jour 401 sur un preview légitime : ajuster le `toSign` (le plus probable = enlever `.mp3`).
+## 9. MÉTHODE DE TRAVAIL
+- Plan court → « go » → **diff avant tout commit** → branche + PR (jamais `main` direct) → additif et testé.
+- **Make** : `scenarios_get` pour LIRE avant d'éditer. **Ne jamais `scenarios_update` un scénario qui contient une vraie clé** (C-gen=Suno, MAKE D=Stripe) — éditer à la main (l'éditeur est sûr, scope `schema.bases:read` présent). Pour les scénarios sans clé : `scenarios_update` OK après `validate_blueprint_schema`.
+- **Git** : toujours `git fetch origin` JUSTE AVANT de créer une branche / tester l'ancestry (les squash-merges changent le SHA → `merge-base --is-ancestor` donne des faux négatifs).
+- **MCP** (Airtable/Make) peuvent être déconnectés selon la session : nommer le MCP + pourquoi, ne pas supposer l'accès.
+- Tags de confiance. Bug build/déploiement Netlify : **exiger le log**, ne pas inférer. `node` souvent absent localement → pas de lint, valider sur le deploy.
 
-7. **Phase 6 — choix de version à l'achat** : pas commencé. Garder toutes les versions, `lire-projet` renvoie la liste,
-   sélecteur sur apercu, l'achat enregistre la version choisie. ⚠️ touche la chaîne argent → incrémental.
-
-8. **Proxy `lancer-chanson.js` toujours contourné** (appels webhook directs depuis les pages). Durcissement serveur
-   (secret webhook côté serveur, env `MAKE_C_GEN_WEBHOOK_URL` + `MAKE_WEBHOOK_SECRET`) = phase sécurité séparée.
-   (Le filtre « secret valide / VOTRE_SECRET » placeholder a été RETIRÉ de C-gen — il bloquait tout.)
-
-9. **Hygiène Airtable** : `preview_slug` + `full_slug` (Generations) et `regenerations_count` (Projects) = vestiges à
-   supprimer (le MCP ne peut pas supprimer un champ → manuel UI). `contact_name` (Clients) = gardé (jamais écrit, le
-   survey ne capte pas de nom). À confirmer si Maxime les a supprimés.
-
-10. **Champs à tracker plus tard (analyse faite, pas créés)** : `checkout_started_at`/`preview_played_at` créés ✅ ;
-    restent **`replay_generation`+`force_delivery`** (cases admin Brigitte §6 spine), `delivery_email_sent_at`,
-    `last_error`/`error_step`, `refund_date`/`refund_reason`.
-
-11. **Vraie chaîne COVER (post-achat)** : C-gen module 8 appelle TOUJOURS `/api/v1/generate`, jamais
-    `/api/v1/generate/upload-cover`. Donc `mode:'cover'` génère une chanson normale, pas un vrai cover (mélodie gardée +
-    paroles changées + `uploadUrl` Cloudinary + décortique Anthropic). **À faire quand les phases seront finies** (décidé avec Maxime).
-
-12. **Données de test à ignorer/nettoyer** : Projects à `generations_count=0` = runs MAKE A échoués (orphelins) ;
-    anciennes Generations avec `{"error":"invalid_input"}` ; anciens assets Cloudinary en `upload` (public) qui resteront
-    lisibles en public (buildAudioUrl les sert en `/upload/`). Tout ça = données de test pré-correctifs, sans impact.
-
----
-
-## 5. PROCHAINES ÉTAPES (ordre recommandé)
-1. ✅ **FAIT** — clé Suno en place dans C-gen module 8 (génère, vérifié 2026-06-20).
-2. ✅ **FAIT** — `schema.bases:read` présent sur la connexion Airtable `4766682` (éditeur Make sûr).
-3. ✅ **FAIT** — end-to-end NOUVELLE chanson vert : Project `guigluig` arrivé à `preview_played` (preview signé joué).
-4. ✅ **VÉRIFIÉE** — Phase 5 : tests live 200 / 401 / 403 OK (voir §4.6). *Reste : dismiss manuel des 2 alertes CodeQL.*
-5. **→ PROCHAIN : Activer MAKE D** (webhook Stripe + clé restreinte TEST) → tester un achat 1 $ → `purchased` + courriel + déblocage livraison.
-6. **CAPI** « Lead » (MAKE A) puis « Purchase » (MAKE D) quand les identifiants Meta sont dispo (+ valider le flag Loi 25).
-7. **Phase 6** (choix de version) + chaîne **cover** réelle.
-
----
-
-## 6. MÉTHODE DE TRAVAIL ATTENDUE
-- Plan court d'abord → attendre « go » → **diff avant tout commit**, puis branche + PR (jamais `main` direct) → additif et testé.
-- **Make** : `scenarios_get` pour LIRE l'état réel AVANT d'éditer. Livrer les rebuilds en `*.blueprint.json`
-  (placeholders pour clé/secret, jamais de credential dans le repo ; ils sont **gitignorés** via `*.blueprint*.json`).
-  Quand l'éditeur Make est cassé (champs vides), patcher via **MCP `scenarios_update`** (valider avec
-  `validate_blueprint_schema` AVANT) — sûr pour C-cb (pas de clé) ; pour C-gen, mettre la clé Suno en placeholder.
-- **NE JAMAIS** committer un `.blueprint.json` avec une vraie clé. **NE JAMAIS** demander/exiger un accès MCP non branché
-  (Airtable/Make peuvent être déconnectés selon la session — nommer le MCP + pourquoi, ne pas supposer l'accès).
-- Tags de confiance sur les affirmations. Pour un bug de build/déploiement Netlify : **exiger le log** (ne pas inférer).
-
----
-
-## 7. ÉTAT DES SCÉNARIOS MAKE (résumé)
-| Scénario | État | Note |
-|---|---|---|
-| MAKE A (4789787) | ✅ rebuild A+B + funnel ; garde invalid_input **à confirmer appliqué** | `{{0+1}}`, parseNumber, formatDate |
-| C-gen (4792851) | ✅ réécrit (field IDs) ; **clé Suno en place** (génère, vérifié 2026-06-20) | OK |
-| C-cb (4792855) | ✅ patché (status + song_id + authenticated + funnel + email) | OK |
-| MAKE D | ⏳ bâti, **pas importé/activé** | webhook Stripe + clé TEST requis |
+## 10. RÉFÉRENCES
+- **Mémoire auto** (se charge seule) : `MEMORY.md` (index) → `cm-production-musicale-build.md` (état build granulaire + gotchas), `cm-post-achat-plan.md` (roadmap post-achat validée), `project-guardrails.md`, `working-protocol.md`, `mcp-test-scoped.md`, `confidence-tags.md`, `user-maxime.md`.
+- **Docs repo** : `CLAUDE.md` (garde-fous autoritaires), `CM_spine_spec.md` (parcours), `CM_mapping_airtable.md` (schéma), `CM_make_plan.md` (scénarios Make).
