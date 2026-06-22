@@ -64,6 +64,19 @@ exports.handler = async (event) => {
       return { statusCode: 502, body: JSON.stringify({ error: 'Écriture impossible' }) };
     }
 
+    // Demande de cadeaux (PDF + signet choisis) -> déclenche le fulfillment Canva (best-effort).
+    // On ne fait que SIGNALER le token à Make, qui relit le Project, génère les cadeaux et pose
+    // pdf_url/signet_url. N'écrit AUCUN nouveau champ ici et ne bloque jamais la réponse au client.
+    if (fields.pdf_template && fields.signet_template && process.env.MAKE_CADEAUX_WEBHOOK_URL) {
+      try {
+        await fetch(process.env.MAKE_CADEAUX_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+      } catch (_) { /* le déclenchement ne doit jamais bloquer l'enregistrement */ }
+    }
+
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },

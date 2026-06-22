@@ -131,22 +131,26 @@
   </div>
 
   <!-- CADEAUX -->
-  <div class="card">
+  <div class="card" id="cadeauxCard">
     <div class="section-title">Vos cadeaux inclus</div>
-    <p class="section-sub">En plus de votre chanson : les <strong>paroles en PDF</strong> et un <strong>signet de commémoration</strong>. Choisissez vos modèles ci-dessous — ils seront prêts sur cette page sous 24 à 48 h.</p>
+    <p class="section-sub" id="cadeauxSub">En plus de votre chanson : les <strong>paroles en PDF</strong> et un <strong>signet de commémoration</strong>. Choisissez vos modèles ci-dessous — ils seront prêts sur cette page sous 24 à 48 h.</p>
 
-    <label class="fld">Modèle du PDF des paroles</label>
-    <div class="choices" id="pdfChoices"></div>
+    <div id="cadeauxChooser">
+      <label class="fld">Modèle du PDF des paroles</label>
+      <div class="choices" id="pdfChoices"></div>
 
-    <label class="fld">Modèle du signet</label>
-    <div class="choices" id="signetChoices"></div>
+      <label class="fld">Modèle du signet</label>
+      <div class="choices" id="signetChoices"></div>
 
-    <label class="fld">Un mot pour le signet</label>
-    <div class="chips" id="phraseChips"></div>
-    <textarea id="signetText" rows="3" placeholder="Choisissez une suggestion ci-dessus, ou écrivez votre propre message."></textarea>
+      <label class="fld">Un mot pour le signet</label>
+      <div class="chips" id="phraseChips"></div>
+      <textarea id="signetText" rows="3" placeholder="Choisissez une suggestion ci-dessus, ou écrivez votre propre message."></textarea>
 
-    <div style="margin-top:18px;"><button class="btn btn-block" id="btnCadeaux" type="button">Préparer mes cadeaux</button></div>
-    <p class="ok-msg" id="cadeauxMsg" style="display:none;"></p>
+      <div style="margin-top:18px;"><button class="btn btn-block" id="btnCadeaux" type="button">Préparer mes cadeaux</button></div>
+      <p class="ok-msg" id="cadeauxMsg" style="display:none;"></p>
+    </div>
+
+    <div id="cadeauxReady" style="display:none;"></div>
   </div>
 
   <!-- TEASER MÉMOIRE VIVANTE -->
@@ -205,7 +209,23 @@
     if(d.titre){ document.getElementById('title').textContent=d.titre; document.getElementById('playerTitle').textContent=d.titre; document.title=d.titre+' — Chanson Mémoire'; }
     var bits=[d.style,d.ambiance].filter(Boolean); if(bits.length) document.getElementById('subtitle').textContent=bits.join(' · ');
     if(d.audio_url){ source.src=d.audio_url; audio.load(); } else { loading.textContent='Votre chanson se finalise — réessayez dans un instant.'; }
+    // Cadeaux : URLs présentes -> prêts (téléchargement) ; déjà demandés -> en préparation ; sinon -> on laisse le choix.
+    if(d.pdf_url||d.signet_url){ showCadeauxReady(d.pdf_url,d.signet_url); }
+    else if(d.cadeaux_requested){ showCadeauxPending(); }
   }).catch(function(){ loading.textContent='Une erreur est survenue.'; });
+
+  function showCadeauxPending(){
+    var ch=document.getElementById('cadeauxChooser'); if(ch) ch.style.display='none';
+    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Vos cadeaux sont en préparation — on vous écrit dès qu’ils sont prêts (24 à 48 h).';
+  }
+  function showCadeauxReady(pdfUrl,signetUrl){
+    var ch=document.getElementById('cadeauxChooser'); if(ch) ch.style.display='none';
+    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Vos cadeaux sont prêts — téléchargez-les ci-dessous.';
+    var html='';
+    if(pdfUrl)    html+='<a class="btn btn-block" href="'+pdfUrl+'" style="margin-bottom:10px;"><i class="fa-solid fa-file-pdf"></i>&nbsp; Télécharger les paroles (PDF)</a>';
+    if(signetUrl) html+='<a class="btn btn-ghost btn-block" href="'+signetUrl+'"><i class="fa-solid fa-bookmark"></i>&nbsp; Télécharger le signet</a>';
+    var r=document.getElementById('cadeauxReady'); r.innerHTML=html; r.style.display='block';
+  }
 
   audio.addEventListener('loadedmetadata',function(){ progress.max=audio.duration||100; totEl.textContent=fmt(audio.duration); loading.style.display='none'; playBtn.disabled=false; });
   audio.addEventListener('error',function(){ loading.textContent='Lecture indisponible pour le moment.'; });

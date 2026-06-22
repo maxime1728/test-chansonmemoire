@@ -131,7 +131,10 @@ exports.handler = async (event) => {
         suggestions:       gen.suggestions || '[]',         // bulles dynamiques — exposition INTENTIONNELLE (au-delà des 5 champs §6 ; à refléter dans CLAUDE.md §6)
         commercial_status: projet.fields.commercial_status || 'preview_only',
         style:             gen.gen_music_style || projet.fields.music_style || '',   // affichage acceptation (titre + style + ambiance)
-        ambiance:          gen.gen_mood        || projet.fields.mood        || ''
+        ambiance:          gen.gen_mood        || projet.fields.mood        || '',
+        cadeaux_requested: !!projet.fields.pdf_template,            // a déjà choisi ses modèles -> état 'en préparation' tant que les URLs sont absentes
+        pdf_url:           toHttps(projet.fields.pdf_url || ''),    // PDF paroles (Canva) — propriété du client, token-gaté ; posé par Make au fulfillment
+        signet_url:        toHttps(projet.fields.signet_url || '')  // signet commémoration (Canva)
         // PAS d'email, PAS de stripe_*, PAS d'attribution. Volontaire.
       })
     };
