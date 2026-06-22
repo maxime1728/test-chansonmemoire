@@ -149,25 +149,33 @@ exports.handler = async (event) => {
     //    test/live, paramètre non supporté…), REPLI AUTOMATIQUE sur price_data : le bouton ne doit
     //    JAMAIS rester cassé à cause d'une config de Prix incomplète. L'erreur Stripe est journalisée.
     let resultat;
+    let diagPrix = null;   // DIAGNOSTIC TEMPORAIRE : raison Stripe du refus du chemin Prix/bumps
     if (SONG_PRICE) {
       resultat = await creerSession(paramsAvecPrix());
       if (!resultat.ok) {
+        diagPrix = resultat.err;
         console.error('[creer-checkout] Chemin Prix/bumps refusé par Stripe → repli price_data. Détail:', resultat.err);
         resultat = await creerSession(paramsPriceData());
       }
     } else {
+      diagPrix = 'STRIPE_PRICE_SONG non défini → chemin price_data (sans bumps).';
       resultat = await creerSession(paramsPriceData());
     }
 
     if (!resultat.ok) {
       console.error('[creer-checkout] Stripe a refusé la session (repli inclus). Détail:', resultat.err);
-      return { statusCode: 502, body: JSON.stringify({ error: 'Création du paiement échouée' }) };
+      return { statusCode: 502, body: JSON.stringify({ error: 'Création du paiement échouée', _diag: resultat.err }) };
     }
+
+    // _diag = TEMPORAIRE : pourquoi les bumps n'apparaissent pas (visible dans l'onglet Réseau → réponse
+    // de /api/creer-checkout). À RETIRER une fois le chemin Prix/bumps validé.
+    const out = { url: resultat.url };
+    if (diagPrix) out._diag = diagPrix;
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: resultat.url })
+      body: JSON.stringify(out)
     };
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
