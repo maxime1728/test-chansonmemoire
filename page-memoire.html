@@ -133,7 +133,7 @@
   <!-- CADEAU (v1 : paroles en PDF seulement ; le signet de commémoration s'ajoutera plus tard) -->
   <div class="card" id="cadeauxCard">
     <div class="section-title">Votre cadeau inclus</div>
-    <p class="section-sub" id="cadeauxSub">En plus de votre chanson : <strong>les paroles en PDF</strong> — une belle feuille à imprimer ou à garder. Prête sur cette page sous 24 à 48 h.</p>
+    <p class="section-sub" id="cadeauxSub">En plus de votre chanson : <strong>les paroles en PDF</strong> — une belle feuille à imprimer ou à garder. Prête sur cette page en quelques instants.</p>
 
     <div id="cadeauxChooser">
       <div style="margin-top:6px;"><button class="btn btn-block" id="btnCadeaux" type="button">Préparer mon cadeau</button></div>
@@ -220,9 +220,25 @@
     initUpsell(d.commercial_status === 'purchased', d.instrumental_url);
   }).catch(function(){ loading.textContent='Une erreur est survenue.'; });
 
+  var cadeauTimer=null;
   function showCadeauxPending(){
     var ch=document.getElementById('cadeauxChooser'); if(ch) ch.style.display='none';
-    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Votre cadeau est en préparation — on vous écrit dès qu’il est prêt (24 à 48 h).';
+    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Votre cadeau se prépare — il apparaîtra ici dans quelques instants.';
+    pollCadeau();
+  }
+  /* Sonde pdf_url après la demande (le PDF Canva se génère en ~1 min). ~3 min max, puis on s'arrête. */
+  function pollCadeau(){
+    if(cadeauTimer) return;
+    var n=0;
+    cadeauTimer=setInterval(function(){
+      n++;
+      post('/api/lire-projet',{token:token}).then(function(d){
+        if(d && d.pdf_url){ clearInterval(cadeauTimer); cadeauTimer=null; showCadeauxReady(d.pdf_url); }
+        else if(n>=22){ clearInterval(cadeauTimer); cadeauTimer=null;
+          var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Votre cadeau se finalise — reviens dans quelques minutes, il apparaîtra ici.';
+        }
+      }).catch(function(){});
+    }, 8000);
   }
   function showCadeauxReady(pdfUrl){
     var ch=document.getElementById('cadeauxChooser'); if(ch) ch.style.display='none';
@@ -254,7 +270,7 @@
   document.getElementById('btnCadeaux').addEventListener('click',function(){
     var b=this; b.disabled=true; b.textContent='Un instant…';
     post('/api/choix-memoire',{token:token,pdf_template:PDF_TEMPLATE}).then(function(res){
-      if(res && res.ok){ var m=document.getElementById('cadeauxMsg'); m.textContent='C’est noté ! Votre cadeau sera prêt sur cette page sous 24 à 48 h — on vous écrit dès qu’il est là.'; m.style.display='block'; b.textContent='Cadeau demandé ✓'; }
+      if(res && res.ok){ showCadeauxPending(); }   /* cache le sélecteur + sonde pdf_url jusqu'à livraison */
       else { b.disabled=false; b.textContent='Préparer mon cadeau'; alert("Une erreur est survenue. Réessayez."); }
     }).catch(function(){ b.disabled=false; b.textContent='Préparer mon cadeau'; alert("Une erreur est survenue. Réessayez."); });
   });
