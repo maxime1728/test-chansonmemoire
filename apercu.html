@@ -420,21 +420,7 @@ body {
 #cm-pricing-root .stripe-btn:hover { background: var(--cm-plum-mid); }
 #cm-pricing-root .stripe-btn:active { transform: scale(0.98); }
 
-/* Sélecteur de version à acheter (près du bouton payer) */
-#cm-pricing-root .cm-buy-version-wrap { margin-bottom: 14px; text-align: center; }
-#cm-pricing-root .cm-buy-version-label {
-  display: block; font-family: 'Mulish', sans-serif; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.10em; text-transform: uppercase; color: var(--cm-gold); margin-bottom: 6px;
-}
-#cm-pricing-root .cm-buy-version-select {
-  width: 100%; padding: 11px 36px 11px 14px; border-radius: 12px;
-  border: var(--cm-border-w) solid var(--cm-mauve); background-color: var(--cm-white);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238B4A6E' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-  background-repeat: no-repeat; background-position: right 14px center;
-  color: var(--cm-text); font-family: 'Mulish', sans-serif; font-size: 14px; font-weight: 600;
-  cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none; text-align: center; text-align-last: center;
-}
-#cm-pricing-root .cm-buy-version-select:focus { outline: none; border-color: var(--cm-plum-mid); }
+/* (Sélecteur de version retiré — remplacé par le popup de confirmation #cm-buy-overlay au clic acheter.) */
 
 /* Order bumps (cases indépendantes, au-dessus du bouton payer) */
 #cm-pricing-root .cm-bumps { display: flex; flex-direction: column; gap: 10px; margin: 0 0 18px; text-align: left; }
@@ -968,10 +954,8 @@ body {
         <li><span class="cm-spark">✦</span> Révisions illimitées jusqu'à satisfaction, sans frais</li>
       </ul>
       <p class="cm-anchor">Une œuvre sur mesure, sans les semaines d'attente ni la facture d'un compositeur professionnel.</p>
-      <div class="cm-buy-version-wrap" id="cm-buy-version-wrap" style="display:none;">
-        <label class="cm-buy-version-label" for="cm-buy-version">Version à recevoir</label>
-        <select class="cm-buy-version-select" id="cm-buy-version" aria-label="Choisir la version à acheter"></select>
-      </div>
+      <!-- Choix de version : déplacé dans un POPUP de confirmation au clic « acheter » (si >1 version). -->
+
       <!-- Order bumps déplacés sur la PAGE STRIPE (optional_items, ajoutables d'un clic) — voir creer-checkout.js. -->
 
       <div class="cm-btn-wrap">
@@ -1158,6 +1142,17 @@ body {
 <!-- ══ STICKY DOCK ══════════════════════════════════════ -->
 <div class="cm-sticky" id="cmSticky" aria-hidden="true">
   <button class="cm-sticky-btn" id="stripeBtnSticky">Obtenir la chanson complète</button>
+</div>
+
+<!-- ══ MODAL : CONFIRMER LA VERSION À ACHETER (si >1 version) ══ -->
+<div class="cm-modal-overlay" id="cm-buy-overlay" aria-hidden="true">
+  <div class="cm-modal" role="dialog" aria-modal="true" aria-labelledby="cm-buy-modal-title">
+    <button type="button" class="cm-modal-close" id="cm-buy-close" aria-label="Fermer">&times;</button>
+    <div class="cm-modal-title" id="cm-buy-modal-title">Quelle version souhaitez-vous ?</div>
+    <p class="cm-modal-sub">Confirmez la version à recevoir — c'est celle qui vous sera livrée.</p>
+    <div id="cm-buy-options"></div>
+    <p class="cm-modal-note" id="cm-buy-status" role="status" aria-live="polite"></p>
+  </div>
 </div>
 
 <!-- ══ MODAL : ESSAYER UN AUTRE STYLE ════════════════════ -->
@@ -1375,63 +1370,70 @@ body {
 (function() {
   var email = (window._CM && window._CM.email) || '';
   var token = (window._CM && window._CM.id)    || '';
-  var select = document.getElementById('cm-buy-version');
-  var wrap   = document.getElementById('cm-buy-version-wrap');
-  var defaultGenNo = null;
   var busy = false;
+  var cachedVersions = null;   /* versions chargées une fois (réutilisées par le popup d'achat) */
 
-  /* Remplit le menu des versions achetables (réutilise lire-versions). */
-  if (token) {
-    fetch('/api/lire-versions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token }) })
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(d){
-        if (!d || !Array.isArray(d.versions) || !d.versions.length) return;
-        var versions = d.versions;
-        defaultGenNo = versions[versions.length - 1].generation_no;   /* plus récente par défaut */
-        if (select && versions.length > 1) {
-          versions.forEach(function(ver){
-            var o = document.createElement('option');
-            o.value = String(ver.generation_no);
-            var bits = [ver.style, ver.ambiance].filter(Boolean);
-            o.textContent = 'V' + ver.v + (bits.length ? ' · ' + bits.join(' · ') : '');
-            select.appendChild(o);
-          });
-          select.value = String(defaultGenNo);
-          if (wrap) wrap.style.display = 'block';
-        }
-      })
-      .catch(function(){});
-  }
-
-  /* Version choisie (menu, sinon plus récente ; recharge si pas encore prête au clic). */
-  function chosenGenNo() {
-    if (select && select.value) return Promise.resolve(parseInt(select.value, 10));
-    if (defaultGenNo) return Promise.resolve(defaultGenNo);
+  /* Charge les versions une fois (réutilisé par le popup de confirmation). */
+  function loadVersions() {
+    if (cachedVersions) return Promise.resolve(cachedVersions);
+    if (!token) return Promise.resolve([]);
     return fetch('/api/lire-versions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token }) })
       .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(d){
-        if (d && d.versions && d.versions.length) { defaultGenNo = d.versions[d.versions.length - 1].generation_no; return defaultGenNo; }
-        return null;
-      }).catch(function(){ return null; });
+      .then(function(d){ cachedVersions = (d && Array.isArray(d.versions)) ? d.versions : []; return cachedVersions; })
+      .catch(function(){ return []; });
+  }
+  if (token) loadVersions();   /* préchauffe au chargement */
+
+  /* Lance la session Stripe pour une version précise. */
+  function startCheckout(genNo) {
+    if (!genNo) { busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant."); return; }
+    fetch('/api/creer-checkout', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token, generation_no: genNo, email: email })   /* bumps = optional_items sur la page Stripe */
+    })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (d && d.url) { window.location.href = d.url; return; }   /* → Stripe Checkout */
+      busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant.");
+    })
+    .catch(function(){ busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant."); });
+  }
+
+  /* Popup de confirmation de version (≥ 2 versions) — plus précis que l'ancien sélecteur. */
+  var buyOverlay = document.getElementById('cm-buy-overlay');
+  var buyOptions = document.getElementById('cm-buy-options');
+  var buyClose   = document.getElementById('cm-buy-close');
+  function closeBuy(){ if (buyOverlay) { buyOverlay.classList.remove('show'); buyOverlay.setAttribute('aria-hidden','true'); } busy = false; }
+  if (buyClose)   buyClose.addEventListener('click', closeBuy);
+  if (buyOverlay) buyOverlay.addEventListener('click', function(e){ if (e.target === buyOverlay) closeBuy(); });
+
+  function openBuy(versions) {
+    if (!buyOverlay || !buyOptions) { startCheckout(versions[versions.length - 1].generation_no); return; }
+    buyOptions.innerHTML = '';
+    versions.forEach(function(ver){
+      var bits = [ver.style, ver.ambiance].filter(Boolean);
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'cm-modal-confirm';
+      b.style.cssText = 'display:block;width:100%;margin-bottom:10px;';
+      b.textContent = 'V' + ver.v + (bits.length ? ' · ' + bits.join(' · ') : '');
+      b.addEventListener('click', function(){
+        buyOverlay.classList.remove('show'); buyOverlay.setAttribute('aria-hidden','true');
+        startCheckout(ver.generation_no);
+      });
+      buyOptions.appendChild(b);
+    });
+    buyOverlay.classList.add('show'); buyOverlay.setAttribute('aria-hidden','false');
   }
 
   function goStripe() {
     if (busy || !token) return;               /* aperçu legacy sans token : pas d'achat serveur */
     busy = true;
-    if (window._cmFunnel) window._cmFunnel('checkout_started');   /* intention d'achat (avant redirection) */
-    chosenGenNo().then(function(genNo){
-      if (!genNo) { busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant."); return; }
-      return fetch('/api/creer-checkout', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ token: token, generation_no: genNo, email: email })   /* bumps = optional_items sur la page Stripe */
-      })
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(d){
-        if (d && d.url) { window.location.href = d.url; return; }   /* → Stripe Checkout */
-        busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant.");
-      });
-    })
-    .catch(function(){ busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant."); });
+    if (window._cmFunnel) window._cmFunnel('checkout_started');   /* intention d'achat */
+    loadVersions().then(function(versions){
+      if (!versions || !versions.length) { busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant."); return; }
+      if (versions.length > 1) openBuy(versions);                 /* >1 version → popup de confirmation */
+      else startCheckout(versions[0].generation_no);              /* 1 seule version → direct */
+    });
   }
 
   ['stripeBtnPricing', 'stripeBtnBottom', 'stripeBtnSticky'].forEach(function(id) {
