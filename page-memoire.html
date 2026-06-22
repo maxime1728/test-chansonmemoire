@@ -268,10 +268,11 @@
 
   /* ── Préparer mon cadeau (paroles en PDF) ── */
   document.getElementById('btnCadeaux').addEventListener('click',function(){
-    var b=this; b.disabled=true; b.textContent='Un instant…';
-    post('/api/choix-memoire',{token:token,pdf_template:PDF_TEMPLATE}).then(function(res){
-      if(res && res.ok){ showCadeauxPending(); }   /* cache le sélecteur + sonde pdf_url jusqu'à livraison */
-      else { b.disabled=false; b.textContent='Préparer mon cadeau'; alert("Une erreur est survenue. Réessayez."); }
+    var b=this; b.disabled=true; b.textContent='Préparation de votre cadeau…';
+    /* lancer-cadeau génère le PDF (pdfkit -> Cloudinary), écrit pdf_url et le renvoie (~quelques s). */
+    post('/api/lancer-cadeau',{token:token}).then(function(res){
+      if(res && res.pdf_url){ showCadeauxReady(res.pdf_url); }
+      else { b.disabled=false; b.textContent='Préparer mon cadeau'; alert("La préparation n'a pas abouti. Réessayez dans un instant."); }
     }).catch(function(){ b.disabled=false; b.textContent='Préparer mon cadeau'; alert("Une erreur est survenue. Réessayez."); });
   });
 
