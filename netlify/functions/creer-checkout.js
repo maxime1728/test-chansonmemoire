@@ -78,44 +78,52 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Version introuvable' }) };
     }
 
-    // 3. Libellé dynamique affiché dans Stripe = MÊME rang que le menu (jamais le prix : fixé serveur).
-    const bits     = [gen.gen_music_style, gen.gen_mood].filter(Boolean);
-    const lineName = `Chanson Mémoire — V${rang}` + (bits.length ? ` · ${bits.join(' · ')}` : '');
-    const songId   = gen.song_id || '';
-    const email    = (body.email || '').trim();
+    // 3. Articles. Pour des ORDER BUMPS natifs (optional_items, ajoutables sur la PAGE STRIPE), les
+    //    articles doivent être des Prix Stripe : Stripe interdit optional_items avec un montant
+    //    personnalisé (price_data). Donc si STRIPE_PRICE_SONG est défini -> chemin Price IDs + bumps ;
+    //    sinon repli price_data (libellé dynamique, sans bumps natifs) pour ne rien casser avant config.
+    const songId = gen.song_id || '';
+    const email  = (body.email || '').trim();
+
+    const SONG_PRICE    = process.env.STRIPE_PRICE_SONG;             // Prix Stripe one-time 139,97 $ CAD
+    const PRICE_INSTRU  = process.env.STRIPE_PRICE_INSTRUMENTAL;     // Prix Stripe 19,99 $
+    const PRICE_PAROLES = process.env.STRIPE_PRICE_PAROLES_VIVANTES; // Prix Stripe 13,99 $
 
     // 4. Crée la Checkout Session (form-encodé).
     const params = new URLSearchParams();
     params.append('mode', 'payment');
-    params.append('line_items[0][quantity]', '1');
-    params.append('line_items[0][price_data][currency]', CURRENCY);
-    params.append('line_items[0][price_data][unit_amount]', String(PRICE_CENTS));
-    params.append('line_items[0][price_data][product_data][name]', lineName);
-    params.append('client_reference_id', token);                 // MAKE D retrouve le Project
+
+    if (SONG_PRICE) {
+      // Chemin Price IDs : article principal = la chanson (Prix Stripe fixe).
+      params.append('line_items[0][price]', SONG_PRICE);
+      params.append('line_items[0][quantity]', '1');
+      // Bumps = articles OPTIONNELS, ajoutables d'un clic SUR la page Stripe (le client choisit 0 ou 1).
+      let oi = 0;
+      for (const pid of [PRICE_INSTRU, PRICE_PAROLES]) {
+        if (!pid) continue;
+        params.append(`optional_items[${oi}][price]`, pid);
+        params.append(`optional_items[${oi}][quantity]`, '1');
+        params.append(`optional_items[${oi}][adjustable_quantity][enabled]`, 'true');
+        params.append(`optional_items[${oi}][adjustable_quantity][minimum]`, '0');
+        params.append(`optional_items[${oi}][adjustable_quantity][maximum]`, '1');
+        oi += 1;
+      }
+    } else {
+      // Repli avant config des Prix Stripe : prix fixé serveur + libellé dynamique « V{rang} », sans bumps.
+      const bits     = [gen.gen_music_style, gen.gen_mood].filter(Boolean);
+      const lineName = `Chanson Mémoire — V${rang}` + (bits.length ? ` · ${bits.join(' · ')}` : '');
+      params.append('line_items[0][quantity]', '1');
+      params.append('line_items[0][price_data][currency]', CURRENCY);
+      params.append('line_items[0][price_data][unit_amount]', String(PRICE_CENTS));
+      params.append('line_items[0][price_data][product_data][name]', lineName);
+    }
+
+    params.append('client_reference_id', token);                 // MAKE D / fulfillment retrouvent le Project
     params.append('metadata[token]', token);
     params.append('metadata[generation_no]', String(generationNo));
     if (songId) params.append('metadata[song_id]', songId);
-
-    // Order bumps (cases INDÉPENDANTES) — prix FIXÉS serveur. Livraison NON immédiate : la metadata
-    // est lue à l'ACCEPTATION (signature) pour fulfillment depuis la version acceptée (couche B).
-    const bumps = body.bumps || {};
-    let li = 1;
-    if (bumps.instrumental) {
-      params.append(`line_items[${li}][quantity]`, '1');
-      params.append(`line_items[${li}][price_data][currency]`, CURRENCY);
-      params.append(`line_items[${li}][price_data][unit_amount]`, '1999');   // 19,99 $
-      params.append(`line_items[${li}][price_data][product_data][name]`, 'Version instrumentale');
-      li += 1;
-    }
-    if (bumps.paroles_vivantes) {
-      params.append(`line_items[${li}][quantity]`, '1');
-      params.append(`line_items[${li}][price_data][currency]`, CURRENCY);
-      params.append(`line_items[${li}][price_data][unit_amount]`, '1399');   // 13,99 $
-      params.append(`line_items[${li}][price_data][product_data][name]`, 'Paroles vivantes');
-      li += 1;
-    }
-    params.append('metadata[bump_instrumental]',     bumps.instrumental ? '1' : '0');
-    params.append('metadata[bump_paroles_vivantes]', bumps.paroles_vivantes ? '1' : '0');
+    // NB : les bumps achetés ne sont PLUS en metadata — le fulfillment lira les line_items de la
+    //      session COMPLÉTÉE (un optional_item ajouté devient un vrai line item après paiement).
 
     params.append('success_url', `${SITE}/page-chanson?id=${encodeURIComponent(token)}`);
     params.append('cancel_url',  `${SITE}/apercu?id=${encodeURIComponent(token)}`);

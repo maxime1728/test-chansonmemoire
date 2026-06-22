@@ -972,18 +972,8 @@ body {
         <label class="cm-buy-version-label" for="cm-buy-version">Version à recevoir</label>
         <select class="cm-buy-version-select" id="cm-buy-version" aria-label="Choisir la version à acheter"></select>
       </div>
-      <div class="cm-bumps" id="cm-bumps">
-        <label class="cm-bump">
-          <input type="checkbox" id="cm-bump-instrumental">
-          <span>Version instrumentale <span class="cm-bump-price">+19,99 $</span>
-            <span class="cm-bump-desc">La musique seule, sans voix — pour la réécouter autrement.</span></span>
-        </label>
-        <label class="cm-bump">
-          <input type="checkbox" id="cm-bump-paroles">
-          <span>Paroles vivantes <span class="cm-bump-price">+13,99 $</span>
-            <span class="cm-bump-desc">Une vidéo où les paroles défilent au fil de la chanson.</span></span>
-        </label>
-      </div>
+      <!-- Order bumps déplacés sur la PAGE STRIPE (optional_items, ajoutables d'un clic) — voir creer-checkout.js. -->
+
       <div class="cm-btn-wrap">
         <button id="stripeBtnPricing" class="stripe-btn">Obtenir la chanson complète</button>
       </div>
@@ -1431,13 +1421,9 @@ body {
     if (window._cmFunnel) window._cmFunnel('checkout_started');   /* intention d'achat (avant redirection) */
     chosenGenNo().then(function(genNo){
       if (!genNo) { busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant."); return; }
-      var bumps = {
-        instrumental:     !!(document.getElementById('cm-bump-instrumental') || {}).checked,
-        paroles_vivantes: !!(document.getElementById('cm-bump-paroles') || {}).checked
-      };
       return fetch('/api/creer-checkout', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ token: token, generation_no: genNo, email: email, bumps: bumps })
+        body: JSON.stringify({ token: token, generation_no: genNo, email: email })   /* bumps = optional_items sur la page Stripe */
       })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(d){
