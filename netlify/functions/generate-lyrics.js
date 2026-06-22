@@ -13,6 +13,20 @@ const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
 const BASE_ID        = process.env.AIRTABLE_BASE_ID;
 const AT_API         = `https://api.airtable.com/v0/${BASE_ID}`;
 
+// Token légitime = UUID v4 (généré par crypto.randomUUID()). Validé AVANT tout appel Airtable
+// dans les modes appelés par le client (regenerate/retry) : anti-injection filterByFormula +
+// inguessabilité (122 bits) -> ferme l'énumération/accès inter-projets. (Le mode create vient de Make.)
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// Échappe une valeur pour un littéral filterByFormula Airtable (pas d'échappement \" natif) :
+// on encadre avec le guillemet absent de la valeur ; si les deux types sont présents -> null.
+function formulaLiteral(v) {
+  const s = String(v);
+  if (!s.includes('"')) return `"${s}"`;
+  if (!s.includes("'")) return `'${s}'`;
+  return null;
+}
+
 /* ───────────────────── Bloc suggestions (commun aux 2 prompts) ───────────────────── */
 const SUGGESTIONS_RULES = `
 SUGGESTIONS — also produce between 2 and 5 revision suggestions in Québec French, addressed TO THE CLIENT (using "vous"/"votre"/"sa"):
@@ -114,7 +128,9 @@ function normSuggestions(s) {
 
 /* ───────────────────── Helpers Airtable ───────────────────── */
 async function findProjectByToken(token) {
-  const formule = encodeURIComponent(`{token}="${token}"`);
+  const lit = formulaLiteral(token);
+  if (lit === null) return null;
+  const formule = encodeURIComponent(`{token}=${lit}`);
   const r = await fetch(`${AT_API}/Projects?filterByFormula=${formule}&maxRecords=1`,
     { headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` } });
   const d = await r.json();
@@ -122,7 +138,9 @@ async function findProjectByToken(token) {
 }
 
 async function findLastGeneration(projectPrimary) {
-  const formule = encodeURIComponent(`{project}="${projectPrimary}"`);
+  const lit = formulaLiteral(projectPrimary);
+  if (lit === null) return null;
+  const formule = encodeURIComponent(`{project}=${lit}`);
   const r = await fetch(
     `${AT_API}/Generations?filterByFormula=${formule}` +
     `&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=1`,
@@ -173,6 +191,7 @@ exports.handler = async (event) => {
   if (mode === 'retry') {
     const token = (d.token || '').trim();
     if (!token) return { statusCode: 400, body: JSON.stringify({ error: 'Token manquant' }) };
+    if (!UUID_V4.test(token)) return { statusCode: 400, body: JSON.stringify({ error: 'Token invalide' }) };
     try {
       const projet = await findProjectByToken(token);
       if (!projet) return { statusCode: 404, body: JSON.stringify({ error: 'Introuvable' }) };
@@ -243,6 +262,7 @@ exports.handler = async (event) => {
     const token = (d.token || '').trim();
     const modifications = (d.modifications || '').trim();
     if (!token)          return { statusCode: 400, body: JSON.stringify({ error: 'Token manquant' }) };
+    if (!UUID_V4.test(token)) return { statusCode: 400, body: JSON.stringify({ error: 'Token invalide' }) };
     if (!modifications)  return { statusCode: 400, body: JSON.stringify({ error: 'Modifications manquantes' }) };
 
     try {
