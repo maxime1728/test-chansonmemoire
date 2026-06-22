@@ -217,7 +217,7 @@
     // Cadeau : PDF prêt -> téléchargement ; déjà demandé -> en préparation ; sinon -> bouton.
     if(d.pdf_url){ showCadeauxReady(d.pdf_url); }
     else if(d.cadeaux_requested){ showCadeauxPending(); }
-    initUpsell(d.commercial_status === 'purchased');
+    initUpsell(d.commercial_status === 'purchased', d.instrumental_url);
   }).catch(function(){ loading.textContent='Une erreur est survenue.'; });
 
   function showCadeauxPending(){
@@ -284,11 +284,19 @@
   waitlist('btnWaitVideo','videoMsg',{waitlist_video:true},'Parfait ✓ On vous contactera pour votre vidéo souvenir.');
 
   /* ── Upsell post-achat (add-ons payants) — affiché uniquement aux acheteurs (pic émotionnel). ── */
-  function initUpsell(purchased){
+  function initUpsell(purchased, instrumentalUrl){
     var card = document.getElementById('upsellCard');
     if(!card || !purchased) return;
     card.style.display='block';
     [].forEach.call(card.querySelectorAll('[data-upsell]'), function(btn){
+      /* Add-on déjà livré -> on remplace « Ajouter » par un téléchargement. */
+      if(btn.getAttribute('data-upsell')==='instrumental' && instrumentalUrl){
+        var a=document.createElement('a');
+        a.className='btn btn-ghost'; a.href=instrumentalUrl; a.setAttribute('download','');
+        a.style.whiteSpace='nowrap'; a.textContent='Télécharger';
+        btn.parentNode.replaceChild(a, btn);
+        return;
+      }
       btn.addEventListener('click', function(){
         btn.disabled=true; var old=btn.textContent; btn.textContent='Un instant…';
         post('/api/creer-upsell',{token:token, upsell_type:btn.getAttribute('data-upsell')}).then(function(res){
