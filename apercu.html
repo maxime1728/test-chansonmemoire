@@ -1393,6 +1393,8 @@ body {
     })
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(d){
+      /* DEBUG TEMPORAIRE : pourquoi les bumps n'apparaissent pas. À RETIRER une fois réglé. */
+      if (d && d._diag) { window.alert('DIAG bumps (temporaire) :\n\n' + d._diag); }
       if (d && d.url) { window.location.href = d.url; return; }   /* → Stripe Checkout */
       busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant.");
     })
