@@ -68,6 +68,18 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: JSON.stringify({ error: 'Réservé après achat' }) };
     }
 
+    // Courriel de l'acheteur (sur le Client lié) : préremplit le checkout ET rend l'adresse fiable
+    // dans MAKE D via {{2.data.customer_details.email}} pour le courriel de confirmation de l'upsell.
+    let clientEmail = '';
+    try {
+      const link  = projet.fields.Client;
+      const recId = Array.isArray(link) ? link[0] : null;
+      if (recId) {
+        const rC = await fetch(`${API}/Clients/${recId}`, { headers });
+        if (rC.ok) { const dC = await rC.json(); clientEmail = (dC.fields && dC.fields.email) || ''; }
+      }
+    } catch (_) { /* best-effort : Stripe demandera l'email sinon */ }
+
     // Session Checkout : add-on seul, prix Stripe fixe. metadata -> MAKE D enregistre (kind=upsell).
     const params = new URLSearchParams();
     params.append('mode', 'payment');
@@ -77,6 +89,7 @@ exports.handler = async (event) => {
     params.append('metadata[token]', token);
     params.append('metadata[kind]', 'upsell');
     params.append('metadata[upsell_type]', type);
+    if (clientEmail && clientEmail.includes('@')) params.append('customer_email', clientEmail);
     params.append('success_url', `${SITE}/page-memoire?id=${encodeURIComponent(token)}&upsell_ok=1`);
     params.append('cancel_url',  `${SITE}/page-memoire?id=${encodeURIComponent(token)}`);
 
