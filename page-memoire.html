@@ -152,6 +152,21 @@
     <p class="ok-msg" id="correctionMsg" style="display:none;"></p>
   </div>
 
+  <!-- UPSELL POST-ACHAT : add-ons payants (affiché aux acheteurs, pic émotionnel) -->
+  <div class="card" id="upsellCard" style="display:none;">
+    <div class="section-title">Prolongez votre chanson</div>
+    <p class="section-sub">Des compléments pour faire durer et partager ce souvenir.</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;text-align:left;">
+      <div><strong>Version instrumentale</strong> · 19,99 $<br><span style="font-size:13px;opacity:.7;">La trame musicale seule, sans voix.</span></div>
+      <button class="btn btn-ghost" type="button" data-upsell="instrumental" style="white-space:nowrap;">Ajouter</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;text-align:left;">
+      <div><strong>Paroles vivantes en vidéo</strong> · 13,99 $<br><span style="font-size:13px;opacity:.7;">Les paroles animées, à partager avec vos proches.</span></div>
+      <button class="btn btn-ghost" type="button" data-upsell="paroles_vivantes" style="white-space:nowrap;">Ajouter</button>
+    </div>
+    <p class="ok-msg" id="upsellMsg" style="display:none;"></p>
+  </div>
+
   <!-- TEASER MÉMOIRE VIVANTE -->
   <div class="card teaser">
     <div class="badge">À venir</div>
@@ -202,6 +217,7 @@
     // Cadeau : PDF prêt -> téléchargement ; déjà demandé -> en préparation ; sinon -> bouton.
     if(d.pdf_url){ showCadeauxReady(d.pdf_url); }
     else if(d.cadeaux_requested){ showCadeauxPending(); }
+    initUpsell(d.commercial_status === 'purchased');
   }).catch(function(){ loading.textContent='Une erreur est survenue.'; });
 
   function showCadeauxPending(){
@@ -266,6 +282,26 @@
   }
   waitlist('btnWaitMemoire','memoireMsg',{waitlist_memoire:true},'Vous êtes sur la liste ✓ On vous écrira au lancement.');
   waitlist('btnWaitVideo','videoMsg',{waitlist_video:true},'Parfait ✓ On vous contactera pour votre vidéo souvenir.');
+
+  /* ── Upsell post-achat (add-ons payants) — affiché uniquement aux acheteurs (pic émotionnel). ── */
+  function initUpsell(purchased){
+    var card = document.getElementById('upsellCard');
+    if(!card || !purchased) return;
+    card.style.display='block';
+    [].forEach.call(card.querySelectorAll('[data-upsell]'), function(btn){
+      btn.addEventListener('click', function(){
+        btn.disabled=true; var old=btn.textContent; btn.textContent='Un instant…';
+        post('/api/creer-upsell',{token:token, upsell_type:btn.getAttribute('data-upsell')}).then(function(res){
+          if(res && res.url){ window.location.href=res.url; return; }   /* → Stripe Checkout */
+          btn.disabled=false; btn.textContent=old; alert("Paiement indisponible pour le moment. Réessayez.");
+        }).catch(function(){ btn.disabled=false; btn.textContent=old; alert("Une erreur est survenue."); });
+      });
+    });
+    /* Retour d'un paiement réussi -> petit mot de remerciement. */
+    if(new URLSearchParams(window.location.search).get('upsell_ok')){
+      var m=document.getElementById('upsellMsg'); if(m){ m.textContent='Merci ! Votre complément est en préparation — on vous écrit dès qu’il est prêt.'; m.style.display='block'; }
+    }
+  }
 })();
 </script>
 </body>
