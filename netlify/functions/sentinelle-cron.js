@@ -13,6 +13,7 @@
 // Best-effort : jamais d'exception qui casse le cron. Env : SUNO_API_KEY, CLOUDINARY_*, MAKE_CCB_WEBHOOK_URL.
 
 const { rehost } = require('./_lib/cloudinary-rehost');
+const { accentFor } = require('./_lib/lyrics');
 
 const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
@@ -40,8 +41,8 @@ async function atPatch(id, fields) {
     body: JSON.stringify({ fields })
   });
 }
-function styleOf(g) {
-  return [g.gen_music_style, g.gen_mood, 'Quebec French accent, Canadian French'].filter(Boolean).join(', ');
+function styleOf(g, lang) {
+  return [g.gen_music_style, g.gen_mood, accentFor(lang)].filter(Boolean).join(', ');
 }
 
 exports.handler = async () => {
@@ -103,13 +104,22 @@ exports.handler = async () => {
         continue;
       }
       try {
+        // Langue du Projet lié (accent Suno correct) — chemin rare (régénération), 1 fetch.
+        let projLang = '';
+        try {
+          const pid = Array.isArray(g.project) ? g.project[0] : null;
+          if (pid) {
+            const rp = await fetch(`${API}/Projects/${pid}`, { headers: { Authorization: `Bearer ${AT_TOKEN}` } });
+            if (rp.ok) { const dp = await rp.json(); projLang = (dp.fields && dp.fields.language) || ''; }
+          }
+        } catch (_) {}
         const rGen = await fetch('https://api.sunoapi.org/api/v1/generate', {
           method: 'POST',
           headers: { Authorization: `Bearer ${SUNO_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             customMode: true, instrumental: false, model: MODEL,
             prompt: (g.lyrics || '').slice(0, 5000),
-            style: styleOf(g).slice(0, 1000),
+            style: styleOf(g, projLang).slice(0, 1000),
             title: (g.song_title || 'Pour toujours').slice(0, 100),
             vocalGender: /Masculin/i.test(g.gen_voice || '') ? 'm' : 'f',
             callBackUrl: CCB_HOOK
