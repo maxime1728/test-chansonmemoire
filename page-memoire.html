@@ -217,7 +217,7 @@
     // Cadeau : PDF prêt -> téléchargement ; déjà demandé -> en préparation ; sinon -> bouton.
     if(d.pdf_url){ showCadeauxReady(d.pdf_url); }
     else if(d.cadeaux_requested){ showCadeauxPending(); }
-    initUpsell(d.commercial_status === 'purchased', d.instrumental_url);
+    initUpsell(d.commercial_status === 'purchased', { instrumental: d.instrumental_url, paroles_vivantes: d.video_url });
   }).catch(function(){ loading.textContent='Une erreur est survenue.'; });
 
   var cadeauTimer=null;
@@ -300,16 +300,19 @@
   waitlist('btnWaitMemoire','memoireMsg',{waitlist_memoire:true},'Vous êtes sur la liste ✓ On vous écrira au lancement.');
   waitlist('btnWaitVideo','videoMsg',{waitlist_video:true},'Parfait ✓ On vous contactera pour votre vidéo souvenir.');
 
-  /* ── Upsell post-achat (add-ons payants) — affiché uniquement aux acheteurs (pic émotionnel). ── */
-  function initUpsell(purchased, instrumentalUrl){
+  /* ── Upsell post-achat (add-ons payants) — affiché uniquement aux acheteurs (pic émotionnel). ──
+     delivered = { instrumental: url|'', paroles_vivantes: url|'' } : add-on déjà livré -> téléchargement. */
+  function initUpsell(purchased, delivered){
     var card = document.getElementById('upsellCard');
     if(!card || !purchased) return;
     card.style.display='block';
+    delivered = delivered || {};
     [].forEach.call(card.querySelectorAll('[data-upsell]'), function(btn){
+      var type = btn.getAttribute('data-upsell');
       /* Add-on déjà livré -> on remplace « Ajouter » par un téléchargement. */
-      if(btn.getAttribute('data-upsell')==='instrumental' && instrumentalUrl){
+      if(delivered[type]){
         var a=document.createElement('a');
-        a.className='btn btn-ghost'; a.href=instrumentalUrl; a.setAttribute('download','');
+        a.className='btn btn-ghost'; a.href=delivered[type]; a.setAttribute('download','');
         a.style.whiteSpace='nowrap'; a.textContent='Télécharger';
         btn.parentNode.replaceChild(a, btn);
         return;
