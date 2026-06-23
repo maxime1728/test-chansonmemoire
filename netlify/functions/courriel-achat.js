@@ -87,9 +87,14 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: JSON.stringify({ error: 'Réservé après achat' }) };
     }
 
-    // Destinataire : email Stripe (payload, server-to-server) en priorité, sinon Client lié.
-    let to = (body.email || '').toString().trim();
-    if (!to || !to.includes('@')) to = await emailClient(projet, headers);
+    // Destinataires. ACHAT : on envoie au courriel du FORMULAIRE (Client, principal) ET au courriel
+    // Stripe (payeur) s'il diffère — le 1er courriel doit atteindre les deux. UPSELL : un seul.
+    const clientEmail = (await emailClient(projet, headers) || '').trim();
+    const stripeEmail = (body.email || '').toString().trim();
+    const valide = (e) => e && e.includes('@');
+    const recipients = (kind === 'upsell')
+      ? [valide(stripeEmail) ? stripeEmail : clientEmail].filter(valide)
+      : [...new Set([clientEmail, stripeEmail].filter(valide))];   // achat -> les deux, dédupliqués
 
     const lien = `${SITE}/page-memoire?id=${encodeURIComponent(token)}`;
 
@@ -123,8 +128,9 @@ exports.handler = async (event) => {
       });
     }
 
-    const sent = await envoyerCourriel(to, subject, html);
-    return { statusCode: 200, body: JSON.stringify({ ok: true, sent }) };
+    let sent = 0;
+    for (const r of recipients) { if (await envoyerCourriel(r, subject, html)) sent++; }
+    return { statusCode: 200, body: JSON.stringify({ ok: true, sent, recipients: recipients.length }) };
   } catch (err) {
     console.error('[courriel-achat]', err && err.message);
     return { statusCode: 200, body: JSON.stringify({ ok: true, sent: false }) };  // ne bloque jamais MAKE D

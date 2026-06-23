@@ -233,6 +233,13 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     <div class="cm-q-eyebrow">Dernière étape</div>
     <h2 class="cm-q-title">Où envoyons-nous votre chanson ?</h2>
     <p class="cm-q-sub">Votre aperçu sera prêt en quelques minutes. Entrez votre courriel pour le recevoir.</p>
+    <label class="cm-consent-label" for="input-language" style="display:block;text-align:left;margin-bottom:6px;">Langue de la chanson</label>
+    <select class="cm-input" id="input-language" style="margin-bottom:14px;">
+      <option value="fr-CA">Français (Canada)</option>
+      <option value="fr-FR">Français (France)</option>
+      <option value="en">English</option>
+      <option value="es">Español</option>
+    </select>
     <input class="cm-input" type="email" id="input-email" placeholder="votre@courriel.com" autocomplete="email">
     <div class="cm-error" id="err-email">Veuillez entrer un courriel valide.</div>
     <div class="cm-consent">
@@ -290,6 +297,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     music_style:      '',
     voice:            '',
     mood:             '',
+    language:         'fr-CA',   /* langue de la chanson (sélecteur étape finale) */
     what_made_unique: '',
     memories:         '',
     memory_to_keep:   '',
@@ -429,6 +437,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     if(!valid) return;
 
     data.email=email; data.consentement=true;
+    var langSel=document.getElementById('input-language'); data.language=(langSel&&langSel.value)||'fr-CA';
 
     var btn=document.getElementById('btn-submit');
     btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Envoi en cours…';

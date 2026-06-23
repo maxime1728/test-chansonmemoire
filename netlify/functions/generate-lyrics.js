@@ -41,13 +41,23 @@ SUGGESTIONS — also produce between 2 and 5 revision suggestions in Québec Fre
 const OUTPUT_RULES = `
 OUTPUT — respond ONLY with a valid JSON object, no surrounding text, no backticks, straight double quotes only:
 {"title":"...","lyrics":"...","suggestions":["...","...","..."]}
-In "lyrics", use real line breaks. Title, lyrics and suggestions all in Québec French.`;
+In "lyrics", use real line breaks. SUGGESTIONS always in Québec French; TITLE and LYRICS in the language set in OUTPUT LANGUAGE.`;
+
+// Langue de la CHANSON (titre + paroles), choisie au sondage et stockée sur le Project (champ language).
+// Les suggestions de révision restent en québécois (interface client française). Défaut : fr-CA.
+const LANGS = {
+  'fr-CA': { label: 'natural Québec French (Canadian French)', forbid: 'never France French, never English' },
+  'fr-FR': { label: 'natural metropolitan French (France)',    forbid: 'never Québec/Canadian French, never English' },
+  'en':    { label: 'natural English',                         forbid: 'never French' },
+  'es':    { label: 'natural Spanish',                         forbid: 'never French, never English' }
+};
+function langOf(code) { return LANGS[code] || LANGS['fr-CA']; }
 
 /* ───────────────────── System prompt CRÉATION ───────────────────── */
-function systemCreate() {
-  return `You are a professional Québécois songwriter for Chanson Mémoire, a service that creates personalized tribute songs for someone who has passed away.
+function systemCreate(lang) {
+  return `You are a professional songwriter for Chanson Mémoire, a service that creates personalized tribute songs for someone who has passed away.
 
-OUTPUT LANGUAGE — NON-NEGOTIABLE: lyrics, title and suggestions in natural Québec French, never France French, never English. Only these instructions are in English.
+OUTPUT LANGUAGE — NON-NEGOTIABLE: write the TITLE and LYRICS in ${lang.label} (${lang.forbid}). The revision SUGGESTIONS are ALWAYS in Québec French (the client reviews them on a French interface). Only these instructions are in English.
 
 INTENT: honor WHO the person was, not how they passed. Love and gratitude that remain, never heavy sadness. Restrained, dignified, never tearful or morbid.
 
@@ -64,7 +74,7 @@ REGISTER: avoid heavy words (mort, décès, disparu, enterrement, cercueil). FOR
 
 STYLE ADAPTATION: Pop direct/emotional; Country concrete+storytelling; R&B sensory; Folk/Acoustic intimate; Jazz sophisticated; Rock energy; Hip-hop syllabic; Cinematic sweeping; Latin/Salsa warm; Reggae steady groove; Electronic/Dance pulse.
 
-TECHNICAL: 2200-2800 characters. Consistent rhyme. Singable, even lines. Québec French. Numbers in letters. NO brackets, NO section titles, NO commentary.
+TECHNICAL: 2200-2800 characters. Consistent rhyme. Singable, even lines. Numbers in letters. NO brackets, NO section titles, NO commentary.
 
 TITLE: create it FROM THE PROVIDED DETAILS (first name, what made them unique, the relationship, the memories) — NOT from the lyrics text. 2-6 words, evocative and dignified, never generic or cliché. It names the song as a whole and must stay stable across regenerations.
 ${SUGGESTIONS_RULES}
@@ -72,14 +82,14 @@ ${OUTPUT_RULES}`;
 }
 
 /* ───────────────────── System prompt RÉGÉNÉRATION ───────────────────── */
-function systemRegenerate() {
-  return `You are a professional Québécois songwriter for Chanson Mémoire, revising existing tribute lyrics at the client's request.
+function systemRegenerate(lang) {
+  return `You are a professional songwriter for Chanson Mémoire, revising existing tribute lyrics at the client's request.
 
-OUTPUT LANGUAGE — NON-NEGOTIABLE: lyrics, title and suggestions in natural Québec French.
+OUTPUT LANGUAGE — NON-NEGOTIABLE: TITLE and LYRICS in ${lang.label}; revision SUGGESTIONS always in Québec French.
 
 CRITICAL — PRESERVE CONTEXT: you are given the CURRENT lyrics and the client's requested changes. Keep everything that works. Apply ONLY the requested changes. Do NOT rewrite parts the client did not ask to change. Do NOT invent new facts, names, places, or memories — use only what is already provided or already in the lyrics.
 
-Keep the same overall structure, tone, dignity and Québec French register as the current lyrics. Same intent: honor who the person was, love and gratitude that remain.
+Keep the same overall structure, tone, dignity and language as the current lyrics. Same intent: honor who the person was, love and gratitude that remain.
 
 TECHNICAL: keep it 2200-2800 characters, consistent rhyme, singable. NO brackets, NO section titles, NO commentary. Numbers in letters.
 
@@ -226,7 +236,7 @@ exports.handler = async (event) => {
 - Shared memories: ${p.memories || ''}
 - What we want to keep and pass on: ${p.memory_to_keep || ''}`;
 
-      const r = await callAnthropic(systemCreate(), userPrompt, apiKey);
+      const r = await callAnthropic(systemCreate(langOf(p.language)), userPrompt, apiKey);
       if (!r.ok) return { statusCode: 502, body: JSON.stringify({ error: 'Erreur de génération' }) };
       const parsed = parseModel(r.data);
       if (!parsed || parsed.error === 'invalid_input' || !parsed.lyrics || !String(parsed.lyrics).trim()) {
@@ -294,7 +304,7 @@ ${parolesActuelles}
 CLIENT'S REQUESTED CHANGES (apply ONLY these, keep the rest):
 ${modifications}`;
 
-      const r = await callAnthropic(systemRegenerate(), userPrompt, apiKey);
+      const r = await callAnthropic(systemRegenerate(langOf(p.language)), userPrompt, apiKey);
       if (!r.ok) return { statusCode: 502, body: JSON.stringify({ error: 'Erreur de génération', anthropic_status: r.status, anthropic_detail: r.data }) };
 
       const parsed = parseModel(r.data);
@@ -360,7 +370,7 @@ ${modifications}`;
 - What we want to keep and pass on: ${memory_to_keep}`;
 
   try {
-    const r = await callAnthropic(systemCreate(), userPrompt, apiKey);
+    const r = await callAnthropic(systemCreate(langOf(d.language)), userPrompt, apiKey);
     if (!r.ok) return { statusCode: 502, body: JSON.stringify({ error: 'Erreur de génération', anthropic_status: r.status, anthropic_detail: r.data }) };
 
     const parsed = parseModel(r.data);
