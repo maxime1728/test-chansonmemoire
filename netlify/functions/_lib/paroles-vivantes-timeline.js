@@ -1,6 +1,6 @@
 // netlify/functions/_lib/paroles-vivantes-timeline.js
 //
-// Construit l'« edit » Shotstack pour la vidéo PAROLES VIVANTES (fondu doux ligne par ligne).
+// Construit le RenderScript CREATOMATE pour la vidéo PAROLES VIVANTES (fondu doux ligne par ligne).
 // Module PARTAGÉ entre lancer-paroles-vivantes.js (production) et tools/rendu-test.js (sandbox) :
 // une seule source de vérité pour le design -> aucune divergence entre le rendu test et le rendu livré.
 //
@@ -9,8 +9,8 @@
 //   paroles serif EB Garamond crème qui apparaissent en fondu, une « page » à la fois ·
 //   signature « Chanson Mémoire » discrète en bas pendant toute la durée.
 //
-// Synchronisation : on utilise les paroles HORODATÉES de Suno (startS/endS par mot) pour caler
-//   chaque ligne sur la voix. Si l'alignement manque, on retombe sur une cadence douce et fixe.
+// Polices : Google Fonts par NOM (Creatomate les fournit) -> rien à héberger.
+// Synchronisation : paroles HORODATÉES Suno (startS/endS par mot). Sans alignement -> cadence douce.
 
 'use strict';
 
@@ -20,19 +20,18 @@ const CREAM = '#F5F0EA';   // crème — corps des paroles
 const GOLD  = '#C4963A';   // doré — accent « en mémoire de »
 const MAUVE = '#E7C9D8';   // mauve clair, lisible sur fond sombre — titre
 
-// ── Polices serif (Fontsource via jsDelivr : URLs TTF directes, stables, accents FR garantis) ──
-const FONTS = [
-  { src: 'https://cdn.jsdelivr.net/fontsource/fonts/playfair-display@latest/latin-700-normal.ttf' },
-  { src: 'https://cdn.jsdelivr.net/fontsource/fonts/eb-garamond@latest/latin-400-normal.ttf' }
-];
-const FONT_TITLE = 'Playfair Display';
-const FONT_BODY  = 'EB Garamond';
+const FONT_TITLE = 'Playfair Display';   // Google Font (serif élégant)
+const FONT_BODY  = 'EB Garamond';        // Google Font (serif lisible)
+
+// ── Dimensions ────────────────────────────────────────────────────────────────
+const W = 1280, H = 720, FPS = 30;
 
 // ── Réglages temporels (secondes) ─────────────────────────────────────────────
 const INTRO_MIN = 3.5;   // durée minimale de la carte-titre, même si la voix entre tôt
 const OUTRO     = 5;     // carte-titre de fin après la dernière ligne chantée
 const MIN_LEN   = 1.4;   // durée mini d'affichage d'une ligne (lisibilité)
 const PER_LINE  = 3.4;   // cadence de repli quand l'horodatage manque
+const FADE      = 0.8;   // durée des fondus
 
 // Retire les balises de structure ([Refrain], (x2)…) et les lignes vides -> lignes à AFFICHER.
 function cleanLyrics(lyrics) {
@@ -47,15 +46,14 @@ function countWords(line) {
   return (String(line).match(/\S+/g) || []).length;
 }
 
-// Calcule pour chaque ligne { text, start, length } + introLen + songEnd.
+// Calcule pour chaque ligne { text, start, length } + introLen + lyricsEnd + songEnd.
 // alignedWords = tableau Suno [{ word, startS, endS, success }] (peut être vide -> repli).
 function timeLines(displayLines, alignedWords) {
   const words = (Array.isArray(alignedWords) ? alignedWords : [])
     .filter(w => w && Number.isFinite(w.startS) && Number.isFinite(w.endS) && w.endS >= w.startS);
 
   const totalW = displayLines.reduce((a, l) => a + Math.max(1, countWords(l)), 0);
-  // Assez d'alignement pour caler sur la voix ? (sinon cadence fixe)
-  const aligned = words.length >= Math.max(6, Math.ceil(totalW * 0.5));
+  const aligned = words.length >= Math.max(6, Math.ceil(totalW * 0.5));   // assez pour caler sur la voix ?
 
   const starts = new Array(displayLines.length);
   let lyricsEnd;
@@ -91,8 +89,7 @@ function timeLines(displayLines, alignedWords) {
   }
   if (starts.length) lyricsEnd = Math.max(lyricsEnd, starts[starts.length - 1] + MIN_LEN);
 
-  // Durées « gapless » : chaque ligne reste à l'écran jusqu'à l'apparition de la suivante
-  // (lecture calme, pas de noir entre les lignes).
+  // Durées « gapless » : chaque ligne reste à l'écran jusqu'à l'apparition de la suivante.
   const lines = displayLines.map((text, i) => {
     const start = starts[i];
     const next  = (i + 1 < starts.length) ? starts[i + 1] : lyricsEnd;
@@ -107,88 +104,73 @@ function timeLines(displayLines, alignedWords) {
   };
 }
 
-// Assemble l'« edit » Shotstack complet à partir des lignes timées.
-function buildEdit({ titre, prenom, lines, introLen, lyricsEnd, songEnd, audioUrl, resolution }) {
-  // Piste 0 (au-dessus) : les paroles, ligne par ligne, en fondu.
-  const lyricClips = lines.map(l => ({
-    asset: {
-      type: 'text', text: l.text,
-      font: { family: FONT_BODY, color: CREAM, size: 44, lineHeight: 1.35 },
-      alignment: { horizontal: 'center', vertical: 'center' },
-      width: 1000, height: 460
-    },
-    start: l.start, length: l.length, position: 'center',
-    transition: { in: 'fade', out: 'fade' }
-  }));
-
-  // Piste 1 : carte-titre d'intro (titre + « en mémoire de … ») puis carte de fin.
-  const cardClips = [];
-  if (introLen > 0.8) {
-    cardClips.push({
-      asset: {
-        type: 'text', text: titre || 'Pour toujours',
-        font: { family: FONT_TITLE, color: MAUVE, size: 66, lineHeight: 1.15 },
-        alignment: { horizontal: 'center', vertical: 'center' }, width: 1080, height: 240
-      },
-      start: 0, length: introLen, position: 'center', offset: { x: 0, y: 0.06 },
-      transition: { in: 'fade', out: 'fade' }
-    });
-    if (prenom) {
-      cardClips.push({
-        asset: {
-          type: 'text', text: 'en mémoire de ' + prenom,
-          font: { family: FONT_BODY, color: GOLD, size: 30, lineHeight: 1.2 },
-          alignment: { horizontal: 'center', vertical: 'center' }, width: 900, height: 120
-        },
-        start: 0, length: introLen, position: 'center', offset: { x: 0, y: -0.12 },
-        transition: { in: 'fade', out: 'fade' }
-      });
-    }
-  }
-  cardClips.push({
-    asset: {
-      type: 'text', text: titre || 'Pour toujours',
-      font: { family: FONT_TITLE, color: MAUVE, size: 58, lineHeight: 1.15 },
-      alignment: { horizontal: 'center', vertical: 'center' }, width: 1080, height: 240
-    },
-    start: Math.max(0, lyricsEnd), length: OUTRO, position: 'center',
-    transition: { in: 'fade', out: 'fade' }
-  });
-
-  // Piste 2 : signature permanente, en bas.
-  const footerClip = {
-    asset: {
-      type: 'text', text: 'Chanson Mémoire',
-      font: { family: FONT_TITLE, color: CREAM, size: 24, opacity: 0.55, lineHeight: 1 },
-      alignment: { horizontal: 'center', vertical: 'center' }, width: 600, height: 70
-    },
-    start: 0, length: songEnd, position: 'bottom', offset: { x: 0, y: 0.06 },
-    transition: { in: 'fade' }
+// Élément texte Creatomate. fadeOut=true -> ajoute un fondu de sortie (animation inversée en fin).
+function textEl({ text, track, time, duration, family, weight, color, size, y, fadeOut }) {
+  const el = {
+    type: 'text', track, time, duration, text,
+    font_family: family, font_weight: weight || '400', font_size: size,
+    fill_color: color, line_height: '128%',
+    width: '86%', x_alignment: '50%', y_alignment: '50%',
+    animations: [{ time: 0, duration: FADE, easing: 'quadratic-out', type: 'fade' }]
   };
-
-  const timeline = {
-    background: BG,
-    fonts: FONTS,
-    tracks: [
-      { clips: lyricClips },
-      { clips: cardClips },
-      { clips: [footerClip] }
-    ]
-  };
-  if (audioUrl) timeline.soundtrack = { src: audioUrl, effect: 'fadeOut' };
-
-  return { timeline, output: { format: 'mp4', resolution: resolution || 'hd' } };
+  if (y != null) el.y = y;
+  if (fadeOut) el.animations.push({ time: 'end', duration: FADE, easing: 'quadratic-in', type: 'fade', reversed: true });
+  return el;
 }
 
-// Façade : paroles brutes + alignement Suno -> « edit » Shotstack prêt à rendre.
-function buildEditFromLyrics({ titre, prenom, lyrics, alignedWords, audioUrl, resolution }) {
+// Assemble le RenderScript Creatomate complet à partir des lignes timées.
+function buildEdit({ titre, prenom, lines, introLen, lyricsEnd, songEnd, audioUrl }) {
+  const elements = [];
+
+  // Bande-son (piste 1) : la chanson, bornée à la durée vidéo, fondu de sortie.
+  if (audioUrl) {
+    elements.push({ type: 'audio', track: 1, time: 0, duration: songEnd, source: audioUrl, loop: false, audio_fade_out: 2 });
+  }
+
+  // Signature permanente (piste 2, bas) — peinte avant les paroles -> jamais par-dessus.
+  elements.push(textEl({
+    text: 'Chanson Mémoire', track: 2, time: 0, duration: songEnd,
+    family: FONT_TITLE, weight: '700', color: CREAM, size: 22, y: '92%'
+  }));
+
+  // Cartes titre (piste 3) : intro (titre + « en mémoire de … ») puis fin.
+  if (introLen > 0.8) {
+    elements.push(textEl({
+      text: titre || 'Pour toujours', track: 3, time: 0, duration: introLen,
+      family: FONT_TITLE, weight: '700', color: MAUVE, size: 64, y: '44%', fadeOut: true
+    }));
+    if (prenom) {
+      elements.push(textEl({
+        text: 'en mémoire de ' + prenom, track: 3, time: 0, duration: introLen,
+        family: FONT_BODY, weight: '400', color: GOLD, size: 30, y: '58%', fadeOut: true
+      }));
+    }
+  }
+  elements.push(textEl({
+    text: titre || 'Pour toujours', track: 3, time: Math.max(0, lyricsEnd), duration: OUTRO,
+    family: FONT_TITLE, weight: '700', color: MAUVE, size: 56, y: '50%', fadeOut: true
+  }));
+
+  // Paroles (piste 4) — peintes en DERNIER = au-dessus. Une ligne à la fois, en fondu.
+  lines.forEach(l => {
+    elements.push(textEl({
+      text: l.text, track: 4, time: l.start, duration: l.length,
+      family: FONT_BODY, weight: '400', color: CREAM, size: 44, fadeOut: true
+    }));
+  });
+
+  return { output_format: 'mp4', width: W, height: H, frame_rate: FPS, fill_color: BG, elements };
+}
+
+// Façade : paroles brutes + alignement Suno -> RenderScript Creatomate prêt à rendre.
+function buildEditFromLyrics({ titre, prenom, lyrics, alignedWords, audioUrl }) {
   const displayLines = cleanLyrics(lyrics);
   if (displayLines.length === 0) return null;
   const t = timeLines(displayLines, alignedWords);
   return buildEdit({
-    titre, prenom, audioUrl, resolution,
+    titre, prenom, audioUrl,
     lines: t.lines, introLen: t.introLen, lyricsEnd: t.lyricsEnd, songEnd: t.songEnd
   });
 }
 
-module.exports = { cleanLyrics, timeLines, buildEdit, buildEditFromLyrics, FONTS, FONT_TITLE, FONT_BODY };
+module.exports = { cleanLyrics, timeLines, buildEdit, buildEditFromLyrics, FONT_TITLE, FONT_BODY };

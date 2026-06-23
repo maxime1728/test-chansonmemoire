@@ -2,14 +2,14 @@
 //
 // Enclenche la vidéo PAROLES VIVANTES (add-on payant) : paroles animées en fondu sur la chanson achetée.
 // Appelé par MAKE D quand l'add-on est payé (token en paramètre), ou manuellement / par la page.
-//   1. Récupère les paroles HORODATÉES de Suno (startS/endS par mot) pour caler chaque ligne sur la voix.
-//   2. Construit l'« edit » Shotstack (module partagé _lib/paroles-vivantes-timeline).
-//   3. Lance le rendu Shotstack (async) -> callback-paroles-vivantes.js stockera l'URL de la vidéo.
+//   1. Récupère les paroles HORODATÉES : d'abord le timing STOCKÉ (lyrics_timing, capté à l'achat,
+//      permanent) ; sinon fetch live Suno (si encore < ~15 j) ; sinon cadence douce.
+//   2. Construit le RenderScript Creatomate (module partagé _lib/paroles-vivantes-timeline).
+//   3. Lance le rendu Creatomate (async) -> callback-paroles-vivantes.js stockera l'URL de la vidéo.
 //
 // - Idempotent : si déjà rendu (video_url) -> renvoie ; si rendu en cours (video_task_id) -> 'pending'.
 // - Sécurité : POST, UUID v4 strict, gaté Project 'purchased'. Clés en env (jamais en dur).
-//   SHOTSTACK_API_KEY (x-api-key), SHOTSTACK_ENV ('stage' sandbox | 'v1' prod), SHOTSTACK_RESOLUTION.
-//   SUNO_API_KEY (paroles horodatées), CLOUDINARY_API_SECRET (URL audio signée).
+//   CREATOMATE_API_KEY, CREATOMATE_API_VERSION (v2 défaut), SUNO_API_KEY, CLOUDINARY_API_SECRET.
 
 const crypto = require('crypto');
 const { buildEditFromLyrics } = require('./_lib/paroles-vivantes-timeline');
@@ -20,11 +20,10 @@ const API      = `https://api.airtable.com/v0/${BASE_ID}`;
 const SITE     = 'https://chansonmemoire.ca';
 const UUID_V4  = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const SHOTSTACK_API_KEY = process.env.SHOTSTACK_API_KEY;
-const SHOTSTACK_ENV     = process.env.SHOTSTACK_ENV || 'stage';        // 'stage' (sandbox gratuit) | 'v1' (prod)
-const RESOLUTION        = process.env.SHOTSTACK_RESOLUTION || 'hd';
-const SUNO_API_KEY      = process.env.SUNO_API_KEY;
-const CLD_SECRET        = process.env.CLOUDINARY_API_SECRET;
+const CREATOMATE_API_KEY = process.env.CREATOMATE_API_KEY;
+const CREATOMATE_VERSION = process.env.CREATOMATE_API_VERSION || 'v1';   // v1 = { source, webhook_url, metadata } (doc) ; v2 = RenderScript au top-level
+const SUNO_API_KEY       = process.env.SUNO_API_KEY;
+const CLD_SECRET         = process.env.CLOUDINARY_API_SECRET;
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -50,8 +49,14 @@ function fullAudioUrl(stored) {
   return `https://res.cloudinary.com/${p.cloud}/video/upload/${p.publicId}${p.ext}`;
 }
 
-// Paroles horodatées Suno (best-effort). Renvoie [] en cas d'échec -> le module retombe sur une cadence fixe.
-async function alignedWordsFrom(taskId, audioId) {
+// Timing stocké (capté à l'achat) -> permanent. Renvoie [] si absent/illisible.
+function storedTiming(gen) {
+  try { const a = JSON.parse(gen.fields.lyrics_timing || '[]'); return Array.isArray(a) ? a : []; }
+  catch (_) { return []; }
+}
+
+// Paroles horodatées Suno EN DIRECT (best-effort). Renvoie [] en cas d'échec -> cadence fixe.
+async function alignedWordsLive(taskId, audioId) {
   if (!SUNO_API_KEY || !taskId || !audioId) return [];
   try {
     const r = await fetch('https://api.sunoapi.org/api/v1/generate/get-timestamped-lyrics', {
@@ -67,7 +72,7 @@ async function alignedWordsFrom(taskId, audioId) {
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Méthode non permise' }) };
-  if (!SHOTSTACK_API_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'Configuration vidéo manquante' }) };
+  if (!CREATOMATE_API_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'Configuration vidéo manquante' }) };
 
   let body;
   try { body = JSON.parse(event.body || '{}'); }
@@ -97,7 +102,7 @@ exports.handler = async (event) => {
       return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true }) };
     }
 
-    // 3. Version achetée -> sa Generation (paroles, titre, source audio + ids Suno).
+    // 3. Version achetée -> sa Generation (paroles, titre, source audio + ids Suno + timing stocké).
     const purchasedNo = parseInt(projet.fields.purchased_generation_no, 10);
     if (!Number.isInteger(purchasedNo)) return { statusCode: 409, body: JSON.stringify({ error: 'Version achetée inconnue' }) };
     const projLit = formulaLiteral(projet.fields.project);
@@ -111,34 +116,39 @@ exports.handler = async (event) => {
     const audioUrl = fullAudioUrl(gen.fields.cloudinary_audio_url || '');
     if (!audioUrl) return { statusCode: 409, body: JSON.stringify({ error: 'Audio source introuvable' }) };
 
-    // 4. Paroles horodatées (best-effort) -> edit Shotstack.
-    const alignedWords = await alignedWordsFrom(gen.fields.suno_task_id, gen.fields.song_id);
+    // 4. Timing : stocké (permanent) en priorité, sinon live Suno, sinon cadence -> RenderScript.
+    let alignedWords = storedTiming(gen);
+    if (!alignedWords.length) alignedWords = await alignedWordsLive(gen.fields.suno_task_id, gen.fields.song_id);
+
     const edit = buildEditFromLyrics({
-      titre:        gen.fields.song_title || '',
-      prenom:       projet.fields.deceased_name || '',
-      lyrics:       gen.fields.lyrics || '',
-      alignedWords,
-      audioUrl,
-      resolution:   RESOLUTION
+      titre:  gen.fields.song_title || '',
+      prenom: projet.fields.deceased_name || '',
+      lyrics: gen.fields.lyrics || '',
+      alignedWords, audioUrl
     });
     if (!edit) return { statusCode: 409, body: JSON.stringify({ error: 'Paroles vides' }) };
-    edit.callback = `${SITE}/api/callback-paroles-vivantes`;
 
-    // 5. Lance le rendu Shotstack (async). x-api-key, jamais en dur.
-    const rS = await fetch(`https://api.shotstack.io/edit/${SHOTSTACK_ENV}/render`, {
+    // 5. Lance le rendu Creatomate (async). webhook + metadata=token -> le callback matche le Project.
+    //    v1 : { source, webhook_url, metadata } (forme documentée) ; v2 : RenderScript au top-level.
+    const extra = { webhook_url: `${SITE}/api/callback-paroles-vivantes`, metadata: token };
+    const payload = (CREATOMATE_VERSION === 'v1')
+      ? Object.assign({ source: edit }, extra)
+      : Object.assign({}, edit, extra);
+    const rC = await fetch(`https://api.creatomate.com/${CREATOMATE_VERSION}/renders`, {
       method: 'POST',
-      headers: { 'x-api-key': SHOTSTACK_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify(edit)
+      headers: { Authorization: `Bearer ${CREATOMATE_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-    const dS = await rS.json();
-    const renderId = dS && dS.response && dS.response.id;
-    if (!rS.ok || !renderId) {
-      console.error('[lancer-paroles-vivantes] Shotstack a refusé. Détail:',
-        (dS && (dS.message || (dS.response && dS.response.message))) || `HTTP ${rS.status}`);
+    const dC = await rC.json();
+    const render = Array.isArray(dC) ? dC[0] : dC;          // Creatomate renvoie un tableau de renders
+    const renderId = render && render.id;
+    if (!rC.ok || !renderId) {
+      console.error('[lancer-paroles-vivantes] Creatomate a refusé. Détail:',
+        (dC && (dC.message || dC.error)) || `HTTP ${rC.status}`);
       return { statusCode: 502, body: JSON.stringify({ error: 'Lancement de la vidéo échoué' }) };
     }
 
-    // 6. Stocke l'ID de rendu -> le callback matchera le Project par ce champ.
+    // 6. Stocke l'ID de rendu -> le callback peut aussi matcher par ce champ (en plus du metadata).
     await fetch(`${API}/Projects/${projet.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
