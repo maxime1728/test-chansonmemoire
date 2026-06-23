@@ -5,10 +5,12 @@
 // Webhook public : matche par task_id Suno (non devinable) + n'écrit qu'instrumental_url -> faible risque.
 // Répond TOUJOURS 200 à Suno (pour ne pas déclencher de réessais).
 //
-// ⚠️ v1 = on stocke l'URL Suno directement. À DURCIR avant le live : ré-héberger sur Cloudinary
-//    (signé, comme la chanson) car les URLs Suno expirent.
+// PERMANENCE : les URLs Suno expirent (~15 j) -> on RÉ-HÉBERGE l'audio sur Cloudinary (copie permanente)
+//   avant de l'écrire. Si Cloudinary échoue/non configuré -> repli sur l'URL Suno (on ne perd pas la livraison).
 //
 // Payload : { code, msg, data: { task_id, vocal_removal_info: { instrumental_url, vocal_url, origin_url } } }
+
+const { rehost } = require('./_lib/cloudinary-rehost');
 
 const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
@@ -50,10 +52,14 @@ exports.handler = async (event) => {
     const projet = d.records && d.records[0];
     if (!projet) return { statusCode: 200, body: '{}' };   // rien à matcher (déjà nettoyé / inconnu)
 
+    // Ré-héberge sur Cloudinary (permanent). Repli sur l'URL Suno si non configuré / échec.
+    const pubId = `instrumental_${projet.fields.token || taskId}`;
+    const hosted = await rehost(instrumentalUrl, { folder: 'instrumentales', publicId: pubId, resourceType: 'video' });
+
     await fetch(`${API}/Projects/${projet.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { instrumental_url: instrumentalUrl } })
+      body: JSON.stringify({ fields: { instrumental_url: hosted || instrumentalUrl } })
     });
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };
   } catch (err) {

@@ -5,10 +5,12 @@
 //   sinon par `video_task_id` (= id de rendu Creatomate). Webhook public -> on ne fait que poser video_url.
 // Répond TOUJOURS 200 (un webhook ne doit jamais renvoyer d'erreur au fournisseur).
 //
-// ⚠️ v1 = on stocke l'URL Creatomate directement. Elle est conservée ~30 j puis supprimée.
-//    À DURCIR avant le live : ré-héberger sur Cloudinary (comme la chanson). [voir callback-instrumentale]
+// PERMANENCE : l'URL Creatomate est conservée ~30 j -> on RÉ-HÉBERGE la vidéo sur Cloudinary (copie
+//   permanente) avant de l'écrire. Si Cloudinary échoue/non configuré -> repli sur l'URL Creatomate.
 //
 // Payload Creatomate : { id, status:"succeeded"|"failed"|…, url, metadata, … }
+
+const { rehost } = require('./_lib/cloudinary-rehost');
 
 const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
@@ -59,10 +61,14 @@ exports.handler = async (event) => {
     const projet = d.records && d.records[0];
     if (!projet) return { statusCode: 200, body: '{}' };   // rien à matcher (inconnu / déjà nettoyé)
 
+    // Ré-héberge sur Cloudinary (permanent). Repli sur l'URL Creatomate si non configuré / échec.
+    const pubId = `video_${projet.fields.token || renderId}`;
+    const hosted = await rehost(videoUrl, { folder: 'paroles-vivantes', publicId: pubId, resourceType: 'video' });
+
     await fetch(`${API}/Projects/${projet.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { video_url: videoUrl } })
+      body: JSON.stringify({ fields: { video_url: hosted || videoUrl } })
     });
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };
   } catch (err) {

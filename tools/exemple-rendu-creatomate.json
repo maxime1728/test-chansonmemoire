@@ -1,0 +1,40 @@
+{
+  "source": {
+    "output_format": "mp4",
+    "width": 1280,
+    "height": 720,
+    "frame_rate": 30,
+    "fill_color": "#241019",
+    "elements": [
+      { "type": "audio", "track": 1, "time": 0, "duration": 35.7, "source": "https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/unminus/lit.mp3", "loop": false, "audio_fade_out": 2 },
+
+      { "type": "text", "track": 2, "time": 0, "duration": 35.7, "text": "Chanson Mémoire", "font_family": "Playfair Display", "font_weight": "700", "font_size": 22, "fill_color": "#F5F0EA", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%", "y": "92%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" } ] },
+
+      { "type": "text", "track": 3, "time": 0, "duration": 3.5, "text": "Pour toujours", "font_family": "Playfair Display", "font_weight": "700", "font_size": 64, "fill_color": "#E7C9D8", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%", "y": "44%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] },
+      { "type": "text", "track": 3, "time": 0, "duration": 3.5, "text": "en mémoire de Joséphine", "font_family": "EB Garamond", "font_weight": "400", "font_size": 30, "fill_color": "#C4963A", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%", "y": "58%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] },
+
+      { "type": "text", "track": 4, "time": 3.5, "duration": 3.4, "text": "Dans la lumière douce du matin", "font_family": "EB Garamond", "font_weight": "400", "font_size": 44, "fill_color": "#F5F0EA", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] },
+      { "type": "text", "track": 4, "time": 6.9, "duration": 3.4, "text": "Je revois ton sourire, ta main", "font_family": "EB Garamond", "font_weight": "400", "font_size": 44, "fill_color": "#F5F0EA", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] },
+      { "type": "text", "track": 4, "time": 10.3, "duration": 3.4, "text": "Les étés au chalet, les chansons", "font_family": "EB Garamond", "font_weight": "400", "font_size": 44, "fill_color": "#F5F0EA", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] },
+      { "type": "text", "track": 4, "time": 13.7, "duration": 3.4, "text": "Et ton rire qui portait nos saisons", "font_family": "EB Garamond", "font_weight": "400", "font_size": 44, "fill_color": "#F5F0EA", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] },
+      { "type": "text", "track": 4, "time": 17.1, "duration": 3.4, "text": "Tu vis encore dans chaque mélodie", "font_family": "EB Garamond", "font_weight": "400", "font_size": 44, "fill_color": "#F5F0EA", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] },
+      { "type": "text", "track": 4, "time": 20.5, "duration": 3.4, "text": "Dans chaque mot que le vent nous confie", "font_family": "EB Garamond", "font_weight": "400", "font_size": 44, "fill_color": "#F5F0EA", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] },
+      { "type": "text", "track": 4, "time": 23.9, "duration": 3.4, "text": "Pour toujours, gravée dans nos cœurs", "font_family": "EB Garamond", "font_weight": "400", "font_size": 44, "fill_color": "#F5F0EA", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] },
+      { "type": "text", "track": 4, "time": 27.3, "duration": 3.4, "text": "Ta mémoire est notre douceur", "font_family": "EB Garamond", "font_weight": "400", "font_size": 44, "fill_color": "#F5F0EA", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] },
+
+      { "type": "text", "track": 3, "time": 30.7, "duration": 5, "text": "Pour toujours", "font_family": "Playfair Display", "font_weight": "700", "font_size": 56, "fill_color": "#E7C9D8", "line_height": "128%", "width": "86%", "x_alignment": "50%", "y_alignment": "50%", "y": "50%",
+        "animations": [ { "time": 0, "duration": 0.8, "easing": "quadratic-out", "type": "fade" }, { "time": "end", "duration": 0.8, "easing": "quadratic-in", "type": "fade", "reversed": true } ] }
+    ]
+  }
+}

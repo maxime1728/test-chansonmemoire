@@ -57,7 +57,10 @@ Suno ne garde les données d'une génération que **~15 jours**. Comme la vidéo
 - POST `https://chansonmemoire.ca/api/lancer-paroles-vivantes`
 - Body : `{ "token": "{{2.data.client_reference_id}}" }`
 
+## Permanence des fichiers ✅
+
+`callback-paroles-vivantes` **ré-héberge la vidéo sur Cloudinary** (via `_lib/cloudinary-rehost`) avant d'écrire `video_url` → lien permanent (les URLs Creatomate expirent à ~30 j). Repli sur l'URL Creatomate si Cloudinary échoue/non configuré. Idem pour l'instrumentale. Requiert `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`.
+
 ## À durcir avant le live 🔴
 
-- **Permanence des URLs** : `callback-paroles-vivantes` stocke l'URL de sortie Creatomate (~30 j). Comme pour l'instrumentale, **ré-héberger sur Cloudinary**. Marqué `⚠️` dans le callback.
 - **Photo du défunt** (optionnel, non inclus en v1) : possible en arrière-plan. ⚠️ Vérifier d'abord que le **consentement Loi 25** couvre cet usage avant de l'activer.
