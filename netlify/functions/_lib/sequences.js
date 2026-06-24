@@ -11,6 +11,8 @@
 //   - emails        : gapBeforeH = délai avant CET envoi (depuis l'inscription pour le 1er, depuis l'envoi
 //                     précédent ensuite). ctx = { prenom, lien, unsub, postal }.
 
+const SITE = 'https://chansonmemoire.ca';
+
 function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
 function btn(href, label) {
@@ -68,11 +70,29 @@ const POST_ACHAT = {
   ]
 };
 
-// À VENIR (après validation de Bienvenue + décisions) :
-//  - PARRAINAGE (id 'parrainage')  : J+12, ambassadeur -> lien de parrainage (rabais réel à définir, légal).
-//  - CROSS_SELL  (id 'cross_sell') : J+30 + saisonnier, pont hommage <-> cadeau.
-// Ajouter le choix correspondant dans Airtable Inscriptions.sequence, puis l'entrée ici.
+// ───────────────────── Séquence 2 : PARRAINAGE / partage (AUCUN rabais, clics tracés) ─────────────────────
+// Pas d'incitatif : on invite simplement à faire découvrir CM. Le bouton passe par /api/clic (redirection
+// tracée -> table Clics) pour mesurer l'engagement. Le client partage lui-même (jamais de courriel à un tiers).
+const PARRAINAGE = {
+  id: 'parrainage',
+  label: 'Parrainage / partage',
+  enrollFormula: `AND({commercial_status}='purchased', {nurture_status}!='unsubscribed', IS_AFTER({created_date}, DATEADD(NOW(),-504,'hours')))`,
+  exit: (f) => (f.commercial_status || '') === 'refunded',
+  emails: [
+    {
+      gapBeforeH: 288,   // ~J+12 après l'achat (valeur ressentie)
+      subject: 'Connaissez-vous quelqu\'un que ça toucherait ?',
+      html: (c) => shell(
+        `<p>Bonjour,</p>`
+        + `<p>Si votre chanson vous a touché, elle parlera peut-être aussi à quelqu'un de votre entourage. Faites découvrir Chanson Mémoire à un proche qui aimerait garder une voix, un souvenir, bien vivant.</p>`
+        + btn(`${SITE}/api/clic?c=parrainage&t=${encodeURIComponent(c.token)}&u=${encodeURIComponent(SITE)}`, 'Faire découvrir Chanson Mémoire')
+        + `<p>Merci de faire connaître ces moments autour de vous.</p>`, c)
+    }
+  ]
+};
 
-const SEQUENCES = [POST_ACHAT];
+// À VENIR : CROSS_SELL (id 'cross_sell') : J+30 + saisonnier, pont hommage <-> cadeau.
+
+const SEQUENCES = [POST_ACHAT, PARRAINAGE];
 
 module.exports = { SEQUENCES };

@@ -40,7 +40,8 @@ async function atSearch(table, formula, max) {
   return (d && d.records) || [];
 }
 async function atCreate(table, fields) {
-  return fetch(`${API}/${table}`, { method: 'POST', headers: { ...H(), 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
+  // typecast: true -> crée au besoin le choix de `sequence` (ex. 'parrainage') sans config manuelle.
+  return fetch(`${API}/${table}`, { method: 'POST', headers: { ...H(), 'Content-Type': 'application/json' }, body: JSON.stringify({ fields, typecast: true }) });
 }
 async function atPatch(table, id, fields) {
   return fetch(`${API}/${table}/${id}`, { method: 'PATCH', headers: { ...H(), 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
@@ -121,7 +122,7 @@ exports.handler = async () => {
 
         const token = pf.token || '';
         const unsub = `${SITE}/api/desabonnement?id=${encodeURIComponent(token)}`;
-        const ctx = { prenom: pf.deceased_name || '', lien: `${SITE}/page-memoire?id=${encodeURIComponent(token)}`, unsub, postal: POSTAL };
+        const ctx = { prenom: pf.deceased_name || '', token, lien: `${SITE}/page-memoire?id=${encodeURIComponent(token)}`, unsub, postal: POSTAL };
         const mail = seq.emails[step];
 
         const ok = await envoyer(to, mail.subject, mail.html(ctx), unsub);
