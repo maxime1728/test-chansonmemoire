@@ -20,9 +20,9 @@
 [functions."alerte-cron"]
   schedule = "@hourly"
 
-# Relance cover : déclenche la cover des corrections approuvées. Toutes les 15 min.
+# Relance cover + refaire/régénérer (dropdown `refaire`) : chaque minute (quasi instantané).
 [functions."cover-cron"]
-  schedule = "*/15 * * * *"
+  schedule = "* * * * *"
 
 # Envoi des réponses support : expédie les conversations cochées « envoyer ». Chaque minute (réactif).
 [functions."envoyer-cron"]

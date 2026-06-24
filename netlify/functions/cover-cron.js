@@ -1,7 +1,8 @@
 // netlify/functions/cover-cron.js
 //
-// RELANCE COVER (remplace le scénario Make « Relance cover ») — fonction PLANIFIÉE (toutes les 15 min,
-// netlify.toml). Trouve les corrections APPROUVÉES non encore lancées et déclenche la cover en
+// RELANCE COVER (remplace le scénario Make « Relance cover ») — fonction PLANIFIÉE (CHAQUE MINUTE,
+// netlify.toml -> refaire le cover/régénérer quasi instantané). Trouve les corrections APPROUVÉES + le
+// dropdown `refaire`, et déclenche la cover en
 // appelant la fonction existante /api/lancer-cover (qui fait la vraie cover Suno + livraison).
 // Best-effort : jamais d'exception qui casse le cron.
 
@@ -15,33 +16,20 @@ exports.handler = async () => {
   let launched = 0;
   const headers = { Authorization: `Bearer ${AT_TOKEN}` };
   try {
-    // 0. REFAIRE LE COVER (1-clic) : projets cochés `relancer_cover` -> on réarme (approved + champs
-    //    cover vidés) + décoche, puis on relance. Re-chante avec adjusted_lyrics/adjusted_style_prompt.
-    const rRedo = await fetch(`${API}/${PROJECTS}?filterByFormula=${encodeURIComponent('{relancer_cover}')}&maxRecords=20`, { headers });
-    const dRedo = await rRedo.json().catch(() => ({}));
-    for (const rec of (dRedo.records || [])) {
+    // 0. REFAIRE LA CHANSON (1-clic via le dropdown `refaire`) : « Refaire le cover » = même mélodie ;
+    //    « Régénérer » = nouvelle mélodie (regenerate=true). On réarme (approved + champs cover vidés),
+    //    on vide `refaire`, puis on relance lancer-cover (qui utilise adjusted_lyrics/adjusted_style_prompt).
+    const rRefaire = await fetch(`${API}/${PROJECTS}?filterByFormula=${encodeURIComponent("{refaire}!=''")}&maxRecords=20`, { headers });
+    const dRefaire = await rRefaire.json().catch(() => ({}));
+    for (const rec of (dRefaire.records || [])) {
       const tok = rec.fields.token;
+      const regenerate = rec.fields.refaire === 'Régénérer';
       try {
         await fetch(`${API}/${PROJECTS}/${rec.id}`, {
           method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields: { approval_status: 'approved', cover_task_id: '', cover_launched_at: '', relancer_cover: false } })
+          body: JSON.stringify({ fields: { approval_status: 'approved', cover_task_id: '', cover_launched_at: '', refaire: null } })
         });
-        if (tok) { await fetch(`${SITE}/api/lancer-cover`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: tok }) }); launched++; }
-      } catch (_) {}
-    }
-
-    // 0b. RÉGÉNÉRER (1-clic) : projets cochés `regenerer` -> chanson COMPLÈTE (nouvelle mélodie). Même
-    //     réarmement, mais on passe regenerate=true à lancer-cover (-> Suno /generate).
-    const rReg = await fetch(`${API}/${PROJECTS}?filterByFormula=${encodeURIComponent('{regenerer}')}&maxRecords=20`, { headers });
-    const dReg = await rReg.json().catch(() => ({}));
-    for (const rec of (dReg.records || [])) {
-      const tok = rec.fields.token;
-      try {
-        await fetch(`${API}/${PROJECTS}/${rec.id}`, {
-          method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields: { approval_status: 'approved', cover_task_id: '', cover_launched_at: '', regenerer: false } })
-        });
-        if (tok) { await fetch(`${SITE}/api/lancer-cover`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: tok, regenerate: true }) }); launched++; }
+        if (tok) { await fetch(`${SITE}/api/lancer-cover`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: tok, regenerate }) }); launched++; }
       } catch (_) {}
     }
 
