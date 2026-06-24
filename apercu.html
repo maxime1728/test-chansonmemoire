@@ -32,6 +32,13 @@
 /* ── SUIVI FUNNEL (best-effort, ne casse jamais l'UX) ──
    Envoie un événement de parcours à /api/suivi-funnel. sendBeacon survit à la navigation
    (utile pour checkout_started juste avant la redirection Stripe). */
+/* Pixel Meta (consentement requis) — eventID = sha256(token.evt) pour dédup avec le CAPI serveur. */
+window._cmPixel = function(eventName, evtKey, tok, custom){
+  try{ if(localStorage.getItem('cm_consent')!=='yes' || !tok) return; }catch(e){ return; }
+  (function ld(){ if(window._px)return; window._px=true; !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','909919758755200');fbq('track','PageView'); })();
+  crypto.subtle.digest('SHA-256', new TextEncoder().encode((tok+'.'+evtKey).trim().toLowerCase())).then(function(buf){ var id=Array.prototype.map.call(new Uint8Array(buf),function(x){return x.toString(16).padStart(2,'0');}).join(''); var o=id?{eventID:id}:{}; try{ if(eventName==='PreviewPlayed'){fbq('trackCustom',eventName,custom||{},o);}else{fbq('track',eventName,custom||{},o);} }catch(e){} }).catch(function(){ try{ if(eventName==='PreviewPlayed'){fbq('trackCustom',eventName,custom||{});}else{fbq('track',eventName,custom||{});} }catch(e){} });
+};
+
 window._cmFunnel = function(evt) {
   try {
     var t = (window._CM && window._CM.id) || '';
@@ -41,6 +48,10 @@ window._cmFunnel = function(evt) {
       navigator.sendBeacon('/api/suivi-funnel', new Blob([payload], { type: 'application/json' }));
     } else {
       fetch('/api/suivi-funnel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(function(){});
+    }
+    if (window._cmPixel) {
+      if (evt === 'preview_played') window._cmPixel('PreviewPlayed', 'preview_played', t);
+      else if (evt === 'checkout_started') window._cmPixel('InitiateCheckout', 'checkout_started', t);
     }
   } catch (e) {}
 };

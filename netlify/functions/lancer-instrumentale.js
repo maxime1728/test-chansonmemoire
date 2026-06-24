@@ -76,7 +76,7 @@ exports.handler = async (event) => {
         taskId,
         audioId,
         type: 'separate_vocal',
-        callBackUrl: `${SITE}/api/callback-instrumentale`
+        callBackUrl: `${SITE}/api/callback-instrumentale${process.env.CALLBACK_SECRET ? '?s=' + encodeURIComponent(process.env.CALLBACK_SECRET) : ''}`
       })
     });
     const dS = await rS.json();

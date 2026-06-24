@@ -12,7 +12,7 @@
 const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
 const BASE_ID        = process.env.AIRTABLE_BASE_ID;
 const AT_API         = `https://api.airtable.com/v0/${BASE_ID}`;
-const MAKE_WEBHOOK_SECRET = process.env.MAKE_WEBHOOK_SECRET || '';   // mode create (MAKE A) : exigé si défini (anti cost-bombing Anthropic)
+const GENERATE_LYRICS_SECRET = process.env.GENERATE_LYRICS_SECRET || '';  // mode create (MAKE A) : exigé si défini. Var DÉDIÉE -> inerte tant que non posée (merge sans risque).
 const { stripSectionTags } = require('./_lib/lyrics');   // masque les balises [Verse]/[Chorus] à l'affichage client
 
 // Token légitime = UUID v4 (généré par crypto.randomUUID()). Validé AVANT tout appel Airtable
@@ -402,7 +402,7 @@ ${modifications}`;
   /* ═══════════════ MODE CRÉATION (Make) ═══════════════ */
   // Sécurité : ce mode vient de MAKE A. Si MAKE_WEBHOOK_SECRET est défini en env, on l'EXIGE (anti cost-bombing Anthropic).
   // Inerte tant que l'env n'est pas posée -> déploiement SANS risque ; n'activer qu'APRÈS que MAKE A envoie { secret }.
-  if (MAKE_WEBHOOK_SECRET && d.secret !== MAKE_WEBHOOK_SECRET) {
+  if (GENERATE_LYRICS_SECRET && d.secret !== GENERATE_LYRICS_SECRET) {
     return { statusCode: 401, body: JSON.stringify({ error: 'Non autorisé' }) };
   }
   const deceased_name    = d.deceased_name    || 'cette personne';

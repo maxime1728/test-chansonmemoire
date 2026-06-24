@@ -324,6 +324,13 @@
     })
     .catch(function(){ b.disabled = false; b.textContent = 'Envoyer ma demande de modification'; alert("Une erreur est survenue. Réessayez."); });
   });
+  /* Pixel Meta Purchase (consentement requis) — eventID = sha256(token.purchase) pour dédup avec le CAPI serveur (MAKE D). */
+  (function(){
+    function consentOK(){ try{ return localStorage.getItem('cm_consent')==='yes'; }catch(e){ return false; } }
+    function loadPixel(){ if(window._px)return; window._px=true; !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','909919758755200');fbq('track','PageView'); }
+    async function eid(s){ try{ var bb=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(s).trim().toLowerCase())); return Array.prototype.map.call(new Uint8Array(bb), function(x){return x.toString(16).padStart(2,'0');}).join(''); }catch(e){ return ''; } }
+    if(consentOK() && token){ loadPixel(); (async function(){ var o={}; var id=await eid(token+'.purchase'); if(id)o.eventID=id; try{ fbq('track','Purchase',{currency:'CAD',value:139.97}, o); }catch(e){} })(); }
+  })();
 })();
 </script>
 </body>

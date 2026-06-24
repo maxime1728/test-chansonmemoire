@@ -109,7 +109,7 @@ exports.handler = async (event) => {
         style: style.slice(0, 1000),
         title: (g.song_title || 'Pour toujours').slice(0, 100),
         vocalGender,
-        callBackUrl: `${SITE}/api/callback-cover`
+        callBackUrl: `${SITE}/api/callback-cover${process.env.CALLBACK_SECRET ? '?s=' + encodeURIComponent(process.env.CALLBACK_SECRET) : ''}`
       })
     });
     const dS = await rS.json();

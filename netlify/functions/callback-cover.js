@@ -52,6 +52,9 @@ async function emailClient(projet, headers) {
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: '{}' };
 
+  // Sécurité (T8) : si CALLBACK_SECRET est défini, exiger ?s=<secret> (posé par lancer-cover). Inerte sinon. 200 silencieux si invalide.
+  { const _s = (event.queryStringParameters && event.queryStringParameters.s) || ''; if (process.env.CALLBACK_SECRET && _s !== process.env.CALLBACK_SECRET) return { statusCode: 200, body: '{}' }; }
+
   let body;
   try { body = JSON.parse(event.body || '{}'); }
   catch (e) { return { statusCode: 200, body: '{}' }; }

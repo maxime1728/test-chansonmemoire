@@ -130,7 +130,7 @@ exports.handler = async (event) => {
 
     // 5. Lance le rendu Creatomate (async). webhook + metadata=token -> le callback matche le Project.
     //    v1 : { source, webhook_url, metadata } (forme documentée) ; v2 : RenderScript au top-level.
-    const extra = { webhook_url: `${SITE}/api/callback-paroles-vivantes`, metadata: token };
+    const extra = { webhook_url: `${SITE}/api/callback-paroles-vivantes${process.env.CALLBACK_SECRET ? '?s=' + encodeURIComponent(process.env.CALLBACK_SECRET) : ''}`, metadata: token };
     const payload = (CREATOMATE_VERSION === 'v1')
       ? Object.assign({ source: edit }, extra)
       : Object.assign({}, edit, extra);

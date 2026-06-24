@@ -290,6 +290,13 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
 
   /* ── ATTRIBUTION META ── */
   function getParam(n){ return new URLSearchParams(window.location.search).get(n) || ''; }
+
+  /* ── Pixel Meta (consentement requis) + dédup CAPI via eventID = sha256(token.evt) ── */
+  function cmConsentOK(){ try{ return localStorage.getItem('cm_consent')==='yes'; }catch(e){ return false; } }
+  function cmLoadPixel(){ if(window._px)return; window._px=true; !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','909919758755200');fbq('track','PageView'); }
+  async function cmEid(s){ try{ var bb=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(s).trim().toLowerCase())); return Array.prototype.map.call(new Uint8Array(bb), function(x){return x.toString(16).padStart(2,'0');}).join(''); }catch(e){ return ''; } }
+  async function cmPixel(eventName, evtKey, tok, custom){ if(!cmConsentOK()||!tok)return; cmLoadPixel(); var o={}; var id=await cmEid(tok+'.'+evtKey); if(id)o.eventID=id; try{ if(eventName==='PreviewPlayed'){ fbq('trackCustom',eventName,custom||{},o); } else { fbq('track',eventName,custom||{},o); } }catch(e){} }
+  if(cmConsentOK()) cmLoadPixel();
   function getCookie(n){ var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)'); return m?m.pop():''; }
 
   /* ── ÉTAT : noms = champs Airtable ── */
@@ -470,7 +477,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
       headers:{ 'Content-Type':'application/json' },
       body:JSON.stringify(data)
     })
-    .then(function(){ redirigerVersRevision(); })
+    .then(function(){ cmPixel('Lead','lead',token); redirigerVersRevision(); })
     .catch(function(err){ console.error('Erreur webhook Make:', err); redirigerVersRevision(); });
   });
 
