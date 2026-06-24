@@ -141,6 +141,25 @@ const NOEL_2026 = {
   ]
 };
 
-const SEQUENCES = [POST_ACHAT, PARRAINAGE, CROSS_SELL, NOEL_2026];
+// Dernière chance avant Noël (rappel d'échéance) : même segment, fenêtre 16-22 déc. (campagne séparée).
+const NOEL_2026_FIN = {
+  id: 'noel_2026_fin',
+  label: 'Noël 2026 — dernière chance',
+  enrollFormula: `AND({nurture_status}!='unsubscribed', OR({commercial_status}='purchased', IS_AFTER({created_date}, DATEADD(NOW(),-365,'days'))), IS_AFTER(NOW(), DATETIME_PARSE('2026-12-16','YYYY-MM-DD')), IS_BEFORE(NOW(), DATETIME_PARSE('2026-12-22','YYYY-MM-DD')))`,
+  exit: () => false,
+  emails: [
+    {
+      gapBeforeH: 0,
+      subject: 'Dernière chance avant Noël',
+      html: (c) => shell(
+        `<p>Bonjour,</p>`
+        + `<p>Si vous pensiez offrir une chanson pour les fêtes, c'est vraiment le moment : créez-la dans les prochains jours pour l'avoir bien à temps pour Noël.</p>`
+        + btn(`${SITE}/api/clic?c=noel_2026_fin&t=${encodeURIComponent(c.token)}&u=${encodeURIComponent(SITE + '/souvenirs')}`, 'Créer ma chanson maintenant')
+        + `<p>Joyeuses fêtes,</p>`, c)
+    }
+  ]
+};
+
+const SEQUENCES = [POST_ACHAT, PARRAINAGE, CROSS_SELL, NOEL_2026, NOEL_2026_FIN];
 
 module.exports = { SEQUENCES };
