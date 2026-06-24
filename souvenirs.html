@@ -103,7 +103,11 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
 
   <div class="cm-step-card active" data-step="1">
     <div class="cm-q-eyebrow">Pour commencer</div>
-    <h2 class="cm-q-title">En souvenir de qui créons-nous cette chanson ?</h2>
+    <div class="cm-songtype" style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px;text-align:left;">
+      <label class="cm-consent-label" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;"><input type="radio" name="song_type" value="hommage" checked style="margin-top:3px;flex-shrink:0;"><span><strong>Un hommage</strong><br><span style="opacity:.7;">à la mémoire d'une personne qui nous a quittés</span></span></label>
+      <label class="cm-consent-label" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;"><input type="radio" name="song_type" value="cadeau" style="margin-top:3px;flex-shrink:0;"><span><strong>Un cadeau</strong><br><span style="opacity:.7;">pour une personne bien vivante</span></span></label>
+    </div>
+    <h2 class="cm-q-title" id="q1-title">En souvenir de qui créons-nous cette chanson ?</h2>
     <p class="cm-q-sub">Son prénom, son surnom, ou ce qui le représente le mieux.</p>
     <input class="cm-input" type="text" id="input-deceased_name" placeholder="Ex : Grand-papa Roger, Maman, Isabelle…" autocomplete="off" maxlength="80">
     <div class="cm-error" id="err-deceased_name">Veuillez entrer un prénom ou un nom (au moins quelques lettres).</div>
@@ -292,6 +296,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   const data = {
     token:            token,
     regeneration:     isRegen,   /* token existant => MAKE A cree une nouvelle Generation, pas un nouveau Project */
+    song_type:        'hommage',   /* hommage (décédé) | cadeau (vivant) — étape 1 */
     deceased_name:    '',
     relationship:     '',
     music_style:      '',
@@ -327,10 +332,21 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     if(t){ t.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
     currentStep = step; updateProgress(step);
     if(data.deceased_name){
-      var q2=document.getElementById('q2-title'); if(q2) q2.textContent='Qui était '+data.deceased_name+' pour vous ?';
-      var q6=document.getElementById('q6-title'); if(q6) q6.textContent='Qu\'est-ce qui rendait '+data.deceased_name+' unique ?';
+      var _gift = data.song_type === 'cadeau';
+      var q2=document.getElementById('q2-title'); if(q2) q2.textContent=(_gift?'Qui est ':'Qui était ')+data.deceased_name+' pour vous ?';
+      var q6=document.getElementById('q6-title'); if(q6) q6.textContent='Qu\'est-ce qui rend'+(_gift?'':'ait')+' '+data.deceased_name+' unique ?';
     }
   }
+
+  /* Type de chanson (hommage/cadeau) : capte le choix de l'étape 1 + adapte le titre. */
+  function applySongType(){
+    var sel=document.querySelector('input[name="song_type"]:checked');
+    data.song_type=(sel&&sel.value)||'hommage';
+    var q1=document.getElementById('q1-title');
+    if(q1) q1.textContent=(data.song_type==='cadeau')?'Pour qui créons-nous cette chanson ?':'En souvenir de qui créons-nous cette chanson ?';
+  }
+  [].forEach.call(document.querySelectorAll('input[name="song_type"]'), function(r){ r.addEventListener('change', applySongType); });
+  applySongType();
 
   function bindChoices(containerId, dataKey, nextStep){
     var c=document.getElementById(containerId); if(!c) return;
