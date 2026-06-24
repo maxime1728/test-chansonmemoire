@@ -31,6 +31,7 @@ const CLIENTS  = 'tblQbF1OlE3uRxFra';
 const PROJECTS = 'tblh7O8eoog7RyTMJ';
 const CONVOS   = 'tbl3KBgXthCPromxF';
 const CLIENT_PROJECTS_LINK = 'fldayFzM1PdALeWKL';   // champ lien Clients -> Projects (lu par returnFieldsByFieldId)
+const SITE     = 'https://chansonmemoire.ca';       // lien page client (= courriel d'achat / nouvelle version)
 
 const MAX_PROJETS    = 3;                            // contexte donné à l'IA (les clients en ont ~1)
 const FENETRE_FIL_MS = 30 * 24 * 60 * 60 * 1000;     // au-delà de 30 j, un même sujet = nouvelle conversation
@@ -54,7 +55,7 @@ function normaliserSujet(subject) {
 // Adresses qui ne doivent JAMAIS créer de conversation (nos propres envois, no-reply, notifications).
 function estAdresseInterne(addr) {
   const a = (addr || '').toLowerCase();
-  return /@(achat|info|mg|mail)\.chansonmemoire\.ca$/.test(a)
+  return /@([a-z0-9-]+\.)*chansonmemoire\.ca$/.test(a)   // racine + tout sous-domaine = nous (jamais un client)
       || /\bno-?reply@/.test(a)
       || /(mailer-daemon|postmaster)@/.test(a);
 }
@@ -78,6 +79,8 @@ Ta tâche : à partir de l'échange reçu d'un client et du contexte de ses proj
 LE FIL PEUT CONTENIR PLUSIEURS MESSAGES : le client a parfois écrit en plusieurs courriels successifs. Lis TOUT le fil et réponds au besoin global (en priorité ce qui est resté sans réponse / le plus récent).
 
 PLUSIEURS PROJETS : si le contexte contient plus d'un projet, identifie DE QUELLE chanson le client parle grâce au prénom de la personne ou au contenu. Si c'est ambigu, demande-lui poliment de préciser — n'invente pas.
+
+LIEN DE LA PAGE : si le client veut accéder à sa chanson / la réécouter, suivre l'avancement, ou demande une modification, INCLUS le lien de sa page (le champ "lien_page" du contexte du bon projet) dans ta réponse — c'est là qu'il écoute, télécharge et demande ses modifications. N'invente JAMAIS d'autre lien ; si "lien_page" est vide, n'en mets aucun.
 
 VOIX DE MARQUE — IMPÉRATIF :
 - Français QUÉBÉCOIS, naturel, chaleureux, sobre et digne. Vouvoiement.
@@ -170,7 +173,8 @@ exports.handler = async (event) => {
             type: p.song_type || 'hommage',
             langue: p.language || 'fr-CA',
             statut_commande: p.commercial_status || 'preview_only',
-            etape: p.approval_status || ''
+            etape: p.approval_status || '',
+            lien_page: p.token ? `${SITE}/page-memoire?id=${encodeURIComponent(p.token)}` : ''
           });
         }
       } catch (_) {}

@@ -17,6 +17,7 @@ const MG_KEY     = process.env.MAILGUN_API_KEY;
 const MG_DOMAIN  = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;     // sous-domaine transactionnel (= celui de lancer-cadeau)
 const MG_FROM    = process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';
 const TEAM_EMAIL = process.env.TEAM_NOTIFY_EMAIL;  // destinataire de l'alerte interne « à approuver »
+const SITE       = 'https://chansonmemoire.ca';    // lien page client (= courriel d'achat / nouvelle version)
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -192,6 +193,7 @@ ${demande}`;
           `<p><strong>Analyse :</strong><br>${esc(compteRendu)}</p>` +
           (adjLyrics ? `<p><strong>Paroles ajustées proposées :</strong><br>${esc(adjLyrics)}</p>` : '') +
           (adjStyle ? `<p><strong>Prompt style ajusté :</strong><br>${esc(adjStyle)}</p>` : '') +
+          `<p style="margin:20px 0;"><a href="${SITE}/page-memoire?id=${encodeURIComponent(token)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;">Voir la page du client</a></p>` +
           `<p style="color:#7A6070;margin-top:18px;">Pour approuver : passez <code>approval_status</code> à « approved » dans Airtable (projet « ${esc(p.project || '')} »).</p></div>`;
         await envoyerCourriel(TEAM_EMAIL, `À approuver — ${refId} (${categories})`, teamHtml);
       }
@@ -200,6 +202,7 @@ ${demande}`;
         `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.7;max-width:560px;">` +
         `<p>Votre demande de modification est bien reçue.</p>` +
         `<p>Notre équipe prépare votre nouvelle version avec soin et vous revient très bientôt. Vous n'avez rien à faire d'ici là.</p>` +
+        `<p style="margin:22px 0;"><a href="${SITE}/page-memoire?id=${encodeURIComponent(token)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:12px 22px;border-radius:8px;display:inline-block;">Revoir ma page</a></p>` +
         `<p style="color:#7A6070;margin-top:18px;">— L'équipe Chanson Mémoire</p></div>`;
       await envoyerCourriel(to, 'Votre demande de modification est bien reçue', clientHtml);
     } catch (_) { /* les courriels ne bloquent jamais l'enregistrement */ }
