@@ -91,8 +91,32 @@ const PARRAINAGE = {
   ]
 };
 
-// À VENIR : CROSS_SELL (id 'cross_sell') : J+30 + saisonnier, pont hommage <-> cadeau.
+// ───────────────────── Séquence 3 : CROSS-SELL (pont hommage <-> cadeau) ─────────────────────
+// J+30. S'adapte au type acheté : acheteur HOMMAGE -> on suggère une chanson CADEAU (vivant, occasion) ;
+// acheteur CADEAU -> on rouvre la porte (autre occasion / hommage). CTA tracé (campagne cross_sell) vers
+// le formulaire. Le saisonnier (fêtes) = mécanisme séparé (envoi daté à un segment), à venir.
+const CROSS_SELL = {
+  id: 'cross_sell',
+  label: 'Cross-sell (hommage <-> cadeau)',
+  enrollFormula: `AND({commercial_status}='purchased', {nurture_status}!='unsubscribed', IS_AFTER({created_date}, DATEADD(NOW(),-504,'hours')))`,
+  exit: (f) => (f.commercial_status || '') === 'refunded',
+  emails: [
+    {
+      gapBeforeH: 720,   // ~J+30 après l'achat (cross-sell seulement après que la valeur est ressentie)
+      subject: 'Une chanson, pour une autre personne qui compte ?',
+      html: (c) => {
+        const corps = (c.song_type === 'cadeau')
+          ? `<p>Vous avez offert une chanson à quelqu'un que vous aimez. Pour une autre occasion, ou pour garder vivante la voix d'une personne qui vous manque, on peut en créer une nouvelle quand vous voulez.</p>`
+          : `<p>Une chanson, c'est aussi un beau cadeau pour les vivants. Pour un anniversaire, une fête, ou simplement pour dire à quelqu'un qu'il compte, vous pouvez lui offrir sa propre chanson.</p>`;
+        return shell(
+          `<p>Bonjour,</p>` + corps
+          + btn(`${SITE}/api/clic?c=cross_sell&t=${encodeURIComponent(c.token)}&u=${encodeURIComponent(SITE + '/souvenirs')}`, 'Créer une nouvelle chanson')
+          + `<p>On est là quand le moment sera bon.</p>`, c);
+      }
+    }
+  ]
+};
 
-const SEQUENCES = [POST_ACHAT, PARRAINAGE];
+const SEQUENCES = [POST_ACHAT, PARRAINAGE, CROSS_SELL];
 
 module.exports = { SEQUENCES };
