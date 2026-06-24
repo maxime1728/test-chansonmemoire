@@ -49,12 +49,12 @@ const POST_ACHAT = {
     },
     {
       gapBeforeH: 48,
-      subject: 'Deux petits cadeaux qui accompagnent votre chanson',
+      subject: 'Les paroles de votre chanson, en format souvenir',
       html: (c) => shell(
         `<p>Bonjour,</p>`
-        + `<p>En plus de votre chanson, vous avez de jolies versions à imprimer : les paroles en format souvenir et un signet à garder.</p>`
-        + btn(c.lien, 'Voir mes cadeaux')
-        + `<p>Glissés dans un cadre ou dans un livre, ils prolongent joliment le moment.</p>`, c)
+        + `<p>En plus de votre chanson, vous avez une belle version des paroles à imprimer, en format souvenir.</p>`
+        + btn(c.lien, 'Voir mes paroles')
+        + `<p>Glissées dans un cadre ou dans un livre, elles prolongent joliment le moment.</p>`, c)
     },
     {
       gapBeforeH: 72,
