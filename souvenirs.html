@@ -94,7 +94,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
 <div class="cm-progress-header">
   <div class="cm-progress-meta">
     <span class="cm-progress-label">Tes souvenirs</span>
-    <span class="cm-progress-count" id="cm-progress-count">Étape 1 sur 9</span>
+    <span class="cm-progress-count" id="cm-progress-count">Étape 1 sur 10</span>
   </div>
   <div class="cm-progress-track"><div class="cm-progress-fill" id="cm-progress-fill"></div></div>
 </div>
@@ -104,20 +104,27 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   <p style="max-width:560px;margin:14px auto 0;text-align:center;font-size:13px;color:var(--cm-text-sub);line-height:1.55;">Quelques mots suffisent. Tu pourras tout ajuster avant de payer, et tes réponses servent seulement à créer ta chanson.</p>
   <div class="cm-step-card active" data-step="1">
     <div class="cm-q-eyebrow">Pour commencer</div>
-    <div class="cm-songtype" style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px;text-align:left;">
+    <h2 class="cm-q-title">Cette chanson, c'est…</h2>
+    <p class="cm-q-sub">Ça nous aide à composer juste, dès le départ.</p>
+    <div class="cm-songtype" style="display:flex;flex-direction:column;gap:10px;margin:6px 0 2px;text-align:left;">
       <label class="cm-consent-label" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;"><input type="radio" name="song_type" value="hommage" checked style="margin-top:3px;flex-shrink:0;"><span><strong>Un hommage</strong><br><span style="opacity:.7;">à la mémoire d'une personne qui nous a quittés</span></span></label>
       <label class="cm-consent-label" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;"><input type="radio" name="song_type" value="cadeau" style="margin-top:3px;flex-shrink:0;"><span><strong>Un cadeau</strong><br><span style="opacity:.7;">pour une personne bien vivante</span></span></label>
     </div>
-    <h2 class="cm-q-title" id="q1-title">En souvenir de qui créons-nous cette chanson ?</h2>
-    <p class="cm-q-sub">Son prénom, son surnom, ou ce qui le représente le mieux.</p>
-    <input class="cm-input" type="text" id="input-deceased_name" placeholder="Ex : Grand-papa Roger, Maman, Isabelle…" autocomplete="off" maxlength="80">
-    <div class="cm-error" id="err-deceased_name">Entre un prénom ou un nom (au moins quelques lettres).</div>
     <div class="cm-nav cm-nav-single"><button class="cm-btn-next" id="btn-next-1">Continuer <i class="fa-solid fa-arrow-right"></i></button></div>
   </div>
 
   <div class="cm-step-card" data-step="2">
+    <div class="cm-q-eyebrow">Pour commencer</div>
+    <h2 class="cm-q-title" data-h="En souvenir de qui créons-nous cette chanson ?" data-c="Pour qui créons-nous cette chanson ?">En souvenir de qui créons-nous cette chanson ?</h2>
+    <p class="cm-q-sub">Son prénom, son surnom, ou ce qui le représente le mieux.</p>
+    <input class="cm-input" type="text" id="input-deceased_name" data-ph-h="Ex : Grand-papa Roger, Maman, Isabelle…" data-ph-c="Ex : Maman, Sophie, mon amoureux…" placeholder="Ex : Grand-papa Roger, Maman, Isabelle…" autocomplete="off" maxlength="80">
+    <div class="cm-error" id="err-deceased_name">Entre un prénom ou un nom (au moins quelques lettres).</div>
+    <div class="cm-nav"><button class="cm-btn-prev" data-target="1"><i class="fa-solid fa-arrow-left"></i> Retour</button><button class="cm-btn-next" id="btn-next-2">Continuer <i class="fa-solid fa-arrow-right"></i></button></div>
+  </div>
+
+  <div class="cm-step-card" data-step="3">
     <div class="cm-q-eyebrow">Ton lien</div>
-    <h2 class="cm-q-title" id="q2-title">Qui était-il ou elle pour toi ?</h2>
+    <h2 class="cm-q-title" data-h="Qui était {n} pour toi ?" data-c="Qui est {n} pour toi ?">Qui était-il ou elle pour toi ?</h2>
     <p class="cm-q-sub">Choisis ce qui s'applique le mieux.</p>
     <div class="cm-choices" id="choices-relationship">
       <button class="cm-choice" data-value="Partenaire / conjoint(e)"><span class="cm-choice-emoji">❤️</span> Partenaire / conjoint(e)</button>
@@ -128,13 +135,13 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
       <button class="cm-choice" data-value="Animal de compagnie"><span class="cm-choice-emoji">🐾</span> Animal de compagnie</button>
       <button class="cm-choice" data-value="Quelqu'un d'autre"><span class="cm-choice-emoji">💛</span> Quelqu'un d'autre</button>
     </div>
-    <div class="cm-nav"><button class="cm-btn-prev" data-target="1"><i class="fa-solid fa-arrow-left"></i> Retour</button></div>
+    <div class="cm-nav"><button class="cm-btn-prev" data-target="2"><i class="fa-solid fa-arrow-left"></i> Retour</button></div>
   </div>
 
-  <div class="cm-step-card" data-step="3">
+  <div class="cm-step-card" data-step="4">
     <div class="cm-q-eyebrow">La musique</div>
     <h2 class="cm-q-title">Quel style musical lui ressemble ?</h2>
-    <p class="cm-q-sub">Choisis le style qui l'aurait le mieux représenté.</p>
+    <p class="cm-q-sub" data-h="Choisis le style qui l'aurait le mieux représenté." data-c="Choisis le style qui lui ressemble le plus.">Choisis le style qui l'aurait le mieux représenté.</p>
     <div class="cm-choices cm-grid-2" id="choices-music_style">
       <button class="cm-choice" data-value="Pop"><span class="cm-choice-emoji">🎵</span> Pop</button>
       <button class="cm-choice" data-value="Country"><span class="cm-choice-emoji">🤠</span> Country</button>
@@ -150,21 +157,21 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
       <button class="cm-choice" data-value="Reggae"><span class="cm-choice-emoji">🌴</span> Reggae</button>
       <button class="cm-choice" data-value="Électronique / Dance"><span class="cm-choice-emoji">🎧</span> Électronique / Dance</button>
     </div>
-    <div class="cm-nav"><button class="cm-btn-prev" data-target="2"><i class="fa-solid fa-arrow-left"></i> Retour</button></div>
-  </div>
-
-  <div class="cm-step-card" data-step="4">
-    <div class="cm-q-eyebrow">La voix</div>
-    <h2 class="cm-q-title">Quelle voix préfères-tu pour la chanson ?</h2>
-    <p class="cm-q-sub">La voix du chanteur ou de la chanteuse qui interprétera ses souvenirs.</p>
-    <div class="cm-choices cm-grid-2" id="choices-voice">
-      <button class="cm-choice" data-value="Masculin"><span class="cm-choice-emoji">🎙️</span> Masculin</button>
-      <button class="cm-choice" data-value="Féminin"><span class="cm-choice-emoji">🎤</span> Féminin</button>
-    </div>
     <div class="cm-nav"><button class="cm-btn-prev" data-target="3"><i class="fa-solid fa-arrow-left"></i> Retour</button></div>
   </div>
 
   <div class="cm-step-card" data-step="5">
+    <div class="cm-q-eyebrow">La voix</div>
+    <h2 class="cm-q-title">Quelle voix préfères-tu pour la chanson ?</h2>
+    <p class="cm-q-sub" data-h="La voix du chanteur ou de la chanteuse qui interprétera ses souvenirs." data-c="La voix du chanteur ou de la chanteuse qui chantera sa chanson.">La voix du chanteur ou de la chanteuse qui interprétera ses souvenirs.</p>
+    <div class="cm-choices cm-grid-2" id="choices-voice">
+      <button class="cm-choice" data-value="Masculin"><span class="cm-choice-emoji">🎙️</span> Masculin</button>
+      <button class="cm-choice" data-value="Féminin"><span class="cm-choice-emoji">🎤</span> Féminin</button>
+    </div>
+    <div class="cm-nav"><button class="cm-btn-prev" data-target="4"><i class="fa-solid fa-arrow-left"></i> Retour</button></div>
+  </div>
+
+  <div class="cm-step-card" data-step="6">
     <div class="cm-q-eyebrow">L'ambiance</div>
     <h2 class="cm-q-title">Choisis l'ambiance de la chanson</h2>
     <p class="cm-q-sub">Choisis l'émotion qui guide la chanson.</p>
@@ -178,42 +185,22 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
       <button class="cm-choice" data-value="Optimiste"><span class="cm-choice-emoji">🌤️</span> Optimiste</button>
       <button class="cm-choice" data-value="Mélancolique"><span class="cm-choice-emoji">🌙</span> Mélancolique</button>
     </div>
-    <div class="cm-nav"><button class="cm-btn-prev" data-target="4"><i class="fa-solid fa-arrow-left"></i> Retour</button></div>
+    <div class="cm-nav"><button class="cm-btn-prev" data-target="5"><i class="fa-solid fa-arrow-left"></i> Retour</button></div>
   </div>
 
-  <div class="cm-step-card" data-step="6">
+  <div class="cm-step-card" data-step="7">
     <div class="cm-q-eyebrow">Sa personnalité</div>
-    <h2 class="cm-q-title" id="q6-title">Qu'est-ce qui le / la rendait unique ?</h2>
-    <p class="cm-q-sub">Sa façon d'être, ce qu'il ou elle dégageait, ce qui te manque le plus.</p>
-    <textarea class="cm-input" id="input-what_made_unique" rows="4" placeholder="Ex : La façon dont il faisait rire tout le monde sans même essayer…"></textarea>
+    <h2 class="cm-q-title" data-h="Qu'est-ce qui rendait {n} unique ?" data-c="Qu'est-ce qui rend {n} unique ?">Qu'est-ce qui le / la rendait unique ?</h2>
+    <p class="cm-q-sub" data-h="Sa façon d'être, ce qu'il ou elle dégageait, ce qui te manque le plus." data-c="Sa façon d'être, ce qu'il ou elle dégage, ce que tu admires le plus chez lui ou elle.">Sa façon d'être, ce qu'il ou elle dégageait, ce qui te manque le plus.</p>
+    <textarea class="cm-input" id="input-what_made_unique" rows="4" data-ph-h="Ex : La façon dont il faisait rire tout le monde sans même essayer…" data-ph-c="Ex : La façon dont elle fait rire tout le monde sans même essayer…" placeholder="Ex : La façon dont il faisait rire tout le monde sans même essayer…"></textarea>
     <div class="cm-error" id="err-what_made_unique">Partage au moins quelques mots pour que la chanson lui ressemble vraiment.</div>
     <div class="cm-hint">
       <div class="cm-hint-title"><i class="fa-solid fa-lightbulb"></i> Des pistes si tu cherches par où commencer</div>
       <ul>
-        <li>Son expression préférée ou ce qu'il / elle répétait souvent</li>
-        <li>Ce que tu remarques maintenant qu'il ou elle n'est plus là</li>
-        <li>Un geste, une odeur, un bruit qui te rappelle à lui ou elle</li>
-        <li>La façon dont il / elle entrait dans une pièce</li>
-      </ul>
-    </div>
-    <div class="cm-nav">
-      <button class="cm-btn-prev" data-target="5"><i class="fa-solid fa-arrow-left"></i> Retour</button>
-      <button class="cm-btn-next" id="btn-next-6">Continuer <i class="fa-solid fa-arrow-right"></i></button>
-    </div>
-  </div>
-
-  <div class="cm-step-card" data-step="7">
-    <div class="cm-q-eyebrow">Tes souvenirs</div>
-    <h2 class="cm-q-title">Y a-t-il un souvenir que tu aimerais voir dans la chanson ?</h2>
-    <span class="cm-optional">Optionnel, passe si tu n'es pas prêt</span>
-    <textarea class="cm-input" id="input-memories" rows="4" placeholder="Ex : On passait nos dimanches dans sa cuisine…"></textarea>
-    <div class="cm-hint">
-      <div class="cm-hint-title"><i class="fa-solid fa-heart"></i> Des souvenirs qui touchent particulièrement</div>
-      <ul>
-        <li>Un endroit qui vous appartenait : son fauteuil, votre banc, sa cuisine le matin</li>
-        <li>Un rituel ou une habitude : le café du dimanche, sa façon de…</li>
-        <li>La dernière chose que tu lui as dite, ou qu'il ou elle t'a dite</li>
-        <li>Ce que tu aurais voulu lui dire encore</li>
+        <li data-h="Son expression préférée ou ce qu'il / elle répétait souvent" data-c="Son expression préférée, ce qu'il / elle dit tout le temps">Son expression préférée ou ce qu'il / elle répétait souvent</li>
+        <li data-h="Ce que tu remarques maintenant qu'il ou elle n'est plus là" data-c="Ce qui te fait sourire chez lui ou elle">Ce que tu remarques maintenant qu'il ou elle n'est plus là</li>
+        <li data-h="Un geste, une odeur, un bruit qui te rappelle à lui ou elle" data-c="Une manie, un talent, une passion qui le ou la définit">Un geste, une odeur, un bruit qui te rappelle à lui ou elle</li>
+        <li data-h="La façon dont il / elle entrait dans une pièce" data-c="La façon dont il / elle illumine une pièce">La façon dont il / elle entrait dans une pièce</li>
       </ul>
     </div>
     <div class="cm-nav">
@@ -223,11 +210,19 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   </div>
 
   <div class="cm-step-card" data-step="8">
-    <div class="cm-q-eyebrow">Ce que tu gardes</div>
-    <h2 class="cm-q-title">Comment souhaites-tu te souvenir d'eux ?</h2>
-    <span class="cm-optional">Optionnel, prends ton temps</span>
-    <p class="cm-q-sub">Ce que tu veux que cette chanson capture, préserve, ou transmette à ceux qui l'écouteront après toi.</p>
-    <textarea class="cm-input" id="input-memory_to_keep" rows="4" placeholder="Ex : Je veux qu'on se souvienne de son rire…"></textarea>
+    <div class="cm-q-eyebrow" data-h="Tes souvenirs" data-c="Vos moments">Tes souvenirs</div>
+    <h2 class="cm-q-title" data-h="Y a-t-il un souvenir que tu aimerais voir dans la chanson ?" data-c="Y a-t-il un moment que tu aimerais voir dans la chanson ?">Y a-t-il un souvenir que tu aimerais voir dans la chanson ?</h2>
+    <span class="cm-optional">Optionnel, passe si tu n'es pas prêt</span>
+    <textarea class="cm-input" id="input-memories" rows="4" data-ph-h="Ex : On passait nos dimanches dans sa cuisine…" data-ph-c="Ex : On passe nos dimanches à rire ensemble…" placeholder="Ex : On passait nos dimanches dans sa cuisine…"></textarea>
+    <div class="cm-hint">
+      <div class="cm-hint-title"><i class="fa-solid fa-heart"></i> <span data-h="Des souvenirs qui touchent particulièrement" data-c="Des moments qui touchent particulièrement">Des souvenirs qui touchent particulièrement</span></div>
+      <ul>
+        <li data-h="Un endroit qui vous appartenait : son fauteuil, votre banc, sa cuisine le matin" data-c="Un endroit qui vous appartient : votre café, votre banc, sa cuisine le matin">Un endroit qui vous appartenait : son fauteuil, votre banc, sa cuisine le matin</li>
+        <li data-h="Un rituel ou une habitude : le café du dimanche, sa façon de…" data-c="Un rituel, une tradition : le souper du dimanche, votre fou rire…">Un rituel ou une habitude : le café du dimanche, sa façon de…</li>
+        <li data-h="La dernière chose que tu lui as dite, ou qu'il ou elle t'a dite" data-c="Une fois où il ou elle t'a vraiment surpris(e)">La dernière chose que tu lui as dite, ou qu'il ou elle t'a dite</li>
+        <li data-h="Ce que tu aurais voulu lui dire encore" data-c="Ce que vous aimez faire ensemble">Ce que tu aurais voulu lui dire encore</li>
+      </ul>
+    </div>
     <div class="cm-nav">
       <button class="cm-btn-prev" data-target="7"><i class="fa-solid fa-arrow-left"></i> Retour</button>
       <button class="cm-btn-next" id="btn-next-8">Continuer <i class="fa-solid fa-arrow-right"></i></button>
@@ -235,6 +230,18 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   </div>
 
   <div class="cm-step-card" data-step="9">
+    <div class="cm-q-eyebrow" data-h="Ce que tu gardes" data-c="Ton message">Ce que tu gardes</div>
+    <h2 class="cm-q-title" data-h="Comment souhaites-tu te souvenir d'eux ?" data-c="Quel message veux-tu lui transmettre ?">Comment souhaites-tu te souvenir d'eux ?</h2>
+    <span class="cm-optional">Optionnel, prends ton temps</span>
+    <p class="cm-q-sub" data-h="Ce que tu veux que cette chanson capture, préserve, ou transmette à ceux qui l'écouteront après toi." data-c="Ce que tu aimerais lui dire, le message qu'elle gardera de cette chanson.">Ce que tu veux que cette chanson capture, préserve, ou transmette à ceux qui l'écouteront après toi.</p>
+    <textarea class="cm-input" id="input-memory_to_keep" rows="4" data-ph-h="Ex : Je veux qu'on se souvienne de son rire…" data-ph-c="Ex : Je veux qu'elle sache à quel point elle compte…" placeholder="Ex : Je veux qu'on se souvienne de son rire…"></textarea>
+    <div class="cm-nav">
+      <button class="cm-btn-prev" data-target="8"><i class="fa-solid fa-arrow-left"></i> Retour</button>
+      <button class="cm-btn-next" id="btn-next-9">Continuer <i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <div class="cm-step-card" data-step="10">
     <div class="cm-q-eyebrow">Dernière étape</div>
     <h2 class="cm-q-title">Où veux-tu recevoir ta chanson ?</h2>
     <p class="cm-q-sub">Ton aperçu sera prêt en quelques minutes. Entre ton courriel pour le recevoir.</p>
@@ -260,7 +267,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     <input type="text" name="bot-field" style="display:none" tabindex="-1" autocomplete="off">
     <div class="cm-submit-wrap"><button class="cm-submit-btn" id="btn-submit">Créer ma chanson <i class="fa-solid fa-music"></i></button></div>
     <p class="cm-submit-note">100 % gratuit à essayer · Aperçu prêt en quelques minutes</p>
-    <div class="cm-nav" style="margin-top:16px;"><button class="cm-btn-prev" data-target="8"><i class="fa-solid fa-arrow-left"></i> Retour</button></div>
+    <div class="cm-nav" style="margin-top:16px;"><button class="cm-btn-prev" data-target="9"><i class="fa-solid fa-arrow-left"></i> Retour</button></div>
   </div>
 
 </div>
@@ -272,7 +279,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   'use strict';
 
   /* ── CONFIG ── */
-  const TOTAL_STEPS  = 9;
+  const TOTAL_STEPS  = 10;
   const REVISION_URL = '/revision';
   const MAKE_WEBHOOK_A = 'https://hook.us1.make.com/1dyhk11x8yf1biy8mawnepdt3k1rcqvq';
   const MIN_CHARS = 3; /* minimum léger anti-vide / anti-1-lettre */
@@ -338,23 +345,26 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     document.querySelectorAll('.cm-step-card').forEach(function(c){ c.classList.remove('active'); });
     var t = document.querySelector('[data-step="'+step+'"]');
     if(t){ t.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
-    currentStep = step; updateProgress(step);
-    if(data.deceased_name){
-      var _gift = data.song_type === 'cadeau';
-      var q2=document.getElementById('q2-title'); if(q2) q2.textContent=(_gift?'Qui est ':'Qui était ')+data.deceased_name+' pour toi ?';
-      var q6=document.getElementById('q6-title'); if(q6) q6.textContent='Qu\'est-ce qui rend'+(_gift?'':'ait')+' '+data.deceased_name+' unique ?';
-    }
+    currentStep = step; updateProgress(step); applyType();
   }
 
-  /* Type de chanson (hommage/cadeau) : capte le choix de l'étape 1 + adapte le titre. */
-  function applySongType(){
+  /* Adaptation hommage/cadeau : bascule tous les textes [data-h]/[data-c] et placeholders
+     [data-ph-h]/[data-ph-c]. {n} = prénom saisi (sinon « cette personne »). */
+  function applyType(){
     var sel=document.querySelector('input[name="song_type"]:checked');
     data.song_type=(sel&&sel.value)||'hommage';
-    var q1=document.getElementById('q1-title');
-    if(q1) q1.textContent=(data.song_type==='cadeau')?'Pour qui créons-nous cette chanson ?':'En souvenir de qui créons-nous cette chanson ?';
+    var c = data.song_type==='cadeau';
+    var n = data.deceased_name || 'cette personne';
+    document.querySelectorAll('[data-h]').forEach(function(el){
+      var t = (c ? el.getAttribute('data-c') : el.getAttribute('data-h')) || '';
+      el.textContent = t.replace('{n}', n);
+    });
+    document.querySelectorAll('[data-ph-h]').forEach(function(el){
+      el.placeholder = c ? el.getAttribute('data-ph-c') : el.getAttribute('data-ph-h');
+    });
   }
-  [].forEach.call(document.querySelectorAll('input[name="song_type"]'), function(r){ r.addEventListener('change', applySongType); });
-  applySongType();
+  [].forEach.call(document.querySelectorAll('input[name="song_type"]'), function(r){ r.addEventListener('change', applyType); });
+  applyType();
 
   function bindChoices(containerId, dataKey, nextStep){
     var c=document.getElementById(containerId); if(!c) return;
@@ -367,10 +377,10 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
       });
     });
   }
-  bindChoices('choices-relationship', 'relationship', 3);
-  bindChoices('choices-music_style',  'music_style',  4);
-  bindChoices('choices-voice',        'voice',        5);
-  bindChoices('choices-mood',         'mood',         6);
+  bindChoices('choices-relationship', 'relationship', 4);
+  bindChoices('choices-music_style',  'music_style',  5);
+  bindChoices('choices-voice',        'voice',        6);
+  bindChoices('choices-mood',         'mood',         7);
 
   /* ── PRÉ-REMPLISSAGE (régénération chanson) ──
      Relit les réponses précédentes via lire-survey.js (champs minimisés) et les réinjecte.
@@ -409,6 +419,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
       selectChoice('choices-music_style',  'music_style',  s.style_musical);
       selectChoice('choices-voice',        'voice',        s.voix);
       selectChoice('choices-mood',         'mood',         s.ambiance);
+      applyType();
     })
     .catch(function(){ /* pré-remplissage best-effort : si échec, formulaire vierge */ });
   }
@@ -417,31 +428,34 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     btn.addEventListener('click', function(){ goTo(parseInt(btn.dataset.target)); });
   });
 
-  /* ── Étape 1 : prénom (minimum 3 caractères) ── */
-  document.getElementById('btn-next-1').addEventListener('click', function(){
+  /* ── Étape 1 : type de chanson -> étape 2 ── */
+  document.getElementById('btn-next-1').addEventListener('click', function(){ applyType(); goTo(2); });
+
+  /* ── Étape 2 : prénom (minimum 3 caractères) ── */
+  document.getElementById('btn-next-2').addEventListener('click', function(){
     var v=document.getElementById('input-deceased_name').value.trim();
     var e=document.getElementById('err-deceased_name');
     if(v.length < MIN_CHARS){ e.classList.add('show'); return; }
-    e.classList.remove('show'); data.deceased_name=v; goTo(2);
+    e.classList.remove('show'); data.deceased_name=v; applyType(); goTo(3);
   });
   document.getElementById('input-deceased_name').addEventListener('keydown', function(e){
-    if(e.key==='Enter') document.getElementById('btn-next-1').click();
+    if(e.key==='Enter') document.getElementById('btn-next-2').click();
   });
 
-  /* ── Étape 6 : unicité (minimum 3 caractères) ── */
-  document.getElementById('btn-next-6').addEventListener('click', function(){
+  /* ── Étape 7 : unicité (minimum 3 caractères) ── */
+  document.getElementById('btn-next-7').addEventListener('click', function(){
     var v=document.getElementById('input-what_made_unique').value.trim();
     var e=document.getElementById('err-what_made_unique');
     if(v.length < MIN_CHARS){ e.classList.add('show'); return; }
-    e.classList.remove('show'); data.what_made_unique=v; goTo(7);
-  });
-
-  document.getElementById('btn-next-7').addEventListener('click', function(){
-    data.memories=document.getElementById('input-memories').value.trim(); goTo(8);
+    e.classList.remove('show'); data.what_made_unique=v; goTo(8);
   });
 
   document.getElementById('btn-next-8').addEventListener('click', function(){
-    data.memory_to_keep=document.getElementById('input-memory_to_keep').value.trim(); goTo(9);
+    data.memories=document.getElementById('input-memories').value.trim(); goTo(9);
+  });
+
+  document.getElementById('btn-next-9').addEventListener('click', function(){
+    data.memory_to_keep=document.getElementById('input-memory_to_keep').value.trim(); goTo(10);
   });
 
   function redirigerVersRevision(){
