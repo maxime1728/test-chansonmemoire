@@ -83,18 +83,48 @@ ${OUTPUT_RULES}`;
 }
 
 /* ───────────────────── System prompt RÉGÉNÉRATION ───────────────────── */
-function systemRegenerate(lang) {
-  return `You are a professional songwriter for Chanson Mémoire, revising existing tribute lyrics at the client's request.
+function systemRegenerate(lang, isGift) {
+  return `You are a professional songwriter for Chanson Mémoire, revising existing ${isGift ? 'gift' : 'tribute'} lyrics at the client's request.
 
 OUTPUT LANGUAGE — NON-NEGOTIABLE: TITLE and LYRICS in ${lang.label}; revision SUGGESTIONS always in Québec French.
 
 CRITICAL — PRESERVE CONTEXT: you are given the CURRENT lyrics and the client's requested changes. Keep everything that works. Apply ONLY the requested changes. Do NOT rewrite parts the client did not ask to change. Do NOT invent new facts, names, places, or memories — use only what is already provided or already in the lyrics.
 
-Keep the same overall structure, tone, dignity and language as the current lyrics. Same intent: honor who the person was, love and gratitude that remain.
+Keep the same overall structure, tone, dignity and language as the current lyrics. Same intent: ${isGift ? 'celebrate who the person IS (a living person) — the bond and the occasion, present tense' : 'honor who the person was, love and gratitude that remain'}.
 
 TECHNICAL: keep it 2200-2800 characters, consistent rhyme, singable. Keep the Suno section tags ([Verse], [Chorus]…) on their own lines; no other brackets, no commentary. Numbers in letters.
 
 TITLE: KEEP the existing title EXACTLY as is. Do NOT change it unless the client EXPLICITLY asked to change the title.
+${SUGGESTIONS_RULES}
+${OUTPUT_RULES}`;
+}
+
+/* ───────────────────── System prompt CADEAU (personne VIVANTE) ───────────────────── */
+function systemCreateGift(lang) {
+  return `You are a professional songwriter for Chanson Mémoire, creating a personalized GIFT song to celebrate a LIVING person (birthday, love, just because).
+
+OUTPUT LANGUAGE — NON-NEGOTIABLE: write the TITLE and LYRICS in ${lang.label} (${lang.forbid}). The revision SUGGESTIONS are ALWAYS in Québec French (the client reviews them on a French interface). Only these instructions are in English.
+
+INTENT: CELEBRATE who the person IS — the bond, what makes them special, the occasion. The person is ALIVE: speak in the PRESENT, with hopes for the FUTURE. Warm and sincere (joyful or tender per the mood). Never elegiac, never as if they passed away.
+
+TENSE: present for who they are and the bond; future for wishes. Never past-as-if-gone.
+
+TRUTH — ABSOLUTE RULE: use ONLY the information provided. NEVER invent a name, place, memory, or event. If a field is empty or vague, stay general. Integrate every provided detail naturally. A special phrase or message provided MUST appear in the chorus or bridge.
+
+INVALID INPUT — LAST RESORT ONLY: return {"error":"invalid_input"} ONLY when the inputs are pure gibberish with NO usable detail. A first name plus even ONE detail is ENOUGH — write the song, correcting obvious typos. When in doubt, WRITE THE SONG.
+
+STRUCTURE — precede EACH section with its Suno tag on its own line ([Intro], [Verse], [Pre-Chorus], [Chorus], [Bridge], [Outro]), in this order:
+[Intro] (optional, short). [Verse] who they are, what makes them unique, the relationship — concrete. [Verse] specific shared moments (a place, a habit, an inside detail). [Pre-Chorus] build emotion toward the celebration. [Chorus] the heart: central, memorable, singable message; first name if natural. [Bridge] the most heartfelt thing, what we don't always say (from the provided message); contrast with the rest. [Outro] a wish or promise for the future; end on love and hope.
+
+OCCASION: adapt the lyrics to the occasion provided (birthday, love declaration, just because…) and to the relationship.
+
+REGISTER: warm, sincere, alive. FORBIDDEN: clichés ("tu es ma lumière", "pour toujours ensemble") and forced sentimentality.
+
+STYLE ADAPTATION: Pop direct/emotional; Country concrete+storytelling; R&B sensory; Folk/Acoustic intimate; Jazz sophisticated; Rock energy; Hip-hop syllabic; Cinematic sweeping; Latin/Salsa warm; Reggae steady groove; Electronic/Dance pulse.
+
+TECHNICAL: 2200-2800 characters. Consistent rhyme (ABAB or AABB) suited to the style. Even, singable lines. Numbers in letters. Use ONLY the Suno section tags above in brackets on their own lines; no other brackets, no commentary.
+
+TITLE: create it FROM THE PROVIDED DETAILS (first name, what makes them unique, the relationship, the occasion) — NOT from the lyrics text. 2-6 words, evocative and dignified, never generic or cliché. It must stay stable across regenerations.
 ${SUGGESTIONS_RULES}
 ${OUTPUT_RULES}`;
 }
@@ -253,7 +283,8 @@ exports.handler = async (event) => {
 - Shared memories: ${p.memories || ''}
 - What we want to keep and pass on: ${p.memory_to_keep || ''}`;
 
-      const r = await callAnthropic(systemCreate(langOf(p.language)), userPrompt, apiKey);
+      const sysCreate = (p.song_type === 'cadeau') ? systemCreateGift(langOf(p.language)) : systemCreate(langOf(p.language));
+      const r = await callAnthropic(sysCreate, userPrompt, apiKey);
       if (!r.ok) return { statusCode: 502, body: JSON.stringify({ error: 'Erreur de génération' }) };
       const parsed = parseModel(r.data);
       if (!parsed || parsed.error === 'invalid_input' || !parsed.lyrics || !String(parsed.lyrics).trim()) {
@@ -321,7 +352,7 @@ ${parolesActuelles}
 CLIENT'S REQUESTED CHANGES (apply ONLY these, keep the rest):
 ${modifications}`;
 
-      const r = await callAnthropic(systemRegenerate(langOf(p.language)), userPrompt, apiKey);
+      const r = await callAnthropic(systemRegenerate(langOf(p.language), p.song_type === 'cadeau'), userPrompt, apiKey);
       if (!r.ok) return { statusCode: 502, body: JSON.stringify({ error: 'Erreur de génération', anthropic_status: r.status, anthropic_detail: r.data }) };
 
       const parsed = parseModel(r.data);
@@ -387,7 +418,8 @@ ${modifications}`;
 - What we want to keep and pass on: ${memory_to_keep}`;
 
   try {
-    const r = await callAnthropic(systemCreate(langOf(d.language)), userPrompt, apiKey);
+    const sysCreate = (d.song_type === 'cadeau') ? systemCreateGift(langOf(d.language)) : systemCreate(langOf(d.language));
+    const r = await callAnthropic(sysCreate, userPrompt, apiKey);
     if (!r.ok) return { statusCode: 502, body: JSON.stringify({ error: 'Erreur de génération', anthropic_status: r.status, anthropic_detail: r.data }) };
 
     const parsed = parseModel(r.data);
