@@ -132,8 +132,8 @@
 
   <!-- CADEAU (v1 : paroles en PDF seulement ; le signet de commémoration s'ajoutera plus tard) -->
   <div class="card" id="cadeauxCard">
-    <div class="section-title">Votre cadeau inclus</div>
-    <p class="section-sub" id="cadeauxSub">En plus de votre chanson : <strong>les paroles en PDF</strong> — une belle feuille à imprimer ou à garder. Prête sur cette page en quelques instants.</p>
+    <div class="section-title">Ton cadeau inclus</div>
+    <p class="section-sub" id="cadeauxSub">En plus de ta chanson : <strong>les paroles en PDF</strong>, une belle feuille à imprimer ou à garder. Prête sur cette page en quelques instants.</p>
 
     <div id="cadeauxChooser">
       <div style="margin-top:6px;"><button class="btn btn-block" id="btnCadeaux" type="button">Préparer mon cadeau</button></div>
@@ -183,10 +183,18 @@
 
   <!-- UPSELL VIDÉO -->
   <div class="card">
-    <div class="section-title">Bientôt : votre vidéo souvenir</div>
-    <p class="section-sub">Un montage personnalisé à partir de vos photos et vidéos, porté par votre chanson. Tout sera accompagné par notre équipe.</p>
-    <div style="margin-top:6px;"><button class="btn btn-ghost btn-block" id="btnWaitVideo" type="button">Ça m'intéresse — gardez-moi au courant</button></div>
+    <div class="section-title">Bientôt : ta vidéo souvenir</div>
+    <p class="section-sub">Un montage personnalisé à partir de tes photos et vidéos, porté par ta chanson. Le tout accompagné par notre équipe.</p>
+    <div style="margin-top:6px;"><button class="btn btn-ghost btn-block" id="btnWaitVideo" type="button">Ça m'intéresse, tiens-moi au courant</button></div>
     <p class="ok-msg" id="videoMsg" style="display:none;"></p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Questions fréquentes</div>
+    <details style="margin-top:8px;border-top:1px solid rgba(92,45,74,.10);"><summary style="cursor:pointer;font-weight:600;padding:12px 0;list-style:none;">Comment télécharger ma chanson ?</summary><p class="section-sub" style="margin:0 0 10px;">Le bouton de téléchargement est sur cette page. Ton fichier MP3 est aussi dans le courriel qu'on t'a envoyé après l'achat.</p></details>
+    <details style="border-top:1px solid rgba(92,45,74,.10);"><summary style="cursor:pointer;font-weight:600;padding:12px 0;list-style:none;">Puis-je encore demander une modification ?</summary><p class="section-sub" style="margin:0 0 10px;">Oui. Décris ce que tu veux ajuster et on retravaille ta version, sans frais.</p></details>
+    <details style="border-top:1px solid rgba(92,45,74,.10);"><summary style="cursor:pointer;font-weight:600;padding:12px 0;list-style:none;">Où sont mes cadeaux (paroles, signet) ?</summary><p class="section-sub" style="margin:0 0 10px;">Ils apparaissent ici une fois prêts, et tu reçois aussi un courriel. Compte de quelques minutes à quelques heures.</p></details>
+    <details style="border-top:1px solid rgba(92,45,74,.10);"><summary style="cursor:pointer;font-weight:600;padding:12px 0;list-style:none;">Comment partager ma chanson ?</summary><p class="section-sub" style="margin:0 0 10px;">Télécharge le MP3 et partage-le comme tu veux : par courriel, par message, ou directement lors d'une cérémonie.</p></details>
   </div>
 </div>
 
@@ -223,7 +231,7 @@
   var cadeauTimer=null;
   function showCadeauxPending(){
     var ch=document.getElementById('cadeauxChooser'); if(ch) ch.style.display='none';
-    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Votre cadeau se prépare — il apparaîtra ici dans quelques instants.';
+    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Ton cadeau se prépare, il apparaîtra ici dans quelques instants.';
     pollCadeau();
   }
   /* Sonde pdf_url après la demande (le PDF Canva se génère en ~1 min). ~3 min max, puis on s'arrête. */
@@ -235,14 +243,14 @@
       post('/api/lire-projet',{token:token}).then(function(d){
         if(d && d.pdf_url){ clearInterval(cadeauTimer); cadeauTimer=null; showCadeauxReady(d.pdf_url); }
         else if(n>=22){ clearInterval(cadeauTimer); cadeauTimer=null;
-          var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Votre cadeau se finalise — reviens dans quelques minutes, il apparaîtra ici.';
+          var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Ton cadeau se finalise, reviens dans quelques minutes, il apparaîtra ici.';
         }
       }).catch(function(){});
     }, 8000);
   }
   function showCadeauxReady(pdfUrl){
     var ch=document.getElementById('cadeauxChooser'); if(ch) ch.style.display='none';
-    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Votre cadeau est prêt — téléchargez-le ci-dessous.';
+    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Ton cadeau est prêt, télécharge-le ci-dessous.';
     var r=document.getElementById('cadeauxReady');
     r.innerHTML='<a class="btn btn-block" href="'+pdfUrl+'"><i class="fa-solid fa-file-pdf"></i>&nbsp; Télécharger les paroles (PDF)</a>';
     r.style.display='block';
@@ -297,8 +305,8 @@
       }).catch(function(){ b.disabled=false; });
     });
   }
-  waitlist('btnWaitMemoire','memoireMsg',{waitlist_memoire:true},'Vous êtes sur la liste ✓ On vous écrira au lancement.');
-  waitlist('btnWaitVideo','videoMsg',{waitlist_video:true},'Parfait ✓ On vous contactera pour votre vidéo souvenir.');
+  waitlist('btnWaitMemoire','memoireMsg',{waitlist_memoire:true},'Tu es sur la liste ✓ On t'écrira au lancement.');
+  waitlist('btnWaitVideo','videoMsg',{waitlist_video:true},'Parfait ✓ On te contactera pour ta vidéo souvenir.');
 
   /* ── Upsell post-achat (add-ons payants) — affiché uniquement aux acheteurs (pic émotionnel). ──
      delivered = { instrumental: url|'', paroles_vivantes: url|'' } : add-on déjà livré -> téléchargement. */
