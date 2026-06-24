@@ -21,11 +21,14 @@
 //
 // Env : MAKE_WEBHOOK_SECRET, ANTHROPIC_API_KEY, AIRTABLE_TOKEN, AIRTABLE_BASE_ID.
 
+const crypto = require('crypto');
+
 const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
 const API      = `https://api.airtable.com/v0/${BASE_ID}`;
 const SECRET   = process.env.MAKE_WEBHOOK_SECRET;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+const MG_SIGNING_KEY = process.env.MAILGUN_SIGNING_KEY;   // clé de signature webhook Mailgun (voie DIRECTE, sans Make)
 
 const CLIENTS  = 'tblQbF1OlE3uRxFra';
 const PROJECTS = 'tblh7O8eoog7RyTMJ';
@@ -62,6 +65,17 @@ function estAdresseInterne(addr) {
 // Sujets d'auto-réponse à ignorer (absences, accusés, rapports de non-remise).
 function estAutoReponse(subject) {
   return /^(re:\s*)?(out of office|absence|automatic reply|réponse automatique|delivery status|undeliverable|mail delivery|échec de remise)/i.test(subject || '');
+}
+
+// Vérifie la signature d'un POST Mailgun entrant : HMAC-SHA256(timestamp+token) == signature.
+// Ferme l'endpoint (qui crée des lignes + dépense des crédits Anthropic) à tout sauf Mailgun.
+function verifierMailgun(timestamp, token, signature) {
+  if (!MG_SIGNING_KEY || !timestamp || !token || !signature) return false;
+  const attendu = crypto.createHmac('sha256', MG_SIGNING_KEY).update(String(timestamp) + String(token)).digest('hex');
+  try {
+    const a = Buffer.from(attendu), b = Buffer.from(String(signature));
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch (_) { return false; }
 }
 
 // Extrait le premier objet JSON d'un texte (le modèle peut emballer dans de la prose).
@@ -129,17 +143,40 @@ async function redigerBrouillon(from, subject, threadText, contexts) {
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: '{}' };
-  if (!SECRET) { console.error('[courriel-entrant] MAKE_WEBHOOK_SECRET manquant'); return { statusCode: 500, body: '{}' }; }
 
-  let body;
-  try { body = JSON.parse(event.body || '{}'); } catch (_) { return { statusCode: 400, body: '{}' }; }
-  if ((body.secret || '') !== SECRET) return { statusCode: 403, body: '{}' };
+  // Deux entrées, selon le Content-Type :
+  //  - application/json     : voie interne (tests) -> gate par MAKE_WEBHOOK_SECRET.
+  //  - multipart/urlencoded : voie DIRECTE Mailgun (Route -> ici, SANS Make) -> gate par SIGNATURE Mailgun.
+  const ct = (event.headers['content-type'] || event.headers['Content-Type'] || '').toLowerCase();
+  let from = '', subject = '', message = '', msgId = '', recipient = '';
 
-  const from    = (body.from || '').toString().trim();
-  const subject = (body.subject || '').toString().trim();
-  const message = (body.body || '').toString().trim();
-  const msgId   = (body.message_id || '').toString().trim();
-  const recipient = (body.recipient || '').toString().trim();   // adresse d'arrivée -> pré-remplit repondre_de
+  if (ct.includes('application/json')) {
+    if (!SECRET) { console.error('[courriel-entrant] MAKE_WEBHOOK_SECRET manquant'); return { statusCode: 500, body: '{}' }; }
+    let body;
+    try { body = JSON.parse(event.body || '{}'); } catch (_) { return { statusCode: 400, body: '{}' }; }
+    if ((body.secret || '') !== SECRET) return { statusCode: 403, body: '{}' };
+    from = (body.from || '').toString().trim();
+    subject = (body.subject || '').toString().trim();
+    message = (body.body || '').toString().trim();
+    msgId = (body.message_id || '').toString().trim();
+    recipient = (body.recipient || '').toString().trim();
+  } else {
+    // Mailgun poste en multipart/form-data -> parsé NATIVEMENT (Node 20, undici) via Response().formData(), sans dépendance.
+    if (!MG_SIGNING_KEY) { console.error('[courriel-entrant] MAILGUN_SIGNING_KEY manquant'); return { statusCode: 500, body: '{}' }; }
+    let form;
+    try {
+      const buf = Buffer.from(event.body || '', event.isBase64Encoded ? 'base64' : 'utf8');
+      form = await new Response(buf, { headers: { 'content-type': ct } }).formData();
+    } catch (e) { console.error('[courriel-entrant] parse multipart', e && e.message); return { statusCode: 400, body: '{}' }; }
+    if (!verifierMailgun(form.get('timestamp'), form.get('token'), form.get('signature'))) {
+      return { statusCode: 403, body: '{}' };   // pas Mailgun -> refusé
+    }
+    from = (form.get('sender') || '').toString().trim();
+    subject = (form.get('subject') || '').toString().trim();
+    message = (form.get('stripped-text') || form.get('body-plain') || '').toString().trim();   // texte sans l'historique cité
+    msgId = (form.get('Message-Id') || form.get('message-id') || '').toString().trim();
+    recipient = (form.get('recipient') || '').toString().trim();
+  }
 
   if (!from) return { statusCode: 200, body: JSON.stringify({ ok: true, skipped: 'no_sender' }) };
   if (estAdresseInterne(from)) return { statusCode: 200, body: JSON.stringify({ ok: true, skipped: 'internal' }) };
