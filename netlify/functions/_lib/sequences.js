@@ -117,6 +117,30 @@ const CROSS_SELL = {
   ]
 };
 
-const SEQUENCES = [POST_ACHAT, PARRAINAGE, CROSS_SELL];
+// ───────────────────── Saisonnier : NOËL / temps des fêtes (campagne datée, segment large) ─────────────────────
+// Mécanisme saisonnier sur le MÊME moteur : la fenêtre de dates est DANS l'enrollFormula -> personne ne
+// s'enrôle hors campagne ; pendant la fenêtre, chaque contact du segment reçoit 1 courriel (l'inscription
+// empêche le renvoi). L'an prochain : dupliquer avec un nouvel id (noel_2027) + nouvelles dates.
+// Segment : non désinscrits ET (acheteurs OU leads de moins d'un an). Envoi début décembre (délai avant Noël).
+const NOEL_2026 = {
+  id: 'noel_2026',
+  label: 'Temps des fêtes 2026',
+  enrollFormula: `AND({nurture_status}!='unsubscribed', OR({commercial_status}='purchased', IS_AFTER({created_date}, DATEADD(NOW(),-365,'days'))), IS_AFTER(NOW(), DATETIME_PARSE('2026-12-01','YYYY-MM-DD')), IS_BEFORE(NOW(), DATETIME_PARSE('2026-12-12','YYYY-MM-DD')))`,
+  exit: () => false,   // campagne ponctuelle, pas de condition de sortie
+  emails: [
+    {
+      gapBeforeH: 0,   // envoi immédiat dès l'inscription (pendant la fenêtre)
+      subject: 'Un cadeau de Noël qui reste, longtemps après les fêtes',
+      html: (c) => shell(
+        `<p>Bonjour,</p>`
+        + `<p>Le temps des fêtes approche. Cette année, offrez quelque chose qui dure : une chanson personnalisée, pour honorer une personne qui vous manque, ou pour faire plaisir à quelqu'un que vous aimez.</p>`
+        + `<p>Pensez à la créer tôt, pour l'avoir bien à temps sous le sapin.</p>`
+        + btn(`${SITE}/api/clic?c=noel_2026&t=${encodeURIComponent(c.token)}&u=${encodeURIComponent(SITE + '/souvenirs')}`, 'Créer une chanson pour les fêtes')
+        + `<p>Joyeuses fêtes,</p>`, c)
+    }
+  ]
+};
+
+const SEQUENCES = [POST_ACHAT, PARRAINAGE, CROSS_SELL, NOEL_2026];
 
 module.exports = { SEQUENCES };
