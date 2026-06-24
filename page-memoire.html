@@ -132,11 +132,11 @@
 
   <!-- CADEAU (v1 : paroles en PDF seulement ; le signet de commémoration s'ajoutera plus tard) -->
   <div class="card" id="cadeauxCard">
-    <div class="section-title">Ton cadeau inclus</div>
-    <p class="section-sub" id="cadeauxSub">En plus de ta chanson : <strong>les paroles en PDF</strong>, une belle feuille à imprimer ou à garder. Prête sur cette page en quelques instants.</p>
+    <div class="section-title">Tes cadeaux inclus</div>
+    <p class="section-sub" id="cadeauxSub">En plus de ta chanson : <strong>les paroles en PDF</strong> et un <strong>signet souvenir</strong> avec un code QR vers sa chanson. Prêts sur cette page en quelques instants.</p>
 
     <div id="cadeauxChooser">
-      <div style="margin-top:6px;"><button class="btn btn-block" id="btnCadeaux" type="button">Préparer mon cadeau</button></div>
+      <div style="margin-top:6px;"><button class="btn btn-block" id="btnCadeaux" type="button">Préparer mes cadeaux</button></div>
       <p class="ok-msg" id="cadeauxMsg" style="display:none;"></p>
     </div>
 
@@ -223,7 +223,7 @@
     var bits=[d.style,d.ambiance].filter(Boolean); if(bits.length) document.getElementById('subtitle').textContent=bits.join(' · ');
     if(d.audio_url){ source.src=d.audio_url; audio.load(); } else { loading.textContent='Ta chanson se finalise, réessaie dans un instant.'; }
     // Cadeau : PDF prêt -> téléchargement ; déjà demandé -> en préparation ; sinon -> bouton.
-    if(d.pdf_url){ showCadeauxReady(d.pdf_url); }
+    if(d.pdf_url || d.signet_url){ showCadeauxReady(d.pdf_url, d.signet_url); }
     else if(d.cadeaux_requested){ showCadeauxPending(); }
     initUpsell(d.commercial_status === 'purchased', { instrumental: d.instrumental_url, paroles_vivantes: d.video_url });
   }).catch(function(){ loading.textContent='Une erreur est survenue.'; });
@@ -231,7 +231,7 @@
   var cadeauTimer=null;
   function showCadeauxPending(){
     var ch=document.getElementById('cadeauxChooser'); if(ch) ch.style.display='none';
-    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Ton cadeau se prépare, il apparaîtra ici dans quelques instants.';
+    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Tes cadeaux se préparent, ils apparaîtront ici dans quelques instants.';
     pollCadeau();
   }
   /* Sonde pdf_url après la demande (le PDF Canva se génère en ~1 min). ~3 min max, puis on s'arrête. */
@@ -241,19 +241,20 @@
     cadeauTimer=setInterval(function(){
       n++;
       post('/api/lire-projet',{token:token}).then(function(d){
-        if(d && d.pdf_url){ clearInterval(cadeauTimer); cadeauTimer=null; showCadeauxReady(d.pdf_url); }
+        if(d && (d.pdf_url || d.signet_url)){ clearInterval(cadeauTimer); cadeauTimer=null; showCadeauxReady(d.pdf_url, d.signet_url); }
         else if(n>=22){ clearInterval(cadeauTimer); cadeauTimer=null;
-          var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Ton cadeau se finalise, reviens dans quelques minutes, il apparaîtra ici.';
+          var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Tes cadeaux se finalisent, reviens dans quelques minutes, ils apparaîtront ici.';
         }
       }).catch(function(){});
     }, 8000);
   }
-  function showCadeauxReady(pdfUrl){
+  function showCadeauxReady(pdfUrl, signetUrl){
     var ch=document.getElementById('cadeauxChooser'); if(ch) ch.style.display='none';
-    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Ton cadeau est prêt, télécharge-le ci-dessous.';
-    var r=document.getElementById('cadeauxReady');
-    r.innerHTML='<a class="btn btn-block" href="'+pdfUrl+'"><i class="fa-solid fa-file-pdf"></i>&nbsp; Télécharger les paroles (PDF)</a>';
-    r.style.display='block';
+    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Tes cadeaux sont prêts, télécharge-les ci-dessous.';
+    var r=document.getElementById('cadeauxReady'); var html='';
+    if(pdfUrl){ html+='<a class="btn btn-block" href="'+pdfUrl+'"><i class="fa-solid fa-file-pdf"></i>&nbsp; Télécharger les paroles (PDF)</a>'; }
+    if(signetUrl){ html+='<a class="btn btn-block" href="'+signetUrl+'" style="margin-top:10px;"><i class="fa-solid fa-bookmark"></i>&nbsp; Télécharger le signet souvenir</a>'; }
+    r.innerHTML=html; r.style.display='block';
   }
 
   audio.addEventListener('loadedmetadata',function(){ progress.max=audio.duration||100; totEl.textContent=fmt(audio.duration); loading.style.display='none'; playBtn.disabled=false; });
@@ -276,12 +277,16 @@
 
   /* ── Préparer mon cadeau (paroles en PDF) ── */
   document.getElementById('btnCadeaux').addEventListener('click',function(){
-    var b=this; b.disabled=true; b.textContent='Préparation de ton cadeau…';
-    /* lancer-cadeau génère le PDF (pdfkit -> Cloudinary), écrit pdf_url et le renvoie (~quelques s). */
-    post('/api/lancer-cadeau',{token:token}).then(function(res){
-      if(res && res.pdf_url){ showCadeauxReady(res.pdf_url); }
-      else { b.disabled=false; b.textContent='Préparer mon cadeau'; alert("La préparation n'a pas abouti. Réessayez dans un instant."); }
-    }).catch(function(){ b.disabled=false; b.textContent='Préparer mon cadeau'; alert("Une erreur est survenue. Réessayez."); });
+    var b=this; b.disabled=true; b.textContent='Préparation de tes cadeaux…';
+    /* lancer-cadeau = PDF des paroles ; lancer-signet = signet souvenir (QR vers la chanson). pdfkit -> Cloudinary. */
+    Promise.all([
+      post('/api/lancer-cadeau',{token:token}).catch(function(){ return null; }),
+      post('/api/lancer-signet',{token:token}).catch(function(){ return null; })
+    ]).then(function(res){
+      var pdf=res[0]&&res[0].pdf_url, sig=res[1]&&res[1].signet_url;
+      if(pdf||sig){ showCadeauxReady(pdf,sig); }
+      else { b.disabled=false; b.textContent='Préparer mes cadeaux'; alert("La préparation n'a pas abouti. Réessaie dans un instant."); }
+    });
   });
 
   /* ── Demande de modification (decortique : Claude analyse + prépare l'approbation) ── */
