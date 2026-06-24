@@ -1,25 +1,23 @@
 // netlify/functions/courriel-entrant.js
 //
-// SUPPORT ENTRANT — reçoit une réponse client (courriel) et la dépose dans la file « Conversations »
-// d'Airtable avec un BROUILLON DE RÉPONSE rédigé par Claude. Maxime relit, ajuste, répond (Phase 1).
-// Plus tard : auto-réponse des cas à haute confiance (Phase 2).
+// SUPPORT ENTRANT — RÉCEPTION (capture seule, fiable). Reçoit un courriel client et le STOCKE dans la
+// file « Conversations ». Le BROUILLON IA est rédigé séparément par brouillon-cron -> ainsi un courriel
+// n'est JAMAIS perdu si Anthropic est lent/en panne (la réception ne dépend que d'Airtable).
 //
-// CHEMIN : Route Mailgun (achat/info) -> petit webhook Make (décortique le multipart) -> POST ici en
-// JSON PROPRE { secret, from, subject, body, message_id }. On évite ainsi de parser du multipart brut.
+// DEUX entrées selon le Content-Type :
+//  - application/json     : voie interne (tests) -> gate MAKE_WEBHOOK_SECRET.
+//  - multipart/form-data  : voie DIRECTE Mailgun (Route -> ici, SANS Make) -> gate SIGNATURE Mailgun.
+//    Parse natif via Response().formData() (Node 20/undici, zéro dépendance).
 //
-// FIL DE CONVERSATION : plusieurs courriels d'un même échange (même expéditeur + même sujet) sont
-// REGROUPÉS dans UNE seule conversation (thread_key). On accumule les messages et on re-rédige le
-// brouillon avec TOUT le contexte -> réponse personnalisée même si le client écrit en 3 fois.
+// FIABILITÉ (ne rien perdre) : on répond 200 SEULEMENT si le courriel est bien enregistré ; en cas
+// d'échec d'écriture ou d'erreur, on répond 5xx -> Mailgun RÉESSAIE (plusieurs heures). Les cas filtrés
+// volontairement (nos adresses, auto-réponses) répondent 200 (ce ne sont pas des pertes).
 //
-// PLUSIEURS PROJETS : si le client a plusieurs chansons, on lie TOUS ses projets et on donne leur
-// contexte à Claude, qui identifie laquelle concerne le message (ou demande de préciser).
+// FIL : courriels d'un même échange (expéditeur + sujet normalisé, 30 j) regroupés (thread_key) ; on
+// vide alors brouillon_ia pour que le cron re-rédige sur le fil complet. PLUSIEURS PROJETS : tous liés.
 //
-// SÉCURITÉ : gate par `secret` == MAKE_WEBHOOK_SECRET. On ignore nos propres adresses + auto-réponses.
-// Garde-fou légal (CLAUDE.md §2) : remboursement / allégation = JAMAIS auto -> confiance basse + escalade.
-// Voix de marque (§1) : SOLUTION-FIRST, jamais ouvrir sur le deuil ; sobre, digne, québécois.
-// Best-effort : on répond toujours 200 (sauf secret invalide) pour ne pas faire boucler Make.
-//
-// Env : MAKE_WEBHOOK_SECRET, ANTHROPIC_API_KEY, AIRTABLE_TOKEN, AIRTABLE_BASE_ID.
+// Voix/garde-fous (CLAUDE.md) : appliqués côté brouillon-cron (rédaction). Env : MAILGUN_SIGNING_KEY,
+// MAKE_WEBHOOK_SECRET, AIRTABLE_TOKEN, AIRTABLE_BASE_ID.
 
 const crypto = require('crypto');
 
@@ -27,20 +25,16 @@ const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
 const API      = `https://api.airtable.com/v0/${BASE_ID}`;
 const SECRET   = process.env.MAKE_WEBHOOK_SECRET;
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
-const MG_SIGNING_KEY = process.env.MAILGUN_SIGNING_KEY;   // clé de signature webhook Mailgun (voie DIRECTE, sans Make)
+const MG_SIGNING_KEY = process.env.MAILGUN_SIGNING_KEY;   // clé de signature webhook Mailgun (voie DIRECTE)
 
 const CLIENTS  = 'tblQbF1OlE3uRxFra';
-const PROJECTS = 'tblh7O8eoog7RyTMJ';
 const CONVOS   = 'tbl3KBgXthCPromxF';
-const CLIENT_PROJECTS_LINK = 'fldayFzM1PdALeWKL';   // champ lien Clients -> Projects (lu par returnFieldsByFieldId)
-const SITE     = 'https://chansonmemoire.ca';       // lien page client (= courriel d'achat / nouvelle version)
+const CLIENT_PROJECTS_LINK = 'fldayFzM1PdALeWKL';   // lien Clients -> Projects (lu par returnFieldsByFieldId)
 
-const MAX_PROJETS    = 3;                            // contexte donné à l'IA (les clients en ont ~1)
 const FENETRE_FIL_MS = 30 * 24 * 60 * 60 * 1000;     // au-delà de 30 j, un même sujet = nouvelle conversation
 const MAX_TEXTE      = 90000;                          // garde-fou longueur (champ long text)
 
-// Échappe une valeur pour un littéral filterByFormula (cf. lire-projet). null si ambigu (' et ").
+// Échappe une valeur pour un littéral filterByFormula. null si ambigu (' et ").
 function formulaLiteral(v) {
   const s = String(v);
   if (!s.includes('"')) return `"${s}"`;
@@ -68,7 +62,7 @@ function estAutoReponse(subject) {
 }
 
 // Vérifie la signature d'un POST Mailgun entrant : HMAC-SHA256(timestamp+token) == signature.
-// Ferme l'endpoint (qui crée des lignes + dépense des crédits Anthropic) à tout sauf Mailgun.
+// Ferme l'endpoint à tout sauf Mailgun.
 function verifierMailgun(timestamp, token, signature) {
   if (!MG_SIGNING_KEY || !timestamp || !token || !signature) return false;
   const attendu = crypto.createHmac('sha256', MG_SIGNING_KEY).update(String(timestamp) + String(token)).digest('hex');
@@ -78,75 +72,9 @@ function verifierMailgun(timestamp, token, signature) {
   } catch (_) { return false; }
 }
 
-// Extrait le premier objet JSON d'un texte (le modèle peut emballer dans de la prose).
-function extraireJson(txt) {
-  if (!txt) return null;
-  const i = txt.indexOf('{'), j = txt.lastIndexOf('}');
-  if (i === -1 || j === -1 || j < i) return null;
-  try { return JSON.parse(txt.slice(i, j + 1)); } catch (_) { return null; }
-}
-
-const SYSTEM = `Tu es l'assistant du SERVICE CLIENT de Chanson Mémoire (chansons hommage et cadeau personnalisées, marché québécois francophone).
-
-Ta tâche : à partir de l'échange reçu d'un client et du contexte de ses projets, rédiger un BROUILLON de réponse que l'équipe relira avant envoi.
-
-LE FIL PEUT CONTENIR PLUSIEURS MESSAGES : le client a parfois écrit en plusieurs courriels successifs. Lis TOUT le fil et réponds au besoin global (en priorité ce qui est resté sans réponse / le plus récent).
-
-PLUSIEURS PROJETS : si le contexte contient plus d'un projet, identifie DE QUELLE chanson le client parle grâce au prénom de la personne ou au contenu. Si c'est ambigu, demande-lui poliment de préciser — n'invente pas.
-
-LIEN DE LA PAGE : si le client veut accéder à sa chanson / la réécouter, suivre l'avancement, ou demande une modification, INCLUS le lien de sa page (le champ "lien_page" du contexte du bon projet) dans ta réponse — c'est là qu'il écoute, télécharge et demande ses modifications. N'invente JAMAIS d'autre lien ; si "lien_page" est vide, n'en mets aucun.
-
-VOIX DE MARQUE — IMPÉRATIF :
-- Français QUÉBÉCOIS, naturel, chaleureux, sobre et digne. Vouvoiement.
-- SOLUTION-FIRST : n'ouvre JAMAIS sur le deuil ou la douleur. Entre par ce qu'on offre / ce qu'on peut faire.
-- Pas larmoyant, pas de clichés. Concis et humain.
-- Signe « L'équipe Chanson Mémoire ».
-
-GARDE-FOUS — NE JAMAIS faire de façon autonome (mets alors confiance="basse") :
-- Promettre, confirmer ou refuser un REMBOURSEMENT.
-- Avancer un prix, une promotion, une garantie de résultat ou une allégation.
-- Toute question juridique, plainte, ou litige.
-Dans ces cas, rédige un accusé de réception empathique qui dit qu'un membre de l'équipe revient personnellement — sans rien promettre.
-
-CONFIANCE :
-- "haute" : question simple répondable avec le contexte (état de la commande, accès à la chanson, délais).
-- "moyenne" : demande de modification claire, ou question partiellement couverte, ou projet ambigu.
-- "basse" : remboursement, plainte, sujet sensible/légal, ou contexte insuffisant.
-
-CATÉGORIE : "question" | "modification" | "remboursement" | "remerciement" | "autre".
-
-RÉPONDS UNIQUEMENT avec un objet JSON valide, sans texte autour :
-{"brouillon":"<la réponse complète, prête à relire>","confiance":"haute|moyenne|basse","categorie":"question|modification|remboursement|remerciement|autre"}`;
-
-async function redigerBrouillon(from, subject, threadText, contexts) {
-  if (!ANTHROPIC_KEY) return null;
-  const userPrompt =
-    `ÉCHANGE REÇU\nDe : ${from}\nSujet : ${subject || '(aucun)'}\n\nFil (du plus ancien au plus récent) :\n${(threadText || '').slice(-MAX_TEXTE)}\n\n` +
-    `CONTEXTE DES PROJETS DU CLIENT (peut être vide si client non retrouvé) :\n${JSON.stringify(contexts || [])}`;
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1200,
-        system: SYSTEM,
-        messages: [{ role: 'user', content: userPrompt }]
-      })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) { console.error('[courriel-entrant] Anthropic', res.status); return null; }
-    const txt = (data.content && data.content[0] && data.content[0].text) || '';
-    return extraireJson(txt);
-  } catch (e) { console.error('[courriel-entrant] Anthropic', e && e.message); return null; }
-}
-
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: '{}' };
 
-  // Deux entrées, selon le Content-Type :
-  //  - application/json     : voie interne (tests) -> gate par MAKE_WEBHOOK_SECRET.
-  //  - multipart/urlencoded : voie DIRECTE Mailgun (Route -> ici, SANS Make) -> gate par SIGNATURE Mailgun.
   const ct = (event.headers['content-type'] || event.headers['Content-Type'] || '').toLowerCase();
   let from = '', subject = '', message = '', msgId = '', recipient = '';
 
@@ -161,7 +89,7 @@ exports.handler = async (event) => {
     msgId = (body.message_id || '').toString().trim();
     recipient = (body.recipient || '').toString().trim();
   } else {
-    // Mailgun poste en multipart/form-data -> parsé NATIVEMENT (Node 20, undici) via Response().formData(), sans dépendance.
+    // Mailgun poste en multipart/form-data -> parsé NATIVEMENT (Node 20, undici) via Response().formData().
     if (!MG_SIGNING_KEY) { console.error('[courriel-entrant] MAILGUN_SIGNING_KEY manquant'); return { statusCode: 500, body: '{}' }; }
     let form;
     try {
@@ -187,7 +115,7 @@ exports.handler = async (event) => {
   const threadKey = `${from.toLowerCase()}|${normaliserSujet(subject).toLowerCase()}`.slice(0, 250);
 
   try {
-    // 1. MATCH : Client par email (insensible à la casse) -> TOUS ses projets.
+    // 1. MATCH : Client par email -> TOUS ses projets (best-effort ; non bloquant pour la capture).
     let projectIds = [];
     const litEmail = formulaLiteral(from);
     if (litEmail !== null) {
@@ -196,29 +124,10 @@ exports.handler = async (event) => {
       const dC = await rC.json().catch(() => ({}));
       const client = dC.records && dC.records[0];
       const projs = client && client.fields && client.fields[CLIENT_PROJECTS_LINK];
-      if (Array.isArray(projs)) projectIds = projs.slice();   // ids de record
+      if (Array.isArray(projs)) projectIds = projs.slice();
     }
 
-    // 2. Contexte de chaque projet (cap MAX_PROJETS) pour aider l'IA à savoir DE QUELLE chanson on parle.
-    const contexts = [];
-    for (const pid of projectIds.slice(-MAX_PROJETS)) {
-      try {
-        const rP = await fetch(`${API}/${PROJECTS}/${pid}`, { headers });
-        if (rP.ok) {
-          const p = (await rP.json()).fields || {};
-          contexts.push({
-            prenom_personne: p.deceased_name || '',
-            type: p.song_type || 'hommage',
-            langue: p.language || 'fr-CA',
-            statut_commande: p.commercial_status || 'preview_only',
-            etape: p.approval_status || '',
-            lien_page: p.token ? `${SITE}/page-memoire?id=${encodeURIComponent(p.token)}` : ''
-          });
-        }
-      } catch (_) {}
-    }
-
-    // 3. FIL : conversation existante (même thread_key, récente) ?
+    // 2. FIL : conversation existante (même thread_key, récente) ?
     let existing = null;
     const litThread = formulaLiteral(threadKey);
     if (litThread !== null) {
@@ -228,60 +137,50 @@ exports.handler = async (event) => {
       const cand = dT.records && dT.records[0];
       if (cand) {
         const prev = cand.fields && cand.fields.recu_le ? new Date(cand.fields.recu_le).getTime() : 0;
-        if (now.getTime() - prev <= FENETRE_FIL_MS) existing = cand;   // assez récent -> on regroupe
+        if (now.getTime() - prev <= FENETRE_FIL_MS) existing = cand;
       }
     }
 
-    // 4. Texte du fil (accumulé si on regroupe) + brouillon IA sur tout le fil.
+    // 3. Texte du fil (accumulé si on regroupe).
     const sep = `\n\n──────── ${now.toISOString().slice(0, 16).replace('T', ' ')} ────────\n`;
-    const threadText = existing
-      ? ((existing.fields.message || '') + sep + message).slice(-MAX_TEXTE)
-      : message;
+    const threadText = existing ? ((existing.fields.message || '') + sep + message).slice(-MAX_TEXTE) : message;
 
-    const ia = await redigerBrouillon(from, subject, threadText, contexts) || {};
-    const conf = ['haute', 'moyenne', 'basse'].includes(ia.confiance) ? ia.confiance : 'basse';
-    const cat  = ['question', 'modification', 'remboursement', 'remerciement', 'autre'].includes(ia.categorie) ? ia.categorie : 'autre';
-
-    // Union des liens projet (existants + nouveaux), dédupliqués.
     const liensExistants = (existing && Array.isArray(existing.fields.Projet)) ? existing.fields.Projet : [];
     const liens = [...new Set([...liensExistants, ...projectIds])];
 
+    // 4. STORE — étape critique. PAS de brouillon ici (découplé -> brouillon-cron) : la capture ne dépend
+    //    pas d'Anthropic. brouillon_ia vide + statut a_verifier => apparaît en file, le cron le rédige.
     const champs = {
       expediteur: from,
       sujet: subject.slice(0, 250),
       message: threadText,
       recu_le: now.toISOString(),
-      brouillon_ia: (ia.brouillon || '').slice(0, MAX_TEXTE),
-      confiance_ia: conf,
-      categorie_ia: cat,
-      statut: 'a_verifier',                 // (re)mettre en file même si déjà répondu
+      statut: 'a_verifier',
       message_id: msgId.slice(0, 250),
       thread_key: threadKey
     };
     if (liens.length) champs.Projet = liens;
-    // Adresse d'arrivée : seulement à la CRÉATION (ne pas écraser un repondre_de ajusté par l'humain).
-    if (!existing) {
-      if (recipient) champs.destinataire = recipient;
-      champs.repondre_de = recipient;   // « De » par défaut = l'adresse à laquelle le client a écrit (modifiable)
-    }
-
     if (existing) {
-      const rU = await fetch(`${API}/${CONVOS}/${existing.id}`, {
-        method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields: champs })
-      });
-      if (!rU.ok) console.error('[courriel-entrant] update', rU.status, await rU.text().catch(() => ''));
+      champs.brouillon_ia = '';   // nouveau message dans le fil -> le cron re-rédige sur le fil complet
     } else {
-      const rC2 = await fetch(`${API}/${CONVOS}`, {
-        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields: champs })
-      });
-      if (!rC2.ok) console.error('[courriel-entrant] create', rC2.status, await rC2.text().catch(() => ''));
+      if (recipient) champs.destinataire = recipient;
+      champs.repondre_de = recipient;   // « De » par défaut = l'adresse à laquelle le client a écrit
     }
 
-    return { statusCode: 200, body: JSON.stringify({ ok: true, regroupe: !!existing, projets: liens.length, confiance: conf }) };
+    const url    = existing ? `${API}/${CONVOS}/${existing.id}` : `${API}/${CONVOS}`;
+    const method = existing ? 'PATCH' : 'POST';
+    const rStore = await fetch(url, {
+      method, headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: champs })
+    });
+    if (!rStore.ok) {
+      console.error('[courriel-entrant] store', rStore.status, await rStore.text().catch(() => ''));
+      return { statusCode: 500, body: JSON.stringify({ error: 'store_failed' }) };   // -> Mailgun réessaie (pas de perte)
+    }
+
+    return { statusCode: 200, body: JSON.stringify({ ok: true, regroupe: !!existing, projets: liens.length }) };
   } catch (err) {
     console.error('[courriel-entrant]', err && err.message);
-    return { statusCode: 200, body: '{}' };   // best-effort
+    return { statusCode: 500, body: JSON.stringify({ error: 'server_error' }) };   // -> Mailgun réessaie (pas de perte)
   }
 };

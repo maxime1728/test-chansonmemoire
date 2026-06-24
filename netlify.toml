@@ -28,6 +28,11 @@
 [functions."envoyer-cron"]
   schedule = "* * * * *"
 
+# Brouillons IA support : rédige les réponses des conversations en file (découplé de la réception ->
+# aucun courriel perdu ; auto-réparant si Anthropic est en panne). Chaque minute.
+[functions."brouillon-cron"]
+  schedule = "* * * * *"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
