@@ -19,7 +19,7 @@ const API      = `https://api.airtable.com/v0/${BASE_ID}`;
 const SITE     = 'https://chansonmemoire.ca';
 
 const MG_KEY    = process.env.MAILGUN_API_KEY;
-const MG_DOMAIN = process.env.MAILGUN_DOMAIN;     // transactionnel
+const MG_DOMAIN = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;     // transactionnel
 const MG_FROM   = process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';
 
 function formulaLiteral(v) {

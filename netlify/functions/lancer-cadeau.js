@@ -23,7 +23,7 @@ const CLD_KEY    = process.env.CLOUDINARY_API_KEY;
 const CLD_SECRET = process.env.CLOUDINARY_API_SECRET;
 
 const MG_KEY    = process.env.MAILGUN_API_KEY;       // no-op si absent (Mailgun en cours de config)
-const MG_DOMAIN = process.env.MAILGUN_DOMAIN;
+const MG_DOMAIN = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;
 const MG_FROM   = process.env.MAILGUN_FROM || 'Chanson Mémoire <cadeau@chansonmemoire.ca>';
 
 function formulaLiteral(v) {

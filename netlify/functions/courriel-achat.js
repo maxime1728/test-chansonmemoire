@@ -17,7 +17,7 @@ const SITE     = 'https://chansonmemoire.ca';
 const UUID_V4  = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const MG_KEY    = process.env.MAILGUN_API_KEY;       // no-op si absent
-const MG_DOMAIN = process.env.MAILGUN_DOMAIN;        // sous-domaine TRANSACTIONNEL
+const MG_DOMAIN = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;        // sous-domaine TRANSACTIONNEL
 const MG_FROM   = process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';
 
 const UPSELL_LABEL = { instrumental: 'la version instrumentale', paroles_vivantes: 'les paroles vivantes en vidéo' };

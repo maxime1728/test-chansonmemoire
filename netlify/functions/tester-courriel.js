@@ -9,7 +9,7 @@
 //   -> envoie à `to`, sinon à TEAM_NOTIFY_EMAIL. Réponse = { ok, status, mailgun, config:{...} }.
 
 const MG_KEY    = process.env.MAILGUN_API_KEY;
-const MG_DOMAIN = process.env.MAILGUN_DOMAIN;
+const MG_DOMAIN = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;
 const MG_FROM   = process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';
 const TEAM      = process.env.TEAM_NOTIFY_EMAIL || '';
 const SECRET    = process.env.MAKE_WEBHOOK_SECRET || '';

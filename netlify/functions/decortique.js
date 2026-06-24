@@ -14,7 +14,7 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 
 // Mailgun TRANSACTIONNEL (post-achat). No-op si non configuré (ne casse jamais l'enregistrement).
 const MG_KEY     = process.env.MAILGUN_API_KEY;
-const MG_DOMAIN  = process.env.MAILGUN_DOMAIN;     // sous-domaine transactionnel (= celui de lancer-cadeau)
+const MG_DOMAIN  = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;     // sous-domaine transactionnel (= celui de lancer-cadeau)
 const MG_FROM    = process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';
 const TEAM_EMAIL = process.env.TEAM_NOTIFY_EMAIL;  // destinataire de l'alerte interne « à approuver »
 

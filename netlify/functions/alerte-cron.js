@@ -12,7 +12,7 @@ const API      = `https://api.airtable.com/v0/${BASE_ID}`;
 const GENS     = 'tblfrHFe1zH9apNlp';
 
 const MG_KEY    = process.env.MAILGUN_API_KEY;
-const MG_DOMAIN = process.env.MAILGUN_DOMAIN;
+const MG_DOMAIN = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;
 const MG_FROM   = process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';
 const TEAM      = process.env.TEAM_NOTIFY_EMAIL;
 
