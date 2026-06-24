@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>if(!matchMedia('(prefers-reduced-motion:reduce)').matches)document.documentElement.classList.add('js');</script>
 <title>Chanson Mémoire · Une chanson pour quelqu'un que tu n'oublieras jamais</title>
 <meta name="description" content="Crée une chanson personnalisée en mémoire d'un être cher. Paroles et mélodie composées sur mesure à partir de tes souvenirs. Aperçu gratuit : tu ne paies que si elle te touche le cœur.">
 
@@ -440,6 +441,28 @@ a{color:inherit;}
 .consent-refuse:hover{background:var(--mauve-tint);}
 @media(min-width:520px){.consent-row{justify-content:flex-end;}.consent-btn{flex:0 0 auto;min-width:128px;}}
 
+/* ════════ EFFETS (greffés, design inchangé) ════════ */
+@keyframes fxBreathe{0%,100%{opacity:.9;transform:translateX(-50%) scale(1);}50%{opacity:1;transform:translateX(-50%) scale(1.07);}}
+.hero::before{animation:fxBreathe 7s ease-in-out infinite;will-change:transform,opacity;}
+.hero{perspective:1000px;}
+.hero-in{transition:transform .3s ease-out;transform-style:preserve-3d;will-change:transform;}
+.fx-motes{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.fx-mote{position:absolute;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle,var(--gold-soft),transparent 70%);opacity:0;animation:fxRise linear infinite;}
+@keyframes fxRise{0%{opacity:0;transform:translateY(30px) scale(.6);}18%{opacity:.55;}100%{opacity:0;transform:translateY(-200px) scale(1.1);}}
+html.js .hero-in>*{opacity:0;transform:translateY(16px);}
+html.js .head-l,html.js .head-c,html.js .step,html.js .uc-card,html.js .track,html.js .temoin-feat,html.js .temoin,html.js .offer,html.js .faq-item,html.js .final-in{opacity:0;transform:translateY(24px);}
+.fx-in{opacity:1!important;transform:none!important;transition:opacity .7s ease,transform .75s cubic-bezier(.2,.7,.2,1);}
+.btn{position:relative;overflow:hidden;}
+.btn::after{content:"";position:absolute;top:0;left:-130%;width:55%;height:100%;background:linear-gradient(110deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-18deg);transition:left .6s;pointer-events:none;}
+.btn:hover::after{left:140%;}
+@keyframes fxCta{0%,100%{box-shadow:0 6px 18px rgba(60,46,77,.22);}50%{box-shadow:0 12px 30px rgba(60,46,77,.42);}}
+.hero-cta .btn{animation:fxCta 3.4s ease-in-out infinite;}
+.fx-rip{position:absolute;border-radius:50%;background:rgba(255,255,255,.5);transform:translate(-50%,-50%) scale(0);animation:fxRipple .6s ease-out;pointer-events:none;}
+@keyframes fxRipple{to{transform:translate(-50%,-50%) scale(20);opacity:0;}}
+.uc-card h3{position:relative;display:inline-block;}
+.uc-card h3::after{content:"";position:absolute;left:0;bottom:-3px;height:2px;width:0;background:var(--candle);transition:width .4s;}
+.uc-card:hover h3::after{width:100%;}
+
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
 </style>
 </head>
@@ -474,6 +497,7 @@ a{color:inherit;}
 
 <!-- HERO -->
 <section class="hero">
+  <div class="fx-motes" id="fxMotes" aria-hidden="true"></div>
   <div class="hero-in">
     <span class="hero-qc">Entreprise québécoise</span>
     <p class="hero-sub" style="color:var(--candle);">Garde sa mémoire vivante</p>
@@ -494,9 +518,9 @@ a{color:inherit;}
       <h2>Trois étapes, <em>quelques minutes</em></h2>
     </div>
     <div class="steps">
-      <div class="step"><div class="step-n">i</div><div><h3>Raconte-nous qui il ou elle était</h3><p>Son prénom, ses passions, vos souvenirs ensemble. Quelques phrases suffisent.</p></div></div>
-      <div class="step"><div class="step-n">ii</div><div><h3>On compose sa chanson</h3><p>Nos outils d'intelligence artificielle composent les paroles et la mélodie sur mesure, à partir de tes souvenirs, pour honorer sa mémoire.</p></div></div>
-      <div class="step"><div class="step-n">iii</div><div><h3>Reçois-la en quelques minutes</h3><p>Tu découvres un aperçu sur une page dédiée, et tu écoutes avant de décider.</p></div></div>
+      <div class="step"><div class="step-n">i</div><div><h3>Raconte-nous</h3><p>Quelques questions douces sur la personne : son prénom, ses passions, un souvenir qui te tient à cœur.</p></div></div>
+      <div class="step"><div class="step-n">ii</div><div><h3>On compose</h3><p>Paroles et mélodie sur mesure, créées à partir de ton histoire et veillées par notre équipe au Québec.</p></div></div>
+      <div class="step"><div class="step-n">iii</div><div><h3>Écoute l'aperçu</h3><p>Tu reçois ta chanson sur une page privée. Tu l'écoutes, et tu décides ensuite, librement.</p></div></div>
     </div>
   </div>
   <div aria-hidden="true" style="width:100%;line-height:0;margin-top:32px;">
@@ -802,6 +826,32 @@ function loadPixel(){if(window._px)return;window._px=true;!function(f,b,e,v,n,t,
 
 /* ════ FAQ ════ */
 function qFaq(btn){var i=btn.closest('.faq-item'),open=i.classList.contains('open');document.querySelectorAll('.faq-item.open').forEach(function(x){x.classList.remove('open');x.querySelector('.faq-q').setAttribute('aria-expanded','false');});if(!open){i.classList.add('open');btn.setAttribute('aria-expanded','true');}}
+</script>
+<script>
+(function(){
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  var m=document.getElementById('fxMotes');
+  if(m){for(var i=0;i<9;i++){var d=document.createElement('span');d.className='fx-mote';
+    d.style.left=(8+Math.random()*84)+'%';d.style.bottom=(Math.random()*42)+'%';
+    d.style.animationDuration=(8+Math.random()*7)+'s';d.style.animationDelay=(-Math.random()*9)+'s';m.appendChild(d);}}
+  var hr=document.querySelectorAll('.hero-in>*');
+  hr.forEach(function(el,i){setTimeout(function(){el.classList.add('fx-in');},120+i*120);});
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('fx-in');io.unobserve(e.target);}});},{threshold:.15,rootMargin:'0px 0px -8% 0px'});
+  document.querySelectorAll('.head-l,.head-c,.step,.uc-card,.track,.temoin-feat,.temoin,.offer,.faq-item,.final-in').forEach(function(el){io.observe(el);});
+  var hero=document.querySelector('.hero'),tilt=document.querySelector('.hero-in'),raf=0,rx=0,ry=0;
+  function ap(){tilt.style.transform='rotateX('+ry+'deg) rotateY('+rx+'deg)';raf=0;}
+  function mv(x,y){var r=hero.getBoundingClientRect();rx=((x-r.left)/r.width-.5)*5;ry=-((y-r.top)/r.height-.5)*4;if(!raf)raf=requestAnimationFrame(ap);}
+  if(hero&&tilt){
+    hero.addEventListener('pointermove',function(e){mv(e.clientX,e.clientY);});
+    hero.addEventListener('touchmove',function(e){var t=e.touches[0];if(t)mv(t.clientX,t.clientY);},{passive:true});
+    hero.addEventListener('pointerleave',function(){rx=0;ry=0;if(!raf)raf=requestAnimationFrame(ap);});
+  }
+  document.querySelectorAll('.btn').forEach(function(b){b.addEventListener('click',function(e){
+    var r=b.getBoundingClientRect(),s=document.createElement('span');s.className='fx-rip';
+    s.style.left=(e.clientX-r.left)+'px';s.style.top=(e.clientY-r.top)+'px';s.style.width=s.style.height='10px';
+    b.appendChild(s);setTimeout(function(){s.remove();},600);
+  });});
+})();
 </script>
 </body>
 </html>
