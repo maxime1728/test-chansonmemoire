@@ -33,6 +33,10 @@
 [functions."brouillon-cron"]
   schedule = "* * * * *"
 
+# Moteur multi-séquences (Bienvenue post-achat, puis parrainage/cross-sell) via la table Inscriptions. Horaire.
+[functions."sequences-cron"]
+  schedule = "@hourly"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
