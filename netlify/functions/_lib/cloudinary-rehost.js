@@ -46,4 +46,38 @@ async function rehost(remoteUrl, { folder, publicId, resourceType = 'video' }) {
   }
 }
 
-module.exports = { rehost };
+// Signature Cloudinary générique : tous les params SAUF file/api_key/resource_type/signature,
+// triés alphabétiquement, joints en k=v&…, puis sha1(… + secret).
+function signParams(params) {
+  const toSign = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&');
+  return crypto.createHash('sha1').update(toSign + SECRET).digest('hex');
+}
+
+// Déplace/renomme un asset Cloudinary DANS le même compte (pas de re-téléchargement).
+// `type` doit matcher la livraison réelle ('authenticated' pour l'audio CM, sinon 'upload').
+// Renvoie l'objet réponse Cloudinary (avec secure_url, public_id) ou null.
+async function rename(fromPublicId, toPublicId, { resourceType = 'video', type = 'upload' } = {}) {
+  if (!CLOUD || !KEY || !SECRET || !fromPublicId || !toPublicId) return null;
+  try {
+    const ts = Math.floor(Date.now() / 1000);
+    const signed = { from_public_id: fromPublicId, to_public_id: toPublicId, timestamp: ts, type };
+    const signature = signParams(signed);
+    const form = new URLSearchParams();
+    Object.keys(signed).forEach(k => form.append(k, String(signed[k])));
+    form.append('api_key', KEY);
+    form.append('signature', signature);
+    const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/${resourceType}/rename`, { method: 'POST', body: form });
+    const d = await r.json();
+    if (!r.ok || !d.public_id) { console.error('[cloudinary rename] échec:', (d && d.error && d.error.message) || `HTTP ${r.status}`); return null; }
+    return d;
+  } catch (err) { console.error('[cloudinary rename]', err && err.message); return null; }
+}
+
+// Décompose une URL Cloudinary -> { cloud, resourceType, type, publicId, ext } ou null.
+// Tolère le segment de signature (s--…--) et la version (v123…) des URLs livrées.
+function parseCloudinaryUrl(url) {
+  const m = /res\.cloudinary\.com\/([^/]+)\/(image|video|raw)\/(upload|authenticated)\/(?:s--[^/]+--\/)?(?:v\d+\/)?(.+?)(\.\w+)?$/.exec(url || '');
+  return m ? { cloud: m[1], resourceType: m[2], type: m[3], publicId: decodeURIComponent(m[4]), ext: m[5] || '' } : null;
+}
+
+module.exports = { rehost, rename, parseCloudinaryUrl };
