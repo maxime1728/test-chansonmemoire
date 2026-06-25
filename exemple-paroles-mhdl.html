@@ -115,5 +115,26 @@
     <button type="button" onclick="window.print()">Enregistrer en PDF</button>
     <small>Astuce : choisis « Enregistrer au format PDF » comme imprimante.</small>
   </div>
+
+<!-- #9 : ouverte avec un token pendant l'attente -> on redirige vers l'aperçu dès que la
+     chanson est prête. Sans token = exemple statique (aucun appel). -->
+<script>
+(function(){
+  var UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  var token=new URLSearchParams(location.search).get('id');
+  if(!token || !UUID.test(token)) return;
+  var done=false, tries=0;
+  function check(){
+    if(done) return;
+    if(++tries>90){ return; }
+    fetch('/api/lire-projet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token}),cache:'no-store'})
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(d){ if(d && d.statut==='audio_generated' && !done){ done=true; location.href='/apercu?id='+encodeURIComponent(token); } })
+      .catch(function(){});
+  }
+  setInterval(check,20000);
+  setTimeout(check,20000);
+})();
+</script>
 </body>
 </html>

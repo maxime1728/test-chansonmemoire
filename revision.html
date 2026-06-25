@@ -137,6 +137,10 @@
       <div class="spinner"></div>
       <div class="chargement-titre">On compose tes paroles…</div>
       <div class="chargement-sous">Cela prend généralement moins d'une minute.<br>Cette page se mettra à jour automatiquement.</div>
+      <a id="lien-exemple-paroles" href="exemple-page-memoire.html#paroles" target="_blank" rel="noopener"
+         style="display:inline-block;margin-top:22px;font-size:14px;color:#6E4B7E;text-decoration:underline;">
+        En attendant, voir un exemple de paroles →
+      </a>
     </div>
 
     <!-- ERREUR -->
@@ -236,6 +240,11 @@
     const WEBHOOK_MAKE_B  = '/api/lancer-chanson';
 
     const token = new URLSearchParams(location.search).get('id');
+
+    /* #8 : le lien « voir un exemple de paroles » de l'état d'attente pointe vers la page exemple
+       complète (vidéo + tout), ancrée directement aux PAROLES (#paroles), en passant le token pour
+       que cet onglet redirige aussi vers l'aperçu quand la chanson sera prête (#9). */
+    (function(){ var le = document.getElementById('lien-exemple-paroles'); if(le && token){ le.href = 'exemple-page-memoire.html?id=' + encodeURIComponent(token) + '#paroles'; } })();
 
     /* ── Polling + auto-relance (chargement initial) ──
        Fenêtre de 2 min. Voie normale : MAKE A écrit les paroles (~15-20s) → on sonde.

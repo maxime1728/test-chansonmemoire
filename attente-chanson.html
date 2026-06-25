@@ -624,6 +624,17 @@ function checkReady(){
 
 pollingInterval = setInterval(checkReady, 20000);
 setTimeout(checkReady, 20000); /* premier check après 20 secondes */
+
+/* #9 : passe le token aux liens « Voir un exemple » pour que l'onglet exemple puisse, lui aussi,
+   rediriger vers l'aperçu quand la chanson est prête (un éventuel hash #video est préservé). */
+(function(){
+  var t = getToken(); if(!t) return;
+  document.querySelectorAll('a.r-card[href^="exemple-"]').forEach(function(a){
+    var h = a.getAttribute('href'), hash = '', i = h.indexOf('#');
+    if(i >= 0){ hash = h.slice(i); h = h.slice(0, i); }
+    a.setAttribute('href', h + '?id=' + encodeURIComponent(t) + hash);
+  });
+})();
 </script>
 
 <script>

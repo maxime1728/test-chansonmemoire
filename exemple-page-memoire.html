@@ -164,7 +164,7 @@
   </div>
 
   <!-- 4. PAROLES NORMALES — tout en bas -->
-  <div class="card">
+  <div class="card" id="paroles" style="scroll-margin-top:24px;">
     <div class="section-title">Ses paroles</div>
     <p class="section-sub">Écrites à partir de ses souvenirs : son chalet, son bouilli du samedi, ses matins de pêche.</p>
     <div class="lyrics" id="lyrics"></div>
@@ -364,6 +364,28 @@
   function setVolIcon(v){ muteBtn.innerHTML = v==0 ? '<i class="fa-solid fa-volume-xmark"></i>' : v<0.5 ? '<i class="fa-solid fa-volume-low"></i>' : '<i class="fa-solid fa-volume-high"></i>'; }
   volInput.addEventListener('input',function(){ var v=parseFloat(volInput.value); audio.volume=v; volBar.style.width=(v*100)+'%'; setVolIcon(v); });
   muteBtn.addEventListener('click',function(){ if(audio.volume>0){ lastVol=audio.volume; audio.volume=0; volInput.value=0; volBar.style.width='0%'; setVolIcon(0);} else { audio.volume=lastVol||1; volInput.value=audio.volume; volBar.style.width=(audio.volume*100)+'%'; setVolIcon(audio.volume);} });
+})();
+</script>
+
+<!-- #9 : si on arrive ici AVEC un token (depuis l'attente), on surveille la chanson et on
+     redirige vers l'aperçu dès qu'elle est prête — comme la page d'attente. Sans token = exemple
+     statique (aucun appel). Le visiteur peut donc parcourir cet exemple pendant la création. -->
+<script>
+(function(){
+  var UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  var token=new URLSearchParams(location.search).get('id');
+  if(!token || !UUID.test(token)) return;
+  var done=false, tries=0;
+  function check(){
+    if(done) return;
+    if(++tries>90){ return; }   /* ~30 min max */
+    fetch('/api/lire-projet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token}),cache:'no-store'})
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(d){ if(d && d.statut==='audio_generated' && !done){ done=true; location.href='/apercu?id='+encodeURIComponent(token); } })
+      .catch(function(){});
+  }
+  setInterval(check,20000);
+  setTimeout(check,20000);
 })();
 </script>
 </body>
