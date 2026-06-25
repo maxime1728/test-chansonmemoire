@@ -9,7 +9,7 @@
 // Idempotent (ne refait rien si déjà audio_generated). Répond TOUJOURS 200 (un callback ne doit
 // jamais renvoyer d'erreur à Suno). Best-effort.
 //
-// BASCULE : pointer MAKE_CCB_WEBHOOK_URL (lu par lancer-chanson + sentinelle) vers
+// BASCULE : pointer CALLBACK_CHANSON (lu par lancer-chanson + sentinelle) vers
 // https://chansonmemoire.ca/api/callback-chanson. Par défaut, ça reste le webhook Make (sûr).
 
 const { rehost } = require('./_lib/cloudinary-rehost');

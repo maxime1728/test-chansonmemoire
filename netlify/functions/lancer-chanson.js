@@ -23,11 +23,11 @@ const UUID_V4  = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 const SUNO_API_KEY  = process.env.SUNO_API_KEY;
 const SUNO_MODEL    = process.env.SUNO_MODEL || 'V5_5';
-// Callback Suno -> Netlify callback-chanson (ou webhook Make si MAKE_CCB_WEBHOOK_URL pointe encore vers Make).
+// Callback Suno -> Netlify callback-chanson (ou webhook Make si CALLBACK_CHANSON pointe encore vers Make).
 // MÊME variable d'env que sentinelle-cron (source unique). Si CALLBACK_SECRET est posé, on ajoute ?s=<secret>
 // pour passer le contrôle d'authenticité de callback-chanson (lancer-cover / lancer-instrumentale font déjà pareil).
 const CALLBACK_SECRET = process.env.CALLBACK_SECRET || '';
-const CCB_BASE      = process.env.MAKE_CCB_WEBHOOK_URL || 'https://hook.us1.make.com/amlfm9tapjjewz2kec1eirs8oylb812g';
+const CCB_BASE      = process.env.CALLBACK_CHANSON || 'https://hook.us1.make.com/amlfm9tapjjewz2kec1eirs8oylb812g';
 const SUNO_CALLBACK = CCB_BASE + (CALLBACK_SECRET ? (CCB_BASE.includes('?') ? '&' : '?') + 's=' + encodeURIComponent(CALLBACK_SECRET) : '');
 
 // IDs de champ Generations (copiés du blueprint MAKE C-gen module 10) -> match exact du schéma.

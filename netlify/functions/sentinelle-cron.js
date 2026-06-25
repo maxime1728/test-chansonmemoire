@@ -10,7 +10,7 @@
 //     4. Vrai échec -> on régénère (1 crédit), PLAFONNÉ (SENTINELLE_MAX_RETRIES) ; mots sensibles =
 //        jamais réessayé (même paroles = même échec) -> escalade incident pour l'alerte 10h.
 //
-// Best-effort : jamais d'exception qui casse le cron. Env : SUNO_API_KEY, CLOUDINARY_*, MAKE_CCB_WEBHOOK_URL.
+// Best-effort : jamais d'exception qui casse le cron. Env : SUNO_API_KEY, CLOUDINARY_*, CALLBACK_CHANSON.
 
 const { rehost } = require('./_lib/cloudinary-rehost');
 const { styleFor } = require('./_lib/style');
@@ -22,7 +22,7 @@ const API      = `https://api.airtable.com/v0/${BASE_ID}`;
 const GENS     = 'tblfrHFe1zH9apNlp';
 const SUNO_API_KEY = process.env.SUNO_API_KEY;
 const CALLBACK_SECRET = process.env.CALLBACK_SECRET || '';
-const CCB_BASE     = process.env.MAKE_CCB_WEBHOOK_URL;          // callback des régénérations (Netlify callback-chanson, ou webhook Make)
+const CCB_BASE     = process.env.CALLBACK_CHANSON;          // callback des régénérations (Netlify callback-chanson, ou webhook Make)
 const CCB_HOOK     = CCB_BASE ? CCB_BASE + (CALLBACK_SECRET ? (CCB_BASE.includes('?') ? '&' : '?') + 's=' + encodeURIComponent(CALLBACK_SECRET) : '') : '';
 const CAP          = parseInt(process.env.SENTINELLE_MAX_RETRIES, 10) || 5;
 const MODEL        = 'V5_5';
@@ -109,7 +109,7 @@ exports.handler = async () => {
       // 4. VRAI ÉCHEC -> régénérer (1 crédit), plafonné.
       const retries = Number(g.sentinelle_retries) || 0;
       if (retries >= CAP || !CCB_HOOK) {
-        try { await atPatch(rec.id, { incident_status: 'échec_permanent', incident_detail: `Échec Suno x${retries} (${status || 'inconnu'})${CCB_HOOK ? '' : ' — MAKE_CCB_WEBHOOK_URL absent'}.`, incident_at: now }); escalated++; } catch (_) {}
+        try { await atPatch(rec.id, { incident_status: 'échec_permanent', incident_detail: `Échec Suno x${retries} (${status || 'inconnu'})${CCB_HOOK ? '' : ' — CALLBACK_CHANSON absent'}.`, incident_at: now }); escalated++; } catch (_) {}
         continue;
       }
       try {

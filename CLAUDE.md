@@ -89,7 +89,7 @@ Principe : l'agent opère sur **test/preview avec credentials révocables**. Max
   `sessionStorage` (fragile : casse au changement d'onglet/appareil/lien email).
 - **Écriture/lecture** : ~~« Make écrit, Netlify lit »~~ **PÉRIMÉ depuis le cutover 2026-06-25.**
   Désormais **Netlify écrit ET lit** : le sondage (`soumettre-survey`, `SURVEY_DIRECT=1`) et le
-  callback Suno (`callback-chanson`, via `MAKE_CCB_WEBHOOK_URL`) écrivent directement dans Airtable.
+  callback Suno (`callback-chanson`, via `CALLBACK_CHANSON`) écrivent directement dans Airtable.
   **Make ne garde que Stripe (MAKE D) + Meta (Insights) + jointures Pub/Hook.** Voir §11.
 - **Endpoint Netlify** : expose seulement `titre / paroles / statut / audio_url / suggestions / commercial_status`.
   (`suggestions` = JSON string des bulles dynamiques, exposition intentionnelle.)
@@ -161,7 +161,7 @@ Regenerated. Champs Airtable orphelins : `Occasion`, `relancer_cover`, `regenere
 (`generations_count`, `previews_count`, `song_regenerations_count`, `post_purchase_regenerations_count`,
 `client_songs_preachat`, `total_generations_client`).
 
-**Variables d'env clés (Netlify) :** `SURVEY_DIRECT=1`, `MAKE_CCB_WEBHOOK_URL`=callback-chanson,
+**Variables d'env clés (Netlify) :** `SURVEY_DIRECT=1`, `CALLBACK_CHANSON`=callback-chanson,
 `MAILGUN_FROM_ACHAT`, `MAILGUN_DOMAIN_MARKETING`, `GENERATE_LYRICS_SECRET`, `PURGE_ACTIF`,
 `CALLBACK_SECRET`/`RECOMPTE_SECRET`/`RANGER_SECRET` (optionnels).
 
