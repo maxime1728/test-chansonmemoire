@@ -495,6 +495,13 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     data.email=email; data.consentement=true;
     var langSel=document.getElementById('input-language'); data.language=(langSel&&langSel.value)||'fr-CA';
 
+    /* Make A reconstruit un JSON À LA MAIN (module 5) en y injectant ces valeurs. On neutralise
+       sauts de ligne / tabulations / guillemets / antislashs AVANT l'envoi pour ne JAMAIS casser
+       ce JSON ("Bad control character"). Sans effet sur les paroles (l'IA réécrit de toute façon). */
+    Object.keys(data).forEach(function(k){
+      if(typeof data[k]==='string'){ data[k]=data[k].replace(/[\r\n\t]+/g,' ').replace(/[\\"]/g,"'").trim(); }
+    });
+
     var btn=document.getElementById('btn-submit');
     btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Envoi en cours…';
 
