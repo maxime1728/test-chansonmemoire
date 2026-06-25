@@ -14,6 +14,7 @@
 // Sécurité : POST, UUID v4 strict, formule échappée, secrets en env (SUNO_API_KEY, AIRTABLE_*).
 
 const { styleFor } = require('./_lib/style');
+const { compteAvantAchat } = require('./_lib/comptage');
 
 const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
@@ -55,6 +56,32 @@ function num(v, d) {
   return Number.isFinite(n) ? n : d;
 }
 
+// Cumul CLIENT des chansons réussies pré-achat (sans rollup) : on additionne le champ
+// chansons_reussies_avant de TOUS les projets du client. Le projet courant utilise sa
+// valeur FRAÎCHE (freshPre) plutôt que la valeur stockée (qui peut être en retard).
+// Best-effort : en cas de pépin réseau on retombe sur freshPre (ne bloque jamais à tort).
+async function sommeClientAvant(currentId, p, freshPre, headers) {
+  try {
+    const link = Array.isArray(p.Client) ? p.Client[0] : null;
+    if (!link) return freshPre;
+    const rc = await fetch(`${API}/Clients/${link}`, { headers });
+    if (!rc.ok) return freshPre;
+    const email = (((await rc.json()).fields) || {}).email || '';
+    const lit = formulaLiteral(email);
+    if (!email || lit === null) return freshPre;
+    const rp = await fetch(`${API}/Projects?filterByFormula=${encodeURIComponent(`{Client}=${lit}`)}`, { headers });
+    if (!rp.ok) return freshPre;
+    const recs = ((await rp.json()).records) || [];
+    let sum = 0, seen = false;
+    for (const r of recs) {
+      if (r.id === currentId) { sum += freshPre; seen = true; }
+      else sum += num((r.fields || {}).chansons_reussies_avant, 0);
+    }
+    if (!seen) sum += freshPre;
+    return sum;
+  } catch (_) { return freshPre; }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Méthode non permise' }) };
   if (!SUNO_API_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'Configuration Suno manquante' }) };
@@ -78,26 +105,45 @@ exports.handler = async (event) => {
     const projet = dP.records[0];
     const p = projet.fields;
 
-    // 2. Plafond serveur (réplique de C-gen). Acheté = illimité ; sinon limite de régé + total pré-achat.
-    if (p.commercial_status !== 'purchased') {
-      const regen     = num(p.song_regenerations_count, 0);
-      const preachat  = num(p.client_songs_preachat, 0);
-      const purchases = num(p.client_purchases, 0);
-      if (regen >= 4 || preachat >= (10 + 10 * purchases)) {
-        return {
-          statusCode: 200, headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'plafond', message: "Vous avez atteint le maximum de régénérations pour cette chanson. Écrivez-nous et nous vous aiderons avec plaisir." })
-        };
-      }
-    }
-
-    // 3. Dernière Generation (paroles + titre + numéro).
+    // 2. TOUTES les Generations du projet (pour COMPTER en direct ET prendre la dernière).
     const projLit = formulaLiteral(p.project);
     if (projLit === null) return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
     const fG = encodeURIComponent(`{project}=${projLit}`);
-    const rG = await fetch(`${API}/Generations?filterByFormula=${fG}&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=1`, { headers });
+    const rG = await fetch(`${API}/Generations?filterByFormula=${fG}&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc`, { headers });
     const dG = await rG.json();
-    const gen = (dG.records && dG.records[0]) ? dG.records[0].fields : {};
+    const allGens = (dG.records || []);
+    const gen = allGens.length ? allGens[0].fields : {};
+
+    // Compteur EN DIRECT (sans rollup). Une chanson compte SEULEMENT si :
+    //   audio Suno LIVRÉ (generation_status=audio_generated)  -> échecs jamais comptés (#6)
+    //   ET vraie chanson (song/song_regeneration/cover)        -> paroles jamais comptées (#5)
+    //   ET avant achat (post_purchase faux)                    -> post-achat compté ailleurs
+    //   ET pas déclenchée par l'équipe (admin_triggered faux)  -> tes relances ne comptent pas (#11)
+    const preCount = allGens.reduce((n, r) => n + (compteAvantAchat(r.fields) ? 1 : 0), 0);
+
+    // Stat maintenue PAR LE CODE (ta vue Airtable sans rollup). Écrit seulement si ça change.
+    if (num(p.chansons_reussies_avant, -1) !== preCount) {
+      try {
+        await fetch(`${API}/Projects/${projet.id}`, {
+          method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: { chansons_reussies_avant: preCount } })
+        });
+      } catch (_) { /* la stat ne doit jamais bloquer la génération */ }
+    }
+
+    // 2b. Plafond serveur (calcul live). Acheté = pas de plafond pré-achat.
+    //     Avant achat : max 4 chansons réussies / projet ET max 10·(1+achats) / client.
+    if (p.commercial_status !== 'purchased') {
+      const purchases   = num(p.client_purchases, 0);
+      const clientLimit = 10 * (1 + purchases);
+      const clientSum   = await sommeClientAvant(projet.id, p, preCount, headers);
+      if (preCount >= 4 || clientSum >= clientLimit) {
+        return {
+          statusCode: 200, headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'plafond', message: "Tu as atteint le maximum de chansons gratuites pour cette demande. Écris-nous et on va t'aider avec plaisir." })
+        };
+      }
+    }
 
     // Paroles : cover -> paroles ajustées (decortique) si présentes ; sinon -> paroles de la dernière Generation.
     const lyrics = ((mode === 'cover' && p.adjusted_lyrics && p.adjusted_lyrics.trim()) ? p.adjusted_lyrics : (gen.lyrics || '')).trim();
@@ -105,10 +151,10 @@ exports.handler = async (event) => {
 
     const title       = (gen.song_title || `Pour ${p.deceased_name || 'toi'}`).slice(0, 100);
     const dernierNo   = num(gen.generation_no, 0);
-    const regenCount  = num(p.song_regenerations_count, 0);
     const vocalGender = /Masculin/i.test(p.voice || '') ? 'm' : 'f';
     const style = (await styleFor({ music_style: p.music_style, mood: p.mood, cadeau: p.song_type === 'cadeau', language: p.language })).slice(0, 1000);
-    const type  = (mode === 'cover') ? 'cover' : (regenCount >= 1 ? 'song_regeneration' : 'song');
+    // 1re chanson du projet = 'song' ; les suivantes = 'song_regeneration' (basé sur le compte live).
+    const type  = (mode === 'cover') ? 'cover' : (preCount >= 1 ? 'song_regeneration' : 'song');
 
     // 4. Suno /generate (NOUVELLE mélodie). JSON.stringify -> échappement auto, zéro bug de body.
     const rS = await fetch('https://api.sunoapi.org/api/v1/generate', {

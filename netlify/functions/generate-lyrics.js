@@ -369,7 +369,7 @@ ${modifications}`;
       const gen = await createGeneration({
         project:           [projet.id],
         generation_no:     dernierNo + 1,
-        type:              'regeneration',
+        type:              'lyrics_regeneration',
         lyrics:            parsed.lyrics,
         song_title:        nouveauTitre,
         requested_changes: modifications,

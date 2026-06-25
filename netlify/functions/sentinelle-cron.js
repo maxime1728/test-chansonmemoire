@@ -14,6 +14,7 @@
 
 const { rehost } = require('./_lib/cloudinary-rehost');
 const { styleFor } = require('./_lib/style');
+const { recomputerProjet } = require('./_lib/comptage');
 
 const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
@@ -81,6 +82,15 @@ exports.handler = async () => {
             incident_status: 'résolu'
           });
           rescued++;
+          // Le callback normal (C-cb) ne recalcule pas le compteur ; comme ON vient de livrer
+          // l'audio (callback perdu), on rafraîchit la stat du projet. Best-effort.
+          try {
+            const pid = Array.isArray(g.project) ? g.project[0] : null;
+            if (pid) {
+              const rp = await fetch(`${API}/Projects/${pid}`, { headers: { Authorization: `Bearer ${AT_TOKEN}` } });
+              if (rp.ok) { const pf = ((await rp.json()).fields) || {}; await recomputerProjet(API, { Authorization: `Bearer ${AT_TOKEN}` }, pid, pf.project); }
+            }
+          } catch (_) {}
         } catch (_) {}
         continue;
       }
