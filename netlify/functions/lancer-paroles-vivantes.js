@@ -123,6 +123,7 @@ exports.handler = async (event) => {
     const edit = buildEditFromLyrics({
       titre:  gen.fields.song_title || '',
       prenom: projet.fields.deceased_name || '',
+      cadeau: projet.fields.song_type === 'cadeau',
       lyrics: gen.fields.lyrics || '',
       alignedWords, audioUrl
     });
