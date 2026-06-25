@@ -14,21 +14,21 @@ const CLOUD  = process.env.CLOUDINARY_CLOUD_NAME;
 const KEY    = process.env.CLOUDINARY_API_KEY;
 const SECRET = process.env.CLOUDINARY_API_SECRET;
 
-async function rehost(remoteUrl, { folder, publicId, resourceType = 'video' }) {
-  if (!CLOUD || !KEY || !SECRET || !remoteUrl || !folder || !publicId) return null;
+async function rehost(remoteUrl, { folder, publicId, resourceType = 'video', type } = {}) {
+  if (!CLOUD || !KEY || !SECRET || !remoteUrl || !publicId) return null;
   try {
     const ts = Math.floor(Date.now() / 1000);
-    // Signature = sha1 des params signés (ordre alphabétique : folder, public_id, timestamp) + secret.
-    // `file`, `api_key`, `signature`, `resource_type` ne sont JAMAIS signés.
-    const toSign = `folder=${folder}&public_id=${publicId}&timestamp=${ts}`;
-    const signature = crypto.createHash('sha1').update(toSign + SECRET).digest('hex');
+    // `folder` optionnel (racine si absent). `type` optionnel : 'authenticated' pour l'audio protégé
+    // (aperçu signé). `file`, `api_key`, `signature`, `resource_type` ne sont JAMAIS signés.
+    const signed = { public_id: publicId, timestamp: ts };
+    if (folder) signed.folder = folder;
+    if (type && type !== 'upload') signed.type = type;
+    const signature = signParams(signed);
 
     const form = new URLSearchParams();
     form.append('file', remoteUrl);          // Cloudinary télécharge la source lui-même
     form.append('api_key', KEY);
-    form.append('timestamp', String(ts));
-    form.append('public_id', publicId);
-    form.append('folder', folder);
+    Object.keys(signed).forEach(k => form.append(k, String(signed[k])));
     form.append('signature', signature);
 
     const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/${resourceType}/upload`, {

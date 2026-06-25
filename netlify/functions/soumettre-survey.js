@@ -14,11 +14,100 @@
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CTRL    = /[\x00-\x1F\x7F]+/g;   // caractères de contrôle ASCII -> remplacés par une espace
-const MAKE_A_URL = process.env.MAKE_A_WEBHOOK_URL || 'https://hook.us1.make.com/1dyhk11x8yf1biy8mawnepdt3k1rcqvq';
+const MAKE_A_URL = process.env.MAKE_A_WEBHOOK_URL || 'https://hook.us1.make.com/0o1i2ga73ibmf43ast3wxjikxy56i3n8';
+
+// ── Mode DIRECT (SURVEY_DIRECT=1) : REMPLACE MAKE A — on écrit nous-mêmes dans Airtable. ──
+const BASE_ID  = process.env.AIRTABLE_BASE_ID;
+const AT_TOKEN = process.env.AIRTABLE_TOKEN;
+const API      = `https://api.airtable.com/v0/${BASE_ID}`;
+const SITE     = 'https://chansonmemoire.ca';
+const GEN_SECRET = process.env.GENERATE_LYRICS_SECRET || '';
+const CLIENTS = 'tblQbF1OlE3uRxFra', PROJECTS = 'tblh7O8eoog7RyTMJ', GENS = 'tblfrHFe1zH9apNlp';
+// IDs de champ copiés du blueprint MAKE A -> immunisé aux renommages.
+const CL = { email:'flds762OXVwiSORrZ', consent_status:'fldHrKcSlZGEpbiqc', consent_date:'fldMS8vhM9hMXBkOW', first_contact:'fldkS8Tnbo1b5sQuU', last_activity:'flduovxyibPoAdIyJ' };
+const P  = { token:'fldqBcPOplqI7pmTh', Client:'fldAGBhUTrR92bj9a', deceased_name:'fldKuvHVlbPByevNw', Relationship:'fld6sRU6B4gyCvDcV', music_style:'fldyN8cSNrud5PTqW', voice:'fld2ll76GVBTwlrii', mood:'fldo65IejcTOJ6Rgj', language:'fldjXJvehP7DguRdB', song_type:'fldZ5BLAu7eAUhBH6', what_made_unique:'flduGHNsYUGFVJPpW', memories:'flduEXUksZuTGkLCH', memory_to_keep:'fldFZZyQN8I91uRIg', commercial_status:'fldLFpeLNHU0ewF7A', funnel_step:'fldepcYRBoQsGoVkJ', cgv:'fldS53tPp8cmA6hUP', utm_source:'flddBuQWS7VDEQ6Tf', utm_medium:'fldoyM5VqCWvuHupH', utm_campaign:'fldM7MOvA9JSB4TIy', utm_content:'fld717FXmUvBBAahC', utm_term:'fldHS6EXLgJ8xS2hq', fbclid:'fldACzVAZnXIg8Y6F', fbc:'fldH7NqGl1x4iYNUT', fbp:'fldUTYL1ECRDz6ZZ7', landing_page:'fldBCASJabBdbQzf6' };
+const G  = { project:'fldzXsnRLrkvPbO6p', generation_no:'fldYQz30pRWwQfnYd', type:'fld0ElSpJMdrMkAJy', lyrics:'fld9q1iqsYSx6iGaI', song_title:'fldlcfIdzfDFaG9EG', suggestions:'fldmxQuzUg8iALDGF', generation_status:'fldUnmeYy9Uk4zBDq' };
+function formulaLiteral(v) { const s = String(v); if (!s.includes('"')) return `"${s}"`; if (!s.includes("'")) return `'${s}'`; return null; }
 
 function nettoyer(v) {
   if (typeof v !== 'string') return v;
   return v.replace(CTRL, ' ').replace(/[\\"]/g, "'").trim();
+}
+
+async function creerGeneration(headers, projetId, no, type, lyr) {
+  const f = {};
+  f[G.project] = [projetId]; f[G.generation_no] = no; f[G.type] = type;
+  f[G.lyrics] = lyr.lyrics; f[G.song_title] = lyr.title || ''; f[G.generation_status] = 'lyrics_generated';
+  if (lyr.suggestions) f[G.suggestions] = (typeof lyr.suggestions === 'string') ? lyr.suggestions : JSON.stringify(lyr.suggestions);
+  await fetch(`${API}/${GENS}`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: f, typecast: true }) });
+}
+async function dernierNo(headers, projetPrimary) {
+  const lit = formulaLiteral(projetPrimary); if (lit === null) return 0;
+  const r = await fetch(`${API}/${GENS}?filterByFormula=${encodeURIComponent(`{project}=${lit}`)}&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=1`, { headers });
+  if (!r.ok) return 0;
+  const g = (((await r.json()).records) || [])[0];
+  return (g && Number(g.fields.generation_no)) || 0;
+}
+
+// REMPLACE MAKE A : Client (upsert par courriel) + Project (si nouveau token) + Generation, via generate-lyrics.
+async function traiterDirect(propre, headers) {
+  const token = propre.token;
+  const now = new Date().toISOString();
+  const today = now.slice(0, 10);
+
+  // 1. Client (upsert par courriel) — conserve consent_date / first_contact existants.
+  let clientId = '';
+  const email = (propre.email || '').trim();
+  if (email) {
+    const lit = formulaLiteral(email);
+    let existing = null;
+    if (lit) { const r = await fetch(`${API}/${CLIENTS}?filterByFormula=${encodeURIComponent(`{email}=${lit}`)}&maxRecords=1`, { headers }); if (r.ok) existing = (((await r.json()).records) || [])[0] || null; }
+    const cf = {};
+    cf[CL.email] = email; cf[CL.consent_status] = 'received';
+    cf[CL.consent_date] = (existing && existing.fields[CL.consent_date]) || today;
+    cf[CL.first_contact] = (existing && existing.fields[CL.first_contact]) || today;
+    cf[CL.last_activity] = now;
+    if (existing) { clientId = existing.id; try { await fetch(`${API}/${CLIENTS}/${clientId}`, { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: cf }) }); } catch (_) {} }
+    else { const rc = await fetch(`${API}/${CLIENTS}`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: cf, typecast: true }) }); if (rc.ok) clientId = (await rc.json()).id; }
+  }
+
+  // 2. Projet déjà existant ? (régénération = même token)
+  let projet = null;
+  const litT = formulaLiteral(token);
+  if (litT) { const r = await fetch(`${API}/${PROJECTS}?filterByFormula=${encodeURIComponent(`{token}=${litT}`)}&maxRecords=1`, { headers }); if (r.ok) projet = (((await r.json()).records) || [])[0] || null; }
+
+  // 3. Paroles (generate-lyrics). Échec -> on crée quand même le Projet (revision pourra réessayer).
+  let lyr = null;
+  try {
+    const rl = await fetch(`${SITE}/api/generate-lyrics`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: GEN_SECRET, deceased_name: propre.deceased_name, relationship: propre.relationship, music_style: propre.music_style, mood: propre.mood, what_made_unique: propre.what_made_unique, memories: propre.memories, memory_to_keep: propre.memory_to_keep, language: propre.language, song_type: propre.song_type })
+    });
+    const dl = await rl.json().catch(() => ({}));
+    if (rl.ok && dl && dl.lyrics) lyr = dl;
+  } catch (_) {}
+
+  // 4. Nouveau projet -> create Project (toujours) + Generation (si paroles). Sinon -> nouvelle Generation.
+  if (!projet) {
+    const pf = {};
+    pf[P.token] = token; if (clientId) pf[P.Client] = [clientId];
+    pf[P.deceased_name] = propre.deceased_name; pf[P.Relationship] = propre.relationship;
+    pf[P.music_style] = propre.music_style; pf[P.voice] = propre.voice; pf[P.mood] = propre.mood;
+    pf[P.language] = propre.language || 'fr-CA'; pf[P.song_type] = propre.song_type || 'hommage';
+    pf[P.what_made_unique] = propre.what_made_unique; pf[P.memories] = propre.memories; pf[P.memory_to_keep] = propre.memory_to_keep;
+    pf[P.commercial_status] = 'preview_only'; pf[P.funnel_step] = 'lyrics_generated'; pf[P.cgv] = now;
+    pf[P.utm_source] = propre.utm_source; pf[P.utm_medium] = propre.utm_medium; pf[P.utm_campaign] = propre.utm_campaign;
+    pf[P.utm_content] = propre.utm_content; pf[P.utm_term] = propre.utm_term; pf[P.fbclid] = propre.fbclid;
+    pf[P.fbc] = propre.fbc; pf[P.fbp] = propre.fbp; pf[P.landing_page] = propre.landing_page;
+    const rp = await fetch(`${API}/${PROJECTS}`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: pf, typecast: true }) });
+    if (!rp.ok) { console.error('[soumettre-survey direct] create projet:', (await rp.text()).slice(0, 300)); return { ok: false, error: 'projet' }; }
+    projet = await rp.json();
+    if (lyr) await creerGeneration(headers, projet.id, 1, 'lyrics', lyr);
+  } else if (lyr) {
+    const maxNo = await dernierNo(headers, projet.fields.project);
+    await creerGeneration(headers, projet.id, maxNo + 1, 'lyrics_regeneration', lyr);
+  }
+  return { ok: true };
 }
 
 exports.handler = async (event) => {
@@ -36,6 +125,17 @@ exports.handler = async (event) => {
   const propre = {};
   for (const k of Object.keys(data)) propre[k] = nettoyer(data[k]);
   propre.token = token;
+
+  // MODE DIRECT (remplace MAKE A) si activé. Sinon -> transfert historique vers Make A.
+  if (process.env.SURVEY_DIRECT === '1') {
+    try {
+      const res = await traiterDirect(propre, { Authorization: `Bearer ${AT_TOKEN}` });
+      return { statusCode: res.ok ? 200 : 502, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(res) };
+    } catch (err) {
+      console.error('[soumettre-survey direct]', err && err.message);
+      return { statusCode: 502, body: JSON.stringify({ error: 'Traitement échoué' }) };
+    }
+  }
 
   try {
     const r = await fetch(MAKE_A_URL, {
