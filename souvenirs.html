@@ -286,7 +286,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   /* ── CONFIG ── */
   const TOTAL_STEPS  = 10;
   const REVISION_URL = '/revision';
-  const MAKE_WEBHOOK_A = 'https://hook.us1.make.com/1dyhk11x8yf1biy8mawnepdt3k1rcqvq';
+  const SURVEY_ENDPOINT = '/api/soumettre-survey';   // proxy Netlify : cache l'URL du webhook Make (anti-bot) + nettoie côté serveur
   const MIN_CHARS = 3; /* minimum léger anti-vide / anti-1-lettre */
 
   /* ── TOKEN : clé de tout le parcours ──
@@ -516,11 +516,12 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     data.email=email; data.consentement=true;
     var langSel=document.getElementById('input-language'); data.language=(langSel&&langSel.value)||'fr-CA';
 
-    /* Make A reconstruit un JSON À LA MAIN (module 5) en y injectant ces valeurs. On neutralise
-       sauts de ligne / tabulations / guillemets / antislashs AVANT l'envoi pour ne JAMAIS casser
-       ce JSON ("Bad control character"). Sans effet sur les paroles (l'IA réécrit de toute façon). */
+    /* Make A reconstruit un JSON À LA MAIN (module 5). On neutralise TOUS les caractères de
+       contrôle (pas juste \r\n\t) + guillemets / antislashs AVANT l'envoi pour ne JAMAIS casser
+       ce JSON ("Bad control character"). Le proxy re-nettoie côté serveur (ceinture + bretelles).
+       Sans effet sur les paroles (l'IA réécrit de toute façon). */
     Object.keys(data).forEach(function(k){
-      if(typeof data[k]==='string'){ data[k]=data[k].replace(/[\r\n\t]+/g,' ').replace(/[\\"]/g,"'").trim(); }
+      if(typeof data[k]==='string'){ data[k]=data[k].replace(/[\x00-\x1F\x7F]+/g,' ').replace(/[\\"]/g,"'").trim(); }
     });
 
     var btn=document.getElementById('btn-submit');
@@ -532,14 +533,15 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     Object.keys(data).forEach(function(k){ fd.append(k, data[k]); });
     fetch('/', { method:'POST', body:fd }).catch(function(){});
 
-    /* Make A : crée Client + Project + paroles + Generation */
-    fetch(MAKE_WEBHOOK_A, {
+    /* Make A (via proxy Netlify) : crée Client + Project + paroles + Generation.
+       L'URL réelle du webhook est en variable d'env serveur, jamais exposée au client. */
+    fetch(SURVEY_ENDPOINT, {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       body:JSON.stringify(data)
     })
     .then(function(){ cmPixel('Lead','lead',token); redirigerVersRevision(); })
-    .catch(function(err){ console.error('Erreur webhook Make:', err); redirigerVersRevision(); });
+    .catch(function(err){ console.error('Erreur soumission:', err); redirigerVersRevision(); });
   });
 
   updateProgress(1);
