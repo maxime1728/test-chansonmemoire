@@ -15,7 +15,7 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 // Mailgun TRANSACTIONNEL (post-achat). No-op si non configuré (ne casse jamais l'enregistrement).
 const MG_KEY     = process.env.MAILGUN_API_KEY;
 const MG_DOMAIN  = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;     // sous-domaine transactionnel (= celui de lancer-cadeau)
-const MG_FROM    = process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';
+const MG_FROM    = process.env.MAILGUN_FROM_ACHAT || process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';   // post-achat -> sous-domaine achat
 const TEAM_EMAIL = process.env.TEAM_NOTIFY_EMAIL;  // destinataire de l'alerte interne « à approuver »
 const SITE       = 'https://chansonmemoire.ca';    // lien page client (= courriel d'achat / nouvelle version)
 
@@ -136,26 +136,30 @@ ${gen.lyrics || ''}
 DEMANDE DU CLIENT (à analyser) :
 ${demande}`;
 
-    const rC = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 3000, system: SYSTEM, messages: [{ role: 'user', content: userPrompt }] })
-    });
-    const data = await rC.json();
-    if (!rC.ok) return { statusCode: 502, body: JSON.stringify({ error: 'Erreur d’analyse' }) };
+    // Analyse Claude — best-effort. #11 : si elle échoue, on N'INTERROMPT PAS : la demande sera
+    // quand même enregistrée et l'équipe prévenue (jamais de demande perdue).
+    let parsed = null;
+    try {
+      const rC = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 3000, system: SYSTEM, messages: [{ role: 'user', content: userPrompt }] })
+      });
+      const data = await rC.json();
+      if (rC.ok) {
+        let txt = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+        txt = txt.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const a = txt.indexOf('{'), z = txt.lastIndexOf('}');
+        if (a !== -1 && z !== -1 && z > a) txt = txt.slice(a, z + 1);
+        try { parsed = JSON.parse(txt); } catch (_) { parsed = null; }
+      }
+    } catch (_) { parsed = null; }
 
-    let txt = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
-    txt = txt.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const a = txt.indexOf('{'), z = txt.lastIndexOf('}');
-    if (a !== -1 && z !== -1 && z > a) txt = txt.slice(a, z + 1);
-    let parsed; try { parsed = JSON.parse(txt); } catch (_) { parsed = null; }
-    if (!parsed) return { statusCode: 502, body: JSON.stringify({ error: 'Analyse illisible' }) };
-
-    const categories  = Array.isArray(parsed.categories) ? parsed.categories.join(', ') : '';
-    const mode        = (parsed.mode === 'regeneration') ? 'regeneration' : 'cover';
-    const compteRendu = (parsed.compte_rendu || '').toString().slice(0, 3000);
-    const adjStyle    = (parsed.adjusted_style_prompt || '').toString().slice(0, 2000);
-    const adjLyrics   = (parsed.adjusted_lyrics || '').toString().slice(0, 6000);
+    const categories  = (parsed && Array.isArray(parsed.categories)) ? parsed.categories.join(', ') : '';
+    const mode        = (parsed && parsed.mode === 'regeneration') ? 'regeneration' : 'cover';
+    const compteRendu = (((parsed && parsed.compte_rendu) || '').toString().slice(0, 3000)) || '(analyse automatique indisponible — à traiter manuellement)';
+    const adjStyle    = ((parsed && parsed.adjusted_style_prompt) || '').toString().slice(0, 2000);
+    const adjLyrics   = ((parsed && parsed.adjusted_lyrics) || '').toString().slice(0, 6000);
 
     // ref_id = [token8·V#] (suivi interne).
     const vno   = gen.generation_no || (Number.isInteger(boughtNo) ? boughtNo : '');

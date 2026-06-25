@@ -339,11 +339,16 @@
         if(res.ok && d && d.paroles){ arreterPolling(); afficher(d); return; }
         throw new Error('retry');
       } catch(e){
-        /* #4 : le bouton n'a pas suffi -> on rassure + on programme un courriel de récupération.
-           recovery-cron relancera la création et enverra le lien d'ici 24-48h (souvent bien avant). */
-        setTexte('erreur-detail', "On n'a pas réussi à l'instant, pas d'inquiétude. On prépare tes paroles et tu recevras un courriel d'ici 24-48 h avec le lien pour les voir et lancer ta chanson (pense à vérifier tes courriels indésirables). Tu peux aussi réessayer maintenant.");
-        if(btn){ btn.disabled = false; btn.textContent = 'Réessayer'; }
+        /* #4/#6 : le bouton n'a pas suffi -> on rassure + on programme un courriel de récupération.
+           Après 2 échecs, on RETIRE le bouton « Réessayer » (le courriel prend le relais). */
+        setTexte('erreur-detail', "On n'a pas réussi à l'instant, pas d'inquiétude. On prépare tes paroles et tu recevras un courriel d'ici 24-48 h avec le lien pour les voir et lancer ta chanson (pense à vérifier tes courriels indésirables).");
         try{ fetch('/api/signaler-echec', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, kind: 'lyrics' }) }); }catch(_){}
+        if(btn){
+          var n = (parseInt(btn.dataset.echecs || '0', 10) || 0) + 1;
+          btn.dataset.echecs = String(n);
+          if(n >= 2){ btn.style.display = 'none'; }            // 2 échecs -> on retire le bouton
+          else { btn.disabled = false; btn.textContent = 'Réessayer'; }
+        }
       }
     }
 
