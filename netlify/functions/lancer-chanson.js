@@ -1,56 +1,174 @@
 // netlify/functions/lancer-chanson.js
-// PROXY serveur : la page appelle CE endpoint, jamais le webhook Make directement.
-// But (sécurité C) : l'URL du webhook + le secret partagé restent côté serveur
-// (variables d'env Netlify), invisibles dans le code source de la page.
-//   - MAKE_C_GEN_WEBHOOK_URL : l'URL du webhook CM - MAKE C-gen
-//   - MAKE_WEBHOOK_SECRET    : secret partagé, vérifié par un filtre dans le scénario Make
-// Renvoie tel quel la réponse de Make (ex. {status:'plafond', message:...}).
+//
+// Lance la CHANSON (nouvelle mélodie, Suno /generate) — REMPLACE l'appel fragile de MAKE C-gen.
+// Le body Suno est construit avec JSON.stringify -> échappement automatique des paroles
+// (sauts de ligne, guillemets, balises [Verse]) : fini les bugs « bad control character » /
+// formules IML de Make. Appelé par revision (confirmation des paroles) et apercu (« Essayer un
+// autre style » sans nouveau souvenir) : POST { token, mode?, post_purchase? }.
+//
+// Réplique de C-gen : plafond serveur (anti-abus), création de la Generation (audio_pending +
+// suno_task_id), passage du Project en funnel_step=song_generating. Le callback Suno continue
+// d'aller à MAKE C-cb (rehost Cloudinary + statut audio_generated) : INCHANGÉ.
+//
+// Écritures Airtable par ID DE CHAMP (copiés du blueprint C-gen) -> immunisé aux renommages.
+// Sécurité : POST, UUID v4 strict, formule échappée, secrets en env (SUNO_API_KEY, AIRTABLE_*).
 
-const WEBHOOK = process.env.MAKE_C_GEN_WEBHOOK_URL;
-const SECRET  = process.env.MAKE_WEBHOOK_SECRET || '';
+const { accentFor } = require('./_lib/lyrics');
 
-const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const BASE_ID  = process.env.AIRTABLE_BASE_ID;
+const AT_TOKEN = process.env.AIRTABLE_TOKEN;
+const API      = `https://api.airtable.com/v0/${BASE_ID}`;
+const UUID_V4  = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const SUNO_API_KEY  = process.env.SUNO_API_KEY;
+const SUNO_MODEL    = process.env.SUNO_MODEL || 'V5_5';
+// Le callback Suno va à MAKE C-cb (livraison audio) — INCHANGÉ. Surchargable par env.
+const SUNO_CALLBACK = process.env.SUNO_SONG_CALLBACK || 'https://hook.us1.make.com/amlfm9tapjjewz2kec1eirs8oylb812g';
+
+// IDs de champ Generations (copiés du blueprint MAKE C-gen module 10) -> match exact du schéma.
+const GEN = {
+  project:           'fldzXsnRLrkvPbO6p',
+  generation_no:     'fldYQz30pRWwQfnYd',
+  type:              'fld0ElSpJMdrMkAJy',
+  lyrics:            'fld9q1iqsYSx6iGaI',
+  song_title:        'fldlcfIdzfDFaG9EG',
+  generation_status: 'fldUnmeYy9Uk4zBDq',
+  suno_task_id:      'fldJSTPxdzLNzPPs6',
+  post_purchase:     'fldqsaG2QJqefc6LN',
+  gen_music_style:   'fldHoOpXerV6rsn5V',
+  gen_mood:          'fld4MMXVW7zbF1tfb',
+  gen_voice:         'fld8gcBdP0smafuKR'
+};
+const PROJ_FUNNEL_STEP = 'fldepcYRBoQsGoVkJ';   // Projects.funnel_step
+
+function formulaLiteral(v) {
+  const s = String(v);
+  if (!s.includes('"')) return `"${s}"`;
+  if (!s.includes("'")) return `'${s}'`;
+  return null;
+}
+// Rollups/lookups Airtable peuvent revenir en tableau -> on extrait un nombre sûr.
+function num(v, d) {
+  if (Array.isArray(v)) v = v[0];
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+}
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Méthode non permise' }) };
-  }
-  if (!WEBHOOK) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Configuration serveur manquante' }) };
-  }
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Méthode non permise' }) };
+  if (!SUNO_API_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'Configuration Suno manquante' }) };
 
   let body;
   try { body = JSON.parse(event.body || '{}'); }
   catch (e) { return { statusCode: 400, body: JSON.stringify({ error: 'Requête invalide' }) }; }
 
   const token = (body.token || '').trim();
-  if (!UUID_V4.test(token)) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Token invalide' }) };
-  }
+  if (!UUID_V4.test(token)) return { statusCode: 400, body: JSON.stringify({ error: 'Token invalide' }) };
+  const mode = (body.mode === 'cover') ? 'cover' : 'song';
 
-  // On ne transmet QUE des champs connus (pas de passage libre vers Make).
-  const payload = {
-    token:             token,
-    mode:              body.mode || 'song',
-    post_purchase:     body.post_purchase === true,
-    sans_modification: body.sans_modification === true,
-    demande_client:    (body.demande_client || '').toString().slice(0, 2000),
-    secret:            SECRET   // vérifié côté Make ; jamais exposé au navigateur
-  };
+  const headers = { Authorization: `Bearer ${AT_TOKEN}` };
 
   try {
-    const r = await fetch(WEBHOOK, {
+    // 1. Project par token.
+    const fP = encodeURIComponent(`{token}=${formulaLiteral(token)}`);
+    const rP = await fetch(`${API}/Projects?filterByFormula=${fP}&maxRecords=1`, { headers });
+    const dP = await rP.json();
+    if (!dP.records || dP.records.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'Introuvable' }) };
+    const projet = dP.records[0];
+    const p = projet.fields;
+
+    // 2. Plafond serveur (réplique de C-gen). Acheté = illimité ; sinon limite de régé + total pré-achat.
+    if (p.commercial_status !== 'purchased') {
+      const regen     = num(p.song_regenerations_count, 0);
+      const preachat  = num(p.client_songs_preachat, 0);
+      const purchases = num(p.client_purchases, 0);
+      if (regen >= 4 || preachat >= (10 + 10 * purchases)) {
+        return {
+          statusCode: 200, headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'plafond', message: "Vous avez atteint le maximum de régénérations pour cette chanson. Écrivez-nous et nous vous aiderons avec plaisir." })
+        };
+      }
+    }
+
+    // 3. Dernière Generation (paroles + titre + numéro).
+    const projLit = formulaLiteral(p.project);
+    if (projLit === null) return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
+    const fG = encodeURIComponent(`{project}=${projLit}`);
+    const rG = await fetch(`${API}/Generations?filterByFormula=${fG}&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=1`, { headers });
+    const dG = await rG.json();
+    const gen = (dG.records && dG.records[0]) ? dG.records[0].fields : {};
+
+    // Paroles : cover -> paroles ajustées (decortique) si présentes ; sinon -> paroles de la dernière Generation.
+    const lyrics = ((mode === 'cover' && p.adjusted_lyrics && p.adjusted_lyrics.trim()) ? p.adjusted_lyrics : (gen.lyrics || '')).trim();
+    if (!lyrics) return { statusCode: 409, body: JSON.stringify({ error: 'Paroles introuvables' }) };
+
+    const title       = (gen.song_title || `Pour ${p.deceased_name || 'toi'}`).slice(0, 100);
+    const dernierNo   = num(gen.generation_no, 0);
+    const regenCount  = num(p.song_regenerations_count, 0);
+    const vocalGender = /Masculin/i.test(p.voice || '') ? 'm' : 'f';
+    const style = [p.music_style, p.mood, accentFor(p.language)].filter(Boolean).join(', ').slice(0, 1000);
+    const type  = (mode === 'cover') ? 'cover' : (regenCount >= 1 ? 'song_regeneration' : 'song');
+
+    // 4. Suno /generate (NOUVELLE mélodie). JSON.stringify -> échappement auto, zéro bug de body.
+    const rS = await fetch('https://api.sunoapi.org/api/v1/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: { Authorization: `Bearer ${SUNO_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customMode: true,
+        instrumental: false,
+        model: SUNO_MODEL,
+        prompt: lyrics.slice(0, 5000),
+        style: style,
+        title: title,
+        vocalGender: vocalGender,
+        callBackUrl: SUNO_CALLBACK
+      })
     });
-    const data = await r.json().catch(() => ({}));
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    };
+    const dS = await rS.json().catch(() => ({}));
+    const taskId = dS && dS.data && dS.data.taskId;
+    if (!rS.ok || !taskId) {
+      console.error('[lancer-chanson] Suno refusé:', (dS && dS.msg) || `HTTP ${rS.status}`);
+      return { statusCode: 502, body: JSON.stringify({ error: 'Lancement de la chanson échoué' }) };
+    }
+
+    // 5. Crée la Generation (audio_pending + suno_task_id). C-cb (callback Suno) la complétera.
+    const fields = {};
+    fields[GEN.project]           = [projet.id];
+    fields[GEN.generation_no]     = dernierNo + 1;
+    fields[GEN.type]              = type;
+    fields[GEN.lyrics]            = lyrics;
+    fields[GEN.song_title]        = title;
+    fields[GEN.generation_status] = 'audio_pending';
+    fields[GEN.suno_task_id]      = String(taskId);
+    fields[GEN.post_purchase]     = !!body.post_purchase;
+    if (p.music_style) fields[GEN.gen_music_style] = p.music_style;
+    if (p.mood)        fields[GEN.gen_mood]        = p.mood;
+    if (p.voice)       fields[GEN.gen_voice]       = p.voice;
+
+    const rC = await fetch(`${API}/Generations`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields })
+    });
+    if (!rC.ok) {
+      const detail = await rC.json().catch(() => ({}));
+      console.error('[lancer-chanson] Création Generation échouée:', JSON.stringify(detail).slice(0, 500));
+      return { statusCode: 502, body: JSON.stringify({ error: 'Écriture Airtable échouée' }) };
+    }
+
+    // 6. Project -> song_generating (best-effort, ne bloque jamais la chanson).
+    try {
+      const pf = {}; pf[PROJ_FUNNEL_STEP] = 'song_generating';
+      await fetch(`${API}/Projects/${projet.id}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: pf })
+      });
+    } catch (_) { /* le suivi de parcours ne doit jamais casser la génération */ }
+
+    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, pending: true }) };
   } catch (err) {
-    return { statusCode: 502, body: JSON.stringify({ error: 'Lancement impossible' }) };
+    console.error('[lancer-chanson]', err && err.message);
+    return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
   }
 };
