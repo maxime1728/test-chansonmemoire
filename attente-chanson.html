@@ -200,9 +200,37 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
   .cm-player.is-playing .cm-bars span{animation:none!important;}
   .wstep{opacity:1;}
 }
+
+/* ── Étapes pilotées par le statut Suno (sinon animation par défaut) ── */
+.steps.live .wstep{animation:none;opacity:.4;}
+.steps.live .wstep.active{opacity:1;}
+.steps.live .wstep.done{opacity:.85;}
+.steps.live .wstep.done .dot{background:var(--candle);border-color:var(--candle);}
+.steps.live .wstep.active .dot{border-color:var(--candle);box-shadow:0 0 0 4px rgba(195,154,82,.18);}
+
+/* ── Loader anti-flash hommage/cadeau ── */
+#cm-loader{position:fixed;inset:0;z-index:9999;background:#faf8f5;display:flex;align-items:center;justify-content:center;transition:opacity .4s ease;}
+#cm-loader.cm-hide{opacity:0;pointer-events:none;}
+#cm-loader .cm-spin{width:44px;height:44px;border-radius:50%;border:3px solid var(--candle-soft);border-top-color:var(--candle);animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── Section « Ce que tu vas recevoir » ── */
+.s-receive{padding:30px 20px 40px;}
+.s-receive h2{font-family:"Fraunces",serif;font-weight:600;color:var(--plum-deep);font-size:clamp(1.35rem,5vw,1.9rem);margin-bottom:6px;}
+.s-receive .sub{font-size:.96rem;color:var(--muted);margin-bottom:26px;}
+.receive-grid{display:flex;flex-direction:column;gap:14px;max-width:520px;margin:0 auto;}
+.r-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;text-align:left;display:flex;gap:16px;align-items:center;}
+.r-thumb{flex:0 0 auto;width:84px;height:84px;border-radius:12px;background:linear-gradient(135deg,var(--candle-soft),#f3e8d2);display:flex;align-items:center;justify-content:center;font-size:1.9rem;overflow:hidden;}
+.r-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.r-body{flex:1;}
+.r-tag{font-size:.68rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--candle);display:block;margin-bottom:4px;}
+.r-title{font-family:"Fraunces",serif;font-weight:600;color:var(--plum-deep);font-size:1.05rem;margin-bottom:3px;}
+.r-desc{font-size:.88rem;color:var(--muted);line-height:1.5;}
+.r-ph{font-size:.72rem;color:var(--muted);opacity:.65;font-style:italic;}
 </style>
 </head>
 <body>
+<div id="cm-loader" aria-hidden="true"><div class="cm-spin"></div></div>
 
 <!-- ══════════════════════════════════════
      SECTION 1 : ATTENTE
@@ -212,7 +240,7 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
     <div class="flame" aria-hidden="true"></div>
     <span class="eyebrow">Création en cours</span>
     <h1 class="serif">On compose sa chanson</h1>
-    <p class="lede">
+    <p class="lede" id="lede">
       À partir des souvenirs que tu nous as confiés, on donne vie à une œuvre unique
       pour honorer la mémoire de <span class="defunt-name serif" id="defuntName">ta personne aimée</span>.
     </p>
@@ -231,6 +259,43 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
       </p>
     </div>
     <p class="keep-open">Garde cette page ouverte, on t'envoie aussi le lien par courriel.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SECTION 1.5 : CE QUE TU VAS RECEVOIR
+════════════════════════════════════════ -->
+<section class="s-receive">
+  <div class="in">
+    <span class="eyebrow">Pendant que sa chanson se termine</span>
+    <h2 class="serif">Voici tout ce que tu vas recevoir</h2>
+    <p class="sub">Bien plus qu'un fichier audio : un petit univers autour de sa chanson.</p>
+    <div class="receive-grid">
+      <div class="r-card">
+        <div class="r-thumb" aria-hidden="true">🎵</div>
+        <div class="r-body">
+          <span class="r-tag">Ta page privée</span>
+          <div class="r-title">Une page-mémoire à partager</div>
+          <div class="r-desc">Sa chanson, ses paroles et ses souvenirs réunis sur une page privée, à partager avec ceux qui comptent. <span class="r-ph">(exemple à venir)</span></div>
+        </div>
+      </div>
+      <div class="r-card">
+        <div class="r-thumb" aria-hidden="true">📄</div>
+        <div class="r-body">
+          <span class="r-tag">En souvenir</span>
+          <div class="r-title">Les paroles en PDF</div>
+          <div class="r-desc">Une belle version imprimable des paroles, à garder précieusement ou à offrir. <span class="r-ph">(exemple à venir)</span></div>
+        </div>
+      </div>
+      <div class="r-card">
+        <div class="r-thumb" aria-hidden="true">🎬</div>
+        <div class="r-body">
+          <span class="r-tag">Option</span>
+          <div class="r-title">Une vidéo des paroles</div>
+          <div class="r-desc">Les paroles qui défilent en musique, prêtes à projeter ou à partager. <span class="r-ph">(exemple à venir)</span></div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -357,26 +422,26 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
 
       <div class="q">
         <div class="stars">★★★★★</div>
-        <p>« Mon père était un homme de peu de mots. Cette chanson a dit tout ce qu'on n'a jamais réussi à se dire. Je la mets en boucle dans l'auto, là où on passait nos meilleurs moments ensemble. »</p>
-        <div class="who">Pierre B. <span class="role">Montréal · Chanson pour son père décédé</span></div>
-      </div>
-
-      <div class="q">
-        <div class="stars">★★★★★</div>
-        <p>« Ma sœur est partie trop vite, d'un cancer foudroyant. On n'a pas eu le temps de se dire au revoir. Cette chanson a été mon au revoir. »</p>
-        <div class="who">Laurette L. <span class="role">Trois-Rivières · Chanson en hommage à sa sœur</span></div>
-      </div>
-
-      <div class="q">
-        <div class="stars">★★★★★</div>
-        <p>« Perdre son mari après 38 ans ensemble, c'est perdre une moitié de soi. Cette chanson m'a rendu quelque chose : sa voix dans les mots, ses habitudes dans les images. Je la joue chaque matin. »</p>
+        <p>« Perdre son mari après 38 ans ensemble, c'est perdre une moitié de soi. Cette chanson m'a rendu quelque chose, sa voix dans les mots, ses habitudes dans les images. Je la joue chaque matin. »</p>
         <div class="who">Sophie C. <span class="role">Laval · Chanson pour son mari décédé</span></div>
       </div>
 
       <div class="q">
         <div class="stars">★★★★★</div>
-        <p>« J'avais peur que ce soit générique. Mais la chanson a mis dedans tous ses petits détails : son café trop fort, son rire, ses mauvaises blagues. C'est incroyable à quel point c'est personnalisé. »</p>
+        <p>« Perdre un enfant, c'est contre nature. Et pourtant, cette chanson a trouvé les mots. Elle a mis en musique l'amour que j'ai pour lui, que j'aurai toujours. Je la garderai toute ma vie. »</p>
+        <div class="who">Nathalie P. <span class="role">Lévis · Chanson en hommage à son enfant</span></div>
+      </div>
+
+      <div class="q">
+        <div class="stars">★★★★★</div>
+        <p>« J'avais peur que ce soit générique. Mais la chanson a mis dedans tous ses petits détails : son café trop fort, son rire sonore, ses mauvaises blagues. C'est incroyable à quel point c'est personnalisé. »</p>
         <div class="who">Isabelle B. <span class="role">Chicoutimi · Chanson personnalisée</span></div>
+      </div>
+
+      <div class="q">
+        <div class="stars">★★★★★</div>
+        <p>« On a joué la chanson à la réunion de famille un an après son décès. Même mes oncles qui retiennent toujours leurs larmes n'ont pas pu. C'était beau, c'était vrai, c'était elle. »</p>
+        <div class="who">Louise G. <span class="role">Québec · Chanson partagée à une réunion de famille</span></div>
       </div>
 
     </div>
@@ -554,6 +619,78 @@ function checkReady(){
 
 pollingInterval = setInterval(checkReady, 20000);
 setTimeout(checkReady, 20000); /* premier check après 20 secondes */
+</script>
+
+<script>
+/* ════════════════════════════════════════
+   LOADER anti-flash + ADAPTATION hommage/cadeau + ÉTAPES RÉELLES (statut Suno)
+════════════════════════════════════════ */
+(function(){
+  var tok = new URLSearchParams(location.search).get('id');
+  var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  function hideLoader(){
+    var l = document.getElementById('cm-loader');
+    if(l && !l.classList.contains('cm-hide')){ l.classList.add('cm-hide'); setTimeout(function(){ if(l.parentNode) l.parentNode.removeChild(l); }, 420); }
+  }
+  setTimeout(hideLoader, 3000);  /* filet : ne jamais rester bloqué */
+
+  /* Reconstruit le lede selon hommage/cadeau (nom échappé via textContent). */
+  function adaptType(type){
+    var cadeau = (type === 'cadeau');
+    var name = '';
+    try { name = new URLSearchParams(location.search).get('name') || ''; } catch(e){}
+    var lede = document.getElementById('lede');
+    if(lede){
+      var avant = cadeau
+        ? "À partir des souvenirs que tu nous as confiés, on donne vie à une chanson unique, juste pour "
+        : "À partir des souvenirs que tu nous as confiés, on donne vie à une œuvre unique pour honorer la mémoire de ";
+      lede.textContent = avant;
+      var span = document.createElement('span');
+      span.className = 'defunt-name serif';
+      span.textContent = name || (cadeau ? 'cette personne' : 'ta personne aimée');
+      lede.appendChild(span);
+      lede.appendChild(document.createTextNode('.'));
+    }
+  }
+
+  /* Allume les 3 pastilles selon l'étape Suno. */
+  function setSteps(stage){
+    var steps = document.querySelector('.steps');
+    if(!steps) return;
+    steps.classList.add('live');
+    var w = steps.querySelectorAll('.wstep');
+    var doneCount, activeIdx;
+    if(stage === 'lyrics'){ doneCount = 1; activeIdx = 1; }
+    else if(stage === 'first'){ doneCount = 2; activeIdx = 2; }
+    else if(stage === 'done'){ doneCount = 3; activeIdx = -1; }
+    else { doneCount = 0; activeIdx = 0; }
+    w.forEach(function(el, i){
+      el.classList.remove('active','done');
+      if(i < doneCount) el.classList.add('done');
+      else if(i === activeIdx) el.classList.add('active');
+    });
+  }
+
+  /* 1. song_type immédiat -> adaptation + on masque le loader. */
+  if(tok && UUID.test(tok)){
+    fetch('/api/lire-projet', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: tok }), cache:'no-store' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){ adaptType(d && d.song_type); hideLoader(); })
+      .catch(function(){ adaptType('hommage'); hideLoader(); });
+  } else { adaptType('hommage'); hideLoader(); }
+
+  /* 2. Étapes réelles via le statut Suno (record-info = lecture, 0 crédit). */
+  function pollSuno(){
+    if(!tok || !UUID.test(tok)) return;
+    fetch('/api/suno-status', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: tok }), cache:'no-store' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){ if(d && d.stage) setSteps(d.stage); })
+      .catch(function(){});
+  }
+  pollSuno();
+  setInterval(pollSuno, 15000);
+})();
 </script>
 
 </body>
