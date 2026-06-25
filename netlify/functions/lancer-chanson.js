@@ -22,8 +22,9 @@ const UUID_V4  = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 const SUNO_API_KEY  = process.env.SUNO_API_KEY;
 const SUNO_MODEL    = process.env.SUNO_MODEL || 'V5_5';
-// Le callback Suno va à MAKE C-cb (livraison audio) — INCHANGÉ. Surchargable par env.
-const SUNO_CALLBACK = process.env.SUNO_SONG_CALLBACK || 'https://hook.us1.make.com/amlfm9tapjjewz2kec1eirs8oylb812g';
+// Le callback Suno va à MAKE C-cb (livraison audio) — INCHANGÉ. MÊME variable d'env que sentinelle-cron
+// (source unique), avec repli sur le webhook C-cb connu.
+const SUNO_CALLBACK = process.env.MAKE_CCB_WEBHOOK_URL || 'https://hook.us1.make.com/amlfm9tapjjewz2kec1eirs8oylb812g';
 
 // IDs de champ Generations (copiés du blueprint MAKE C-gen module 10) -> match exact du schéma.
 const GEN = {
