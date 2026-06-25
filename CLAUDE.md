@@ -85,10 +85,12 @@ Principe : l'agent opère sur **test/preview avec credentials révocables**. Max
 ## 6. Décisions lockées (ne pas re-litiger)
 
 - **Token routing** : `crypto.randomUUID()` généré au load de la page survey, passé en `?id=TOKEN`
-  sur toutes les pages, écrit dans Project par Make. Remplace `sessionStorage` (fragile : casse au
-  changement d'onglet/appareil/lien email — failure modes critiques pour un produit mémoriel).
-- **Séparation lecture/écriture** : **Make écrit, Netlify lit.** Élimine la race condition
-  Netlify↔Make. (Make facture par opération ; lectures Netlify ~gratuites à l'échelle CM.)
+  sur toutes les pages, écrit dans Project par le code (`soumettre-survey`, ex-MAKE A). Remplace
+  `sessionStorage` (fragile : casse au changement d'onglet/appareil/lien email).
+- **Écriture/lecture** : ~~« Make écrit, Netlify lit »~~ **PÉRIMÉ depuis le cutover 2026-06-25.**
+  Désormais **Netlify écrit ET lit** : le sondage (`soumettre-survey`, `SURVEY_DIRECT=1`) et le
+  callback Suno (`callback-chanson`, via `MAKE_CCB_WEBHOOK_URL`) écrivent directement dans Airtable.
+  **Make ne garde que Stripe (MAKE D) + Meta (Insights) + jointures Pub/Hook.** Voir §11.
 - **Endpoint Netlify** : expose seulement `titre / paroles / statut / audio_url / suggestions / commercial_status`.
   (`suggestions` = JSON string des bulles dynamiques, exposition intentionnelle.)
   **Jamais** email, Stripe IDs, ou données d'attribution.
@@ -129,3 +131,39 @@ Principe : l'agent opère sur **test/preview avec credentials révocables**. Max
 Les pages de livraison **basées sur slug** risquent l'énumération clients (exposition de chansons
 privées d'autres familles). Le token routing adresse **partiellement** le problème.
 **Audit de sécurité complet requis avant launch.** Ne pas considérer comme réglé.
+
+---
+
+## 11. Architecture actuelle (code vs Make) — màj 2026-06-25
+
+**Cœur produit = 100 % Netlify (code).** Make réduit à Stripe + Meta. Carte des flux dispo en
+mémoire Claude (voir `cm-make-migration`, `cm-architecture-code-vs-make`).
+
+**Tunnel client :** `/souvenirs` → `soumettre-survey` (crée Client+Project+Generation, appelle
+`generate-lyrics`) → `/revision` → `lancer-chanson` (Suno) → `/attente-chanson` → `callback-chanson`
+(audio livré, aperçu prêt) → `/apercu` → Stripe (MAKE D) → `/page-chanson` → `/page-memoire`.
+
+**Crons Netlify (`netlify.toml`) :** `sentinelle-cron` (récup chansons bloquées), `alerte-cron`
+(>10h), `cover-cron` (corrections approuvées→cover), `recovery-cron` (courriels paroles/chanson
+ratées), `nurture-cron`/`sequences-cron` (relance), `purge-cron` (Loi 25), `brouillon-cron`/
+`envoyer-cron` (support).
+
+**Corrections/cover :** `decortique` (paroles seules = cover auto ; prononciation/style = approbation)
++ `prononciation` → `cover-cron` → `lancer-cover` → `callback-cover`. Paroles propres affichées,
+phonétique envoyée à Suno (`lyrics_phonetique`).
+
+**Comptage :** plafonds calculés EN DIRECT dans le code (pas de rollup), `_lib/comptage.js`,
+champ `chansons_reussies_avant`. Voir `cm-comptage-generations`.
+
+**Make restant :** MAKE D (Stripe achat), MAKE Insights (dépense Meta), Jointures Pub/Hook.
+**Orphelins à supprimer :** MAKE A, C-cb, C-gen, Sentinelle, Relance cover, Alerte >10h, Song/Cover
+Regenerated. Champs Airtable orphelins : `Occasion`, `relancer_cover`, `regenerer`, anciens rollups
+(`generations_count`, `previews_count`, `song_regenerations_count`, `post_purchase_regenerations_count`,
+`client_songs_preachat`, `total_generations_client`).
+
+**Variables d'env clés (Netlify) :** `SURVEY_DIRECT=1`, `MAKE_CCB_WEBHOOK_URL`=callback-chanson,
+`MAILGUN_FROM_ACHAT`, `MAILGUN_DOMAIN_MARKETING`, `GENERATE_LYRICS_SECRET`, `PURGE_ACTIF`,
+`CALLBACK_SECRET`/`RECOMPTE_SECRET`/`RANGER_SECRET` (optionnels).
+
+> ⚠️ §3 garde-fous (base prod = freelancer, ne pas écrire en prod sans go) : Maxime a explicitement
+> autorisé ces écritures Airtable prod (schéma + migrations) durant le build 2026-06-25.
