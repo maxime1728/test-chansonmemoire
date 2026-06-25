@@ -50,11 +50,26 @@ async function emailClient(projet, headers) {
   } catch (_) { return ''; }
 }
 
-const SYSTEM = `Tu es spécialiste de la prononciation pour le chant en français québécois. Un client signale qu'un MOT de sa chanson (générée par IA) est MAL PRONONCÉ — souvent parce que l'IA le dit "à l'anglaise". À partir du mot et de ce que le client décrit, tu donnes :
-1) une RÉÉCRITURE PHONÉTIQUE simple, à insérer telle quelle dans les paroles pour que le chanteur IA le prononce correctement (ex : "Disquatch" -> "diskoutch" ; "Vaughan" -> "Vonne"). Écris-la comme ça se prononce en français courant, sans alphabet phonétique compliqué.
-2) une EXPLICATION courte et claire (1-2 phrases) pour l'équipe.
-Si le client est vague, fais une hypothèse raisonnable et précise-le dans l'explication.
-Réponds UNIQUEMENT avec un objet JSON valide, guillemets droits : {"phonetique":"...","explication":"..."}`;
+const SYSTEM = `Tu aides l'équipe de Chanson Mémoire à corriger la PRONONCIATION d'un mot qu'un chanteur IA prononce mal dans une chanson (le plus souvent en français québécois). Le client décrit le mot et comment il devrait sonner ; tu produis une correction prête à utiliser.
+
+LE PROBLÈME DE FOND : le chanteur IA lit les paroles avec les règles de lecture du FRANÇAIS. Une réécriture ne fonctionne QUE si, lue à voix haute "à la française", elle donne le bon son. Pièges classiques à éviter :
+- "ou" se lit toujours "ou" (comme "loup") -> ne l'emploie JAMAIS pour un autre son.
+- "ch" se lit "ch" (comme "chat"), jamais "tch".
+- "g" devant e/i se lit "j" ; pour un "g" dur, écris "gu".
+- "in/im/un/en" se nasalisent ; un "a"/"e" en finale est souvent muet ou faible.
+- Pour le son anglais "watch", écris "watch" ou "ouatch" -> JAMAIS "outch".
+
+MÉTHODE (raisonne avant de répondre) :
+1. Établis le SON CIBLE syllabe par syllabe à partir de ce que le client a écrit. S'il donne déjà une graphie, fie-toi à son INTENTION de son, pas forcément à sa graphie exacte.
+2. Construis une réécriture qui, lue selon les règles du français, produit ce son. Relis-toi syllabe par syllabe pour vérifier qu'aucun piège ci-dessus ne trahit le son.
+3. Rédige une explication COURTE et HUMAINE (l'équipe applique la correction à la main).
+
+EXEMPLES BIEN FAITS :
+- "Ghislaine" : l'IA dit "Guis-laine" ; le bon son est "Jis-lène" -> réécriture : "Jislaine".
+- "Disquatch" : le bon son est l'anglais "disk-watch" -> réécriture : "diskwatch" (et NON "diskoutch", qui se lirait "diss-kou-tch").
+
+SORTIE — uniquement un objet JSON valide, guillemets droits, rien autour :
+{"phonetique":"<réécriture à insérer dans les paroles>","explication":"<le son visé, syllabe par syllabe, en clair pour l'équipe>"}`;
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Méthode non permise' }) };
@@ -68,8 +83,9 @@ exports.handler = async (event) => {
   const token      = (body.token || '').trim();
   const mot        = (body.mot || '').toString().trim().slice(0, 120);
   const indication = (body.indication || '').toString().trim().slice(0, 1000);
+  const autre      = (body.autre || '').toString().trim().slice(0, 2000);   // box "Autre chose ?" (erreurs paroles, etc.)
   if (!UUID_V4.test(token)) return { statusCode: 400, body: JSON.stringify({ error: 'Token invalide' }) };
-  if (!mot)                 return { statusCode: 400, body: JSON.stringify({ error: 'Mot manquant' }) };
+  if (!mot && !autre)       return { statusCode: 400, body: JSON.stringify({ error: 'Demande vide' }) };
 
   const headers = { Authorization: `Bearer ${TOKEN}` };
 
@@ -94,13 +110,14 @@ exports.handler = async (event) => {
 
     // 3. Claude : réécriture phonétique + explication (best-effort ; un échec n'empêche pas l'alerte).
     let phonetique = '', explication = '';
-    try {
+    if (mot) try {
       const userPrompt =
 `Personne honorée : ${p.deceased_name || ''}
 Langue : ${p.language || 'fr-CA'}
 
 MOT mal prononcé : ${mot}
 CE QUE LE CLIENT DÉCRIT : ${indication || '(rien de plus)'}
+AUTRE CHOSE SIGNALÉE (paroles, etc.) : ${autre || '(rien)'}
 
 PAROLES (contexte) :
 ${(lyrics || '').slice(0, 2500)}`;
@@ -130,15 +147,19 @@ ${(lyrics || '').slice(0, 2500)}`;
           `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.6;max-width:620px;">` +
           `<h2 style="color:#5C2D4A;margin:0 0 4px;">Erreur de prononciation signalée</h2>` +
           `<p style="color:#7A6070;margin:0 0 16px;">Personne honorée : ${esc(p.deceased_name || '')}</p>` +
-          `<p><strong>Mot à corriger :</strong> ${esc(mot)}</p>` +
+          `<p><strong>Mot à corriger :</strong> ${esc(mot || '(aucun — voir « Autre chose »)')}</p>` +
           `<p><strong>Ce que le client a écrit :</strong><br>${esc(indication || '(rien de plus)')}</p>` +
+          `<p><strong>Autre chose à ajouter (paroles, etc.) :</strong><br>${esc(autre || '(rien)')}</p>` +
           `<p><strong>Prononciation proposée (à mettre dans les paroles) :</strong><br>` +
           `<span style="font-size:18px;color:#5C2D4A;"><strong>${esc(phonetique || '— (analyse IA indisponible)')}</strong></span></p>` +
           `<p><strong>Analyse :</strong><br>${esc(explication || '—')}</p>` +
           `<p><strong>Courriel du client :</strong> ${esc(to || '(introuvable)')}</p>` +
           `<p style="margin:20px 0;"><a href="${SITE}/apercu?id=${encodeURIComponent(token)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;">Ouvrir l'aperçu</a></p>` +
           `<p style="color:#7A6070;margin-top:18px;">Régénère la chanson avec la prononciation corrigée, puis renvoie le lien au client.</p></div>`;
-        await envoyerCourriel(TEAM_EMAIL, `Prononciation à corriger — « ${mot} » (${(p.deceased_name || '').slice(0, 40)})`, html);
+        const sujet = mot
+          ? `Prononciation à corriger — « ${mot} » (${(p.deceased_name || '').slice(0, 40)})`
+          : `Correction demandée (paroles) — ${(p.deceased_name || '').slice(0, 40)}`;
+        await envoyerCourriel(TEAM_EMAIL, sujet, html);
       }
     } catch (_) { /* le courriel ne bloque pas la confirmation client */ }
 

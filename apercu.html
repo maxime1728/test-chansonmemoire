@@ -82,13 +82,14 @@ window._cmFunnel = function(evt) {
 ════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
 
 body {
   font-family: 'Mulish', sans-serif;
   background: var(--cm-bg);
   color: var(--cm-text);
   min-height: 100vh;
+  overflow-x: hidden;
   padding-bottom: 100px;
 }
 
@@ -1274,10 +1275,13 @@ body {
 
     <div id="cm-pron-form">
       <label class="cm-modal-label" for="cm-pron-mot">Quel mot est mal prononcé ?</label>
-      <input class="cm-modal-select" id="cm-pron-mot" type="text" placeholder="Ex. : Disquatch" maxlength="120">
+      <input class="cm-modal-select" id="cm-pron-mot" type="text" placeholder="Ex. : Ghislaine" maxlength="120">
 
       <label class="cm-modal-label" for="cm-pron-comment">Comment ça devrait sonner ? <span class="cm-modal-opt">(optionnel)</span></label>
-      <textarea class="cm-modal-textarea" id="cm-pron-comment" rows="3" placeholder="Ex. : ça se dit « diskoutch », c'est un nom de famille. Là il le prononce à l'anglaise."></textarea>
+      <textarea class="cm-modal-textarea" id="cm-pron-comment" rows="2" placeholder="Ex. : « Ghislaine » se dit « Jislaine ». Ou « Disquatch » se dit « diskwatch » (là il le dit à l'anglaise)."></textarea>
+
+      <label class="cm-modal-label" for="cm-pron-autre">Autre chose à ajouter ? <span class="cm-modal-opt">(optionnel)</span></label>
+      <textarea class="cm-modal-textarea" id="cm-pron-autre" rows="2" placeholder="Ex. : une erreur dans les paroles, un mot oublié, un détail à corriger…"></textarea>
 
       <div class="cm-modal-actions">
         <button type="button" class="cm-modal-cancel" id="cm-pron-cancel">Annuler</button>
@@ -1682,10 +1686,11 @@ setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet
   if (pSend) pSend.addEventListener('click', function(){
     var mot=(document.getElementById('cm-pron-mot').value || '').trim();
     var comment=(document.getElementById('cm-pron-comment').value || '').trim();
+    var autre=(document.getElementById('cm-pron-autre').value || '').trim();
     var s=document.getElementById('cm-pron-status');
-    if (!mot){ if (s) s.textContent='Indique le mot mal prononcé.'; return; }
+    if (!mot && !autre){ if (s) s.textContent='Indique le mot mal prononcé, ou écris-nous dans « Autre chose ».'; return; }
     pSend.disabled=true; if (s) s.textContent='Un instant…';
-    fetch('/api/prononciation', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, mot: mot, indication: comment }) })
+    fetch('/api/prononciation', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, mot: mot, indication: comment, autre: autre }) })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(res){
         if (res && res.ok){ var f=document.getElementById('cm-pron-form'), d=document.getElementById('cm-pron-done'); if (f) f.style.display='none'; if (d) d.style.display='block'; if (s) s.textContent=''; }
@@ -1773,8 +1778,9 @@ document.querySelectorAll('.cm-faq-btn').forEach(function(btn) {
 (function() {
   var dock = document.getElementById('cmSticky');
   document.body.style.paddingBottom = '84px';
+  var seuil = (window.innerWidth <= 600) ? 150 : 400;   /* mobile : apparaît dès qu'on dépasse le lecteur + les 2 boutons */
   function toggle() {
-    if (window.scrollY > 400) { dock.classList.add('show'); dock.setAttribute('aria-hidden','false'); }
+    if (window.scrollY > seuil) { dock.classList.add('show'); dock.setAttribute('aria-hidden','false'); }
     else { dock.classList.remove('show'); dock.setAttribute('aria-hidden','true'); }
   }
   window.addEventListener('scroll', toggle, {passive: true});
@@ -1785,7 +1791,7 @@ document.querySelectorAll('.cm-faq-btn').forEach(function(btn) {
 (function(){
   if (matchMedia('(prefers-reduced-motion:reduce)').matches) return;
   if (!('IntersectionObserver' in window)) return;
-  var targets = document.querySelectorAll('.cm-story, .cm-faq-item, .cm-step-body, #cm-pricing-root, .cm-cta-bottom');
+  var targets = document.querySelectorAll('.cm-story, .cm-faq-item, .cm-step-body, .cm-cta-bottom');
   if (!targets.length) return;
   targets.forEach(function(t){ t.classList.add('cm-fx-reveal'); });
   var io = new IntersectionObserver(function(entries){
