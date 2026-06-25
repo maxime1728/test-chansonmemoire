@@ -219,7 +219,9 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
 .s-receive h2{font-family:"Fraunces",serif;font-weight:600;color:var(--plum-deep);font-size:clamp(1.35rem,5vw,1.9rem);margin-bottom:6px;}
 .s-receive .sub{font-size:.96rem;color:var(--muted);margin-bottom:26px;}
 .receive-grid{display:flex;flex-direction:column;gap:14px;max-width:520px;margin:0 auto;}
-.r-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;text-align:left;display:flex;gap:16px;align-items:center;}
+.r-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;text-align:left;display:flex;gap:16px;align-items:center;text-decoration:none;color:inherit;transition:border-color .18s,box-shadow .18s,transform .18s;}
+a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(46,34,56,.10);transform:translateY(-1px);}
+.r-cta{display:inline-block;margin-top:6px;font-size:.8rem;font-weight:800;letter-spacing:.02em;color:var(--candle);}
 .r-thumb{flex:0 0 auto;width:84px;height:84px;border-radius:12px;background:linear-gradient(135deg,var(--candle-soft),#f3e8d2);display:flex;align-items:center;justify-content:center;font-size:1.9rem;overflow:hidden;}
 .r-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .r-body{flex:1;}
@@ -271,30 +273,33 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
     <h2 class="serif">Voici tout ce que tu vas recevoir</h2>
     <p class="sub">Bien plus qu'un fichier audio : un petit univers autour de sa chanson.</p>
     <div class="receive-grid">
-      <div class="r-card">
+      <a class="r-card" href="exemple-page-memoire.html" target="_blank" rel="noopener">
         <div class="r-thumb" aria-hidden="true">🎵</div>
         <div class="r-body">
           <span class="r-tag">Ta page privée</span>
           <div class="r-title">Une page-mémoire à partager</div>
-          <div class="r-desc">Sa chanson, ses paroles et ses souvenirs réunis sur une page privée, à partager avec ceux qui comptent. <span class="r-ph">(exemple à venir)</span></div>
+          <div class="r-desc">Sa chanson, ses paroles et ses souvenirs réunis sur une page privée, à partager avec ceux qui comptent.</div>
+          <span class="r-cta">Voir un exemple →</span>
         </div>
-      </div>
-      <div class="r-card">
+      </a>
+      <a class="r-card" href="exemple-paroles-mhdl.html" target="_blank" rel="noopener">
         <div class="r-thumb" aria-hidden="true">📄</div>
         <div class="r-body">
           <span class="r-tag">En souvenir</span>
           <div class="r-title">Les paroles en PDF</div>
-          <div class="r-desc">Une belle version imprimable des paroles, à garder précieusement ou à offrir. <span class="r-ph">(exemple à venir)</span></div>
+          <div class="r-desc">Une belle version imprimable des paroles, à garder précieusement ou à offrir.</div>
+          <span class="r-cta">Voir un exemple →</span>
         </div>
-      </div>
-      <div class="r-card">
+      </a>
+      <a class="r-card" href="exemple-page-memoire.html#video" target="_blank" rel="noopener">
         <div class="r-thumb" aria-hidden="true">🎬</div>
         <div class="r-body">
           <span class="r-tag">Option</span>
           <div class="r-title">Une vidéo des paroles</div>
-          <div class="r-desc">Les paroles qui défilent en musique, prêtes à projeter ou à partager. <span class="r-ph">(exemple à venir)</span></div>
+          <div class="r-desc">Les paroles qui défilent en musique, prêtes à projeter ou à partager.</div>
+          <span class="r-cta">Voir un exemple →</span>
         </div>
-      </div>
+      </a>
     </div>
   </div>
 </section>
