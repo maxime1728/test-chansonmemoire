@@ -470,7 +470,7 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(46,34,56,.1
 <div class="cm-delay-overlay" id="cmDelayOverlay" aria-hidden="true" role="dialog" aria-modal="true">
   <div class="cm-delay-box">
     <h2 class="serif">Un petit délai technique</h2>
-    <p>Sa chanson met un peu plus de temps que d'habitude, rien d'inquiétant. On la finalise et <strong>on te l'envoie par courriel dès qu'elle est prête</strong>. Tu peux fermer cette page en toute tranquillité.</p>
+    <p>Sa chanson met un peu plus de temps que d'habitude, rien d'inquiétant. On la finalise et <strong>on te l'envoie par courriel d'ici 24-48 h dès qu'elle est prête</strong>. Pense à vérifier tes courriels indésirables. Tu peux fermer cette page en toute tranquillité.</p>
     <p class="cm-delay-sub">Tu peux aussi garder la page ouverte : elle s'ouvrira ici automatiquement dès que c'est prêt.</p>
   </div>
 </div>
@@ -576,8 +576,11 @@ function showDelayPopup(){
   if(msg){
     var dots = msg.querySelector(".wait-dots");
     if(dots) dots.remove();
-    msg.innerHTML = "Sa chanson arrive, on te l'envoie par courriel dès qu'elle est prête.";
+    msg.innerHTML = "Sa chanson arrive. On te l'envoie par courriel d'ici 24-48 h dès qu'elle est prête (pense à vérifier tes indésirables).";
   }
+  /* #7 : signale le pépin technique -> recovery-cron enverra le lien /apercu dès que la chanson
+     est prête (relancée par la sentinelle ou livrée par le callback). Best-effort. */
+  try{ var t = getToken(); if(t) fetch('/api/signaler-echec', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: t, kind: 'song' }) }); }catch(_){}
 }
 
 function checkReady(){

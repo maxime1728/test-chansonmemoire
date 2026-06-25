@@ -20,6 +20,11 @@
 [functions."alerte-cron"]
   schedule = "@hourly"
 
+# Récupération client (#4/#7) : relance les paroles échouées + envoie le lien (paroles ou chanson)
+# dès que c'est prêt, aux projets marqués recovery_pending. Toutes les 5 min (le client attend).
+[functions."recovery-cron"]
+  schedule = "*/5 * * * *"
+
 # Relance cover + refaire/régénérer (dropdown `refaire`) : chaque minute (quasi instantané).
 [functions."cover-cron"]
   schedule = "* * * * *"
