@@ -1265,6 +1265,36 @@ body {
   </div>
 </div>
 
+<!-- ══ MODALE : Erreur de prononciation ══════════════════ -->
+<div class="cm-modal-overlay" id="cm-pron-overlay" aria-hidden="true">
+  <div class="cm-modal" role="dialog" aria-modal="true" aria-labelledby="cm-pron-title">
+    <button type="button" class="cm-modal-close" id="cm-pron-close" aria-label="Fermer">&times;</button>
+    <div class="cm-modal-title" id="cm-pron-title">Erreur de prononciation</div>
+    <p class="cm-modal-sub">Indique-nous le mot mal prononcé : on le corrige et on te renvoie l'aperçu.</p>
+
+    <div id="cm-pron-form">
+      <label class="cm-modal-label" for="cm-pron-mot">Quel mot est mal prononcé ?</label>
+      <input class="cm-modal-select" id="cm-pron-mot" type="text" placeholder="Ex. : Disquatch" maxlength="120">
+
+      <label class="cm-modal-label" for="cm-pron-comment">Comment ça devrait sonner ? <span class="cm-modal-opt">(optionnel)</span></label>
+      <textarea class="cm-modal-textarea" id="cm-pron-comment" rows="3" placeholder="Ex. : ça se dit « diskoutch », c'est un nom de famille. Là il le prononce à l'anglaise."></textarea>
+
+      <div class="cm-modal-actions">
+        <button type="button" class="cm-modal-cancel" id="cm-pron-cancel">Annuler</button>
+        <button type="button" class="cm-modal-confirm" id="cm-pron-send">Envoyer la correction</button>
+      </div>
+    </div><!-- /#cm-pron-form -->
+
+    <div id="cm-pron-done" style="display:none;">
+      <p class="cm-modal-hint" style="font-size:14px;">Merci ✓ Tu recevras ton lien avec l'aperçu corrigé d'ici <strong>24 à 48 h</strong>.<br><br>Surveille tes courriels indésirables au cas où, et n'hésite pas à nous écrire au besoin.</p>
+      <div class="cm-modal-actions">
+        <button type="button" class="cm-modal-confirm" id="cm-pron-ok">Parfait</button>
+      </div>
+    </div>
+    <p class="cm-modal-note" id="cm-pron-status" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════
      SCRIPTS
 ═══════════════════════════════════════════════════════ -->
@@ -1584,12 +1614,14 @@ setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet
      la conversion ; il sera déplacé sur la page finale de réception (voir mémoire cm-apercu-boutons). */
   var actions = document.createElement('div');
   actions.className = 'cm-regen-actions';
+  var bPron = document.createElement('button');
+  bPron.type = 'button'; bPron.className = 'cm-regen-btn cm-regen-btn-sec'; bPron.textContent = 'Erreur de prononciation';
   var b1 = document.createElement('button');
   b1.type = 'button'; b1.className = 'cm-regen-btn'; b1.textContent = 'Essayer un autre style';
   var note = document.createElement('p');
   note.className = 'cm-regen-note';
   note.textContent = "Ajuste le style, la voix ou l'ambiance, ou bonifie un souvenir.";
-  actions.appendChild(b1); actions.appendChild(note);
+  actions.appendChild(bPron); actions.appendChild(b1); actions.appendChild(note);
   var player = document.getElementById('cm-player-root');
   if (player) player.parentNode.insertBefore(actions, player.nextSibling);
   else anchor.parentNode.insertBefore(actions, anchor.nextSibling);
@@ -1629,6 +1661,38 @@ setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet
 
   b1.addEventListener('click', openModal);
   /* (b2 « Créer une chanson pour quelqu'un d'autre » retiré de l'aperçu — ira sur la page finale.) */
+
+  /* ── Erreur de prononciation → courriel équipe (analyse IA) ; le client patiente 24-48 h. ── */
+  var pOv = document.getElementById('cm-pron-overlay');
+  function pOpen(){
+    if (!pOv) return;
+    var f=document.getElementById('cm-pron-form'), d=document.getElementById('cm-pron-done'), s=document.getElementById('cm-pron-status');
+    if (f) f.style.display=''; if (d) d.style.display='none'; if (s) s.textContent='';
+    var snd=document.getElementById('cm-pron-send'); if (snd) snd.disabled=false;
+    pOv.classList.add('show'); pOv.setAttribute('aria-hidden','false');
+  }
+  function pClose(){ if (!pOv) return; pOv.classList.remove('show'); pOv.setAttribute('aria-hidden','true'); }
+  bPron.addEventListener('click', pOpen);
+  var pCloseBtn=document.getElementById('cm-pron-close'), pCancel=document.getElementById('cm-pron-cancel'), pOk=document.getElementById('cm-pron-ok');
+  if (pCloseBtn) pCloseBtn.addEventListener('click', pClose);
+  if (pCancel)   pCancel.addEventListener('click', pClose);
+  if (pOk)       pOk.addEventListener('click', pClose);
+  if (pOv)       pOv.addEventListener('click', function(e){ if (e.target === pOv) pClose(); });
+  var pSend=document.getElementById('cm-pron-send');
+  if (pSend) pSend.addEventListener('click', function(){
+    var mot=(document.getElementById('cm-pron-mot').value || '').trim();
+    var comment=(document.getElementById('cm-pron-comment').value || '').trim();
+    var s=document.getElementById('cm-pron-status');
+    if (!mot){ if (s) s.textContent='Indique le mot mal prononcé.'; return; }
+    pSend.disabled=true; if (s) s.textContent='Un instant…';
+    fetch('/api/prononciation', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, mot: mot, indication: comment }) })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(res){
+        if (res && res.ok){ var f=document.getElementById('cm-pron-form'), d=document.getElementById('cm-pron-done'); if (f) f.style.display='none'; if (d) d.style.display='block'; if (s) s.textContent=''; }
+        else { pSend.disabled=false; if (s) s.textContent='Un souci est survenu. Réessaye dans un instant.'; }
+      })
+      .catch(function(){ pSend.disabled=false; if (s) s.textContent='Un souci est survenu. Réessaye dans un instant.'; });
+  });
 
   var closeBtn  = document.getElementById('cm-style-close');
   var cancelBtn = document.getElementById('cm-style-cancel');
