@@ -43,29 +43,41 @@ async function rangerProjet(api, headers, projet) {
   const p = projet.fields;
   let moved = 0, skipped = 0, failed = 0;
 
-  // 1. Audio de toutes les Generations du projet.
+  // 1. Pour chaque Generation : son audio + ses livrables upsell (PAR VERSION : instrumental/video/signet/pdf).
   try {
     const l = lit(p.project);
     if (l) {
       const r = await fetch(`${api}/${GENS}?filterByFormula=${encodeURIComponent(`{project}=${l}`)}`, { headers });
       const gens = (((await r.json()) || {}).records) || [];
       for (const g of gens) {
+        const gp = {};
+        // a) Audio de la version.
         const url = g.fields && g.fields.cloudinary_audio_url;
-        if (!url) continue;
-        const res = await moveAsset(url);
-        if (!res) { failed++; continue; }
-        if (res.already) { skipped++; continue; }
-        const np = parseCloudinaryUrl(res.newUrl);
-        await fetch(`${api}/${GENS}/${g.id}`, {
-          method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields: { cloudinary_audio_url: res.newUrl, cloudinary_public_id: np ? np.publicId : undefined } })
-        });
-        moved++;
+        if (url) {
+          const res = await moveAsset(url);
+          if (!res) failed++;
+          else if (res.already) skipped++;
+          else { const np = parseCloudinaryUrl(res.newUrl); gp.cloudinary_audio_url = res.newUrl; if (np) gp.cloudinary_public_id = np.publicId; moved++; }
+        }
+        // b) Livrables upsell de CETTE version.
+        for (const c of UPSELL_FIELDS) {
+          if (!g.fields[c]) continue;
+          const res = await moveAsset(g.fields[c]);
+          if (!res) { failed++; continue; }
+          if (res.already) { skipped++; continue; }
+          gp[c] = res.newUrl; moved++;
+        }
+        if (Object.keys(gp).length) {
+          await fetch(`${api}/${GENS}/${g.id}`, {
+            method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: gp })
+          });
+        }
       }
     }
   } catch (_) { failed++; }
 
-  // 2. Upsells sur le Projet (instrumentale, vidéo, signet, PDF).
+  // 2. Upsells encore au niveau Projet (LEGACY, données pas encore migrées).
   const patch = {};
   for (const c of UPSELL_FIELDS) {
     if (!p[c]) continue;
@@ -104,17 +116,27 @@ async function rangerRevert(api, headers, projet) {
       const r = await fetch(`${api}/${GENS}?filterByFormula=${encodeURIComponent(`{project}=${l}`)}`, { headers });
       const gens = (((await r.json()) || {}).records) || [];
       for (const g of gens) {
+        const gp = {};
         const url = g.fields && g.fields.cloudinary_audio_url;
-        if (!url) continue;
-        const res = await moveAssetBack(url);
-        if (!res) { failed++; continue; }
-        if (res.already) { skipped++; continue; }
-        const np = parseCloudinaryUrl(res.newUrl);
-        await fetch(`${api}/${GENS}/${g.id}`, {
-          method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields: { cloudinary_audio_url: res.newUrl, cloudinary_public_id: np ? np.publicId : undefined } })
-        });
-        moved++;
+        if (url) {
+          const res = await moveAssetBack(url);
+          if (!res) failed++;
+          else if (res.already) skipped++;
+          else { const np = parseCloudinaryUrl(res.newUrl); gp.cloudinary_audio_url = res.newUrl; if (np) gp.cloudinary_public_id = np.publicId; moved++; }
+        }
+        for (const c of UPSELL_FIELDS) {   // livrables upsell PAR VERSION (revert)
+          if (!g.fields[c]) continue;
+          const res = await moveAssetBack(g.fields[c]);
+          if (!res) { failed++; continue; }
+          if (res.already) { skipped++; continue; }
+          gp[c] = res.newUrl; moved++;
+        }
+        if (Object.keys(gp).length) {
+          await fetch(`${api}/${GENS}/${g.id}`, {
+            method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: gp })
+          });
+        }
       }
     }
   } catch (_) { failed++; }

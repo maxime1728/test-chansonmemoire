@@ -1,8 +1,8 @@
 // netlify/functions/callback-paroles-vivantes.js
 //
-// Reçoit le webhook Creatomate en fin de rendu -> écrit l'URL de la vidéo sur le Project.
-// Matching : par `metadata` (= token, posé par lancer-paroles-vivantes) en priorité ;
-//   sinon par `video_task_id` (= id de rendu Creatomate). Webhook public -> on ne fait que poser video_url.
+// Reçoit le webhook Creatomate en fin de rendu -> écrit video_url sur la GENERATION achetée.
+// Matching : par `metadata` (= token -> Project -> sa version achetée) en priorité ; sinon par
+//   `video_task_id` sur Generations (repli Projects, legacy). Webhook public -> on ne pose que video_url.
 // Répond TOUJOURS 200 (un webhook ne doit jamais renvoyer d'erreur au fournisseur).
 //
 // PERMANENCE : l'URL Creatomate est conservée ~30 j -> on RÉ-HÉBERGE la vidéo sur Cloudinary (copie
@@ -45,30 +45,42 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: '{}' };   // pas prêt / échec -> on n'écrit rien
   }
 
-  // Filtre de matching : token (metadata) si c'est un UUID valide, sinon id de rendu.
-  let formule;
-  if (UUID_V4.test(meta)) {
-    formule = `{token}=${formulaLiteral(meta)}`;
-  } else if (renderId) {
-    const lit = formulaLiteral(renderId);
-    if (lit === null) return { statusCode: 200, body: '{}' };
-    formule = `{video_task_id}=${lit}`;
-  } else {
-    return { statusCode: 200, body: '{}' };
-  }
-
   const headers = { Authorization: `Bearer ${AT_TOKEN}` };
   try {
-    const r = await fetch(`${API}/Projects?filterByFormula=${encodeURIComponent(formule)}&maxRecords=1`, { headers });
-    const d = await r.json();
-    const projet = d.records && d.records[0];
-    if (!projet) return { statusCode: 200, body: '{}' };   // rien à matcher (inconnu / déjà nettoyé)
+    // Cible = la GENERATION achetée. Deux chemins : metadata=token (-> Project -> sa version achetée),
+    // sinon video_task_id (-> directement la Generation ; repli Projects pour le legacy).
+    let target = null;   // { table, id }
+
+    if (UUID_V4.test(meta)) {
+      const projet = (((await (await fetch(`${API}/Projects?filterByFormula=${encodeURIComponent(`{token}=${formulaLiteral(meta)}`)}&maxRecords=1`, { headers })).json()) || {}).records || [])[0] || null;
+      if (projet) {
+        const no = parseInt(projet.fields.purchased_generation_no, 10);
+        const projLit = formulaLiteral(projet.fields.project);
+        if (Number.isInteger(no) && projLit !== null) {
+          const fg = encodeURIComponent(`AND({project}=${projLit},{generation_no}=${no})`);
+          const gen = (((await (await fetch(`${API}/Generations?filterByFormula=${fg}&maxRecords=1`, { headers })).json()) || {}).records || [])[0] || null;
+          if (gen) target = { table: 'Generations', id: gen.id };
+        }
+        if (!target) target = { table: 'Projects', id: projet.id };   // repli legacy
+      }
+    } else if (renderId) {
+      const lit = formulaLiteral(renderId);
+      if (lit !== null) {
+        const fr = encodeURIComponent(`{video_task_id}=${lit}`);
+        const gen = (((await (await fetch(`${API}/Generations?filterByFormula=${fr}&maxRecords=1`, { headers })).json()) || {}).records || [])[0] || null;
+        if (gen) target = { table: 'Generations', id: gen.id };
+        else {
+          const projet = (((await (await fetch(`${API}/Projects?filterByFormula=${fr}&maxRecords=1`, { headers })).json()) || {}).records || [])[0] || null;
+          if (projet) target = { table: 'Projects', id: projet.id };
+        }
+      }
+    }
+    if (!target) return { statusCode: 200, body: '{}' };   // rien à matcher (inconnu / déjà nettoyé)
 
     // Ré-héberge sur Cloudinary (permanent). Repli sur l'URL Creatomate si non configuré / échec.
-    const pubId = `video_${projet.fields.token || renderId}`;
-    const hosted = await rehost(videoUrl, { folder: 'paroles-vivantes', publicId: pubId, resourceType: 'video' });
+    const hosted = await rehost(videoUrl, { folder: 'paroles-vivantes', publicId: `video_${renderId || meta}`, resourceType: 'video' });
 
-    await fetch(`${API}/Projects/${projet.id}`, {
+    await fetch(`${API}/${target.table}/${target.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { video_url: hosted || videoUrl } })

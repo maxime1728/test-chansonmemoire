@@ -160,11 +160,6 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: JSON.stringify({ error: 'Réservé après achat' }) };
     }
 
-    // Idempotence : déjà généré.
-    if (projet.fields.pdf_url) {
-      return { statusCode: 200, body: JSON.stringify({ ok: true, pdf_url: projet.fields.pdf_url, already: true }) };
-    }
-
     // Version achetée -> ses paroles + titre.
     const purchasedNo = parseInt(projet.fields.purchased_generation_no, 10);
     if (!Number.isInteger(purchasedNo)) return { statusCode: 409, body: JSON.stringify({ error: 'Version achetée inconnue' }) };
@@ -176,6 +171,10 @@ exports.handler = async (event) => {
     const gen = dG.records && dG.records[0];
     if (!gen || !gen.fields.lyrics) return { statusCode: 409, body: JSON.stringify({ error: 'Paroles introuvables' }) };
 
+    // Idempotence PAR VERSION : déjà généré pour cette version (repli Project pour le legacy).
+    const pdfDeja = gen.fields.pdf_url || projet.fields.pdf_url;
+    if (pdfDeja) return { statusCode: 200, body: JSON.stringify({ ok: true, pdf_url: pdfDeja, already: true }) };
+
     const titre   = gen.fields.song_title || '';
     const paroles = stripSectionTags(gen.fields.lyrics || '');   // PDF + courriel : balises Suno masquées
     const prenom  = projet.fields.deceased_name || '';
@@ -185,7 +184,7 @@ exports.handler = async (event) => {
     const pdfBuffer = await genererPdf({ titre, paroles, prenom, cadeau });
     const pdfUrl = await uploadCloudinary(pdfBuffer, `paroles_${token}`);
 
-    await fetch(`${API}/Projects/${projet.id}`, {
+    await fetch(`${API}/Generations/${gen.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { pdf_url: pdfUrl, pdf_template: 'pdf-1' } })

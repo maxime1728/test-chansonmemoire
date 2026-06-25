@@ -47,11 +47,6 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: JSON.stringify({ error: 'Réservé après achat' }) };
     }
 
-    // 2. Idempotence : déjà lancé -> on ne refait rien.
-    if (projet.fields.instrumental_task_id) {
-      return { statusCode: 200, body: JSON.stringify({ ok: true, already: true }) };
-    }
-
     // 3. Version achetée -> sa Generation -> suno_task_id (taskId) + song_id (audioId).
     const purchasedNo = parseInt(projet.fields.purchased_generation_no, 10);
     if (!Number.isInteger(purchasedNo)) return { statusCode: 409, body: JSON.stringify({ error: 'Version achetée inconnue' }) };
@@ -63,6 +58,12 @@ exports.handler = async (event) => {
     const dG = await rG.json();
     const gen = dG.records && dG.records[0];
     if (!gen) return { statusCode: 404, body: JSON.stringify({ error: 'Version introuvable' }) };
+
+    // Idempotence PAR VERSION : déjà lancé sur cette Generation -> on ne refait rien.
+    // Repli sur le Project pour le legacy (anciennes données encore au niveau Project).
+    if (gen.fields.instrumental_task_id || projet.fields.instrumental_task_id) {
+      return { statusCode: 200, body: JSON.stringify({ ok: true, already: true }) };
+    }
 
     const taskId  = gen.fields.suno_task_id || '';
     const audioId = gen.fields.song_id || '';
@@ -86,8 +87,8 @@ exports.handler = async (event) => {
       return { statusCode: 502, body: JSON.stringify({ error: 'Lancement instrumentale échoué' }) };
     }
 
-    // 5. Stocke le taskId vocal-removal -> le callback matchera le Project par ce champ.
-    await fetch(`${API}/Projects/${projet.id}`, {
+    // 5. Stocke le taskId vocal-removal SUR LA GENERATION -> le callback matchera par ce champ.
+    await fetch(`${API}/Generations/${gen.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { instrumental_task_id: String(vrTask) } })

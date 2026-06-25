@@ -134,12 +134,13 @@ exports.handler = async (event) => {
         song_type:         projet.fields.song_type || 'hommage',   // hommage|cadeau -> adapte le copy + pilote le loader anti-flash (non-PII)
         style:             gen.gen_music_style || projet.fields.music_style || '',   // affichage acceptation (titre + style + ambiance)
         ambiance:          gen.gen_mood        || projet.fields.mood        || '',
-        cadeaux_requested: !!projet.fields.pdf_template,            // a déjà choisi ses modèles -> état 'en préparation' tant que les URLs sont absentes
-        pdf_url:           toHttps(projet.fields.pdf_url || ''),    // PDF paroles (Canva) — propriété du client, token-gaté ; posé par Make au fulfillment
-        signet_url:        toHttps(projet.fields.signet_url || ''), // signet commémoration (Canva)
-        instrumental_url:  toHttps(projet.fields.instrumental_url || ''), // add-on instrumentale livrée (Suno vocal-removal) — propriété du client, token-gaté
-        video_url:         toHttps(projet.fields.video_url || '')         // add-on paroles vivantes livrée (vidéo Shotstack) — propriété du client, token-gaté
-        // PAS d'email, PAS de stripe_*, PAS d'attribution. Volontaire.
+        // Livrables PAR VERSION : on lit la Generation achetée d'abord, repli sur le Project (legacy non migré).
+        cadeaux_requested: !!(gen.pdf_template || projet.fields.pdf_template),            // a déjà choisi ses modèles -> état 'en préparation' tant que les URLs sont absentes
+        pdf_url:           toHttps(gen.pdf_url          || projet.fields.pdf_url          || ''),  // PDF paroles — propriété du client, token-gaté
+        signet_url:        toHttps(gen.signet_url       || projet.fields.signet_url       || ''),  // signet commémoration
+        instrumental_url:  toHttps(gen.instrumental_url || projet.fields.instrumental_url || ''),  // add-on instrumentale livrée (Suno separate_vocal) — token-gaté
+        video_url:         toHttps(gen.video_url        || projet.fields.video_url        || '')   // add-on paroles vivantes livrée (Creatomate) — token-gaté
+        // PAS d'email, PAS de stripe_*, PAS d'attribution. Volontaire. vocal_url volontairement NON exposé (interne).
       })
     };
 

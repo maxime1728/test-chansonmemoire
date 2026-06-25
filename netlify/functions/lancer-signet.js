@@ -113,9 +113,19 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: JSON.stringify({ error: 'Réservé après achat' }) };
     }
 
-    // Idempotence : déjà généré.
-    if (projet.fields.signet_url) {
-      return { statusCode: 200, body: JSON.stringify({ ok: true, signet_url: projet.fields.signet_url, already: true }) };
+    // Version achetée -> sa Generation (cible des livrables, par version).
+    const purchasedNo = parseInt(projet.fields.purchased_generation_no, 10);
+    if (!Number.isInteger(purchasedNo)) return { statusCode: 409, body: JSON.stringify({ error: 'Version achetée inconnue' }) };
+    const projLit = formulaLiteral(projet.fields.project);
+    if (projLit === null) return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
+    const fG = encodeURIComponent(`AND({project}=${projLit},{generation_no}=${purchasedNo})`);
+    const gen = (((await (await fetch(`${API}/Generations?filterByFormula=${fG}&maxRecords=1`, { headers })).json()) || {}).records || [])[0] || null;
+    if (!gen) return { statusCode: 404, body: JSON.stringify({ error: 'Version introuvable' }) };
+
+    // Idempotence PAR VERSION : déjà généré (repli Project pour le legacy).
+    const signetDeja = gen.fields.signet_url || projet.fields.signet_url;
+    if (signetDeja) {
+      return { statusCode: 200, body: JSON.stringify({ ok: true, signet_url: signetDeja, already: true }) };
     }
 
     const prenom = projet.fields.deceased_name || '';
@@ -128,7 +138,7 @@ exports.handler = async (event) => {
     const pdfBuffer = await genererSignetPdf({ prenom, phrase, qrBuffer, cadeau });
     const signetUrl = await uploadCloudinary(pdfBuffer, `signet_${token}`);
 
-    await fetch(`${API}/Projects/${projet.id}`, {
+    await fetch(`${API}/Generations/${gen.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { signet_url: signetUrl, signet_template: 'signet-1' } })

@@ -94,14 +94,6 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: JSON.stringify({ error: 'Réservé après achat' }) };
     }
 
-    // 2. Idempotence : déjà livré -> renvoie l'URL ; rendu en cours -> 'pending' (pas de relance).
-    if (projet.fields.video_url) {
-      return { statusCode: 200, body: JSON.stringify({ ok: true, video_url: projet.fields.video_url, already: true }) };
-    }
-    if (projet.fields.video_task_id) {
-      return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true }) };
-    }
-
     // 3. Version achetée -> sa Generation (paroles, titre, source audio + ids Suno + timing stocké).
     const purchasedNo = parseInt(projet.fields.purchased_generation_no, 10);
     if (!Number.isInteger(purchasedNo)) return { statusCode: 409, body: JSON.stringify({ error: 'Version achetée inconnue' }) };
@@ -112,6 +104,13 @@ exports.handler = async (event) => {
     const dG = await rG.json();
     const gen = dG.records && dG.records[0];
     if (!gen || !gen.fields.lyrics) return { statusCode: 409, body: JSON.stringify({ error: 'Paroles introuvables' }) };
+
+    // 2. Idempotence PAR VERSION : déjà livré -> renvoie l'URL ; rendu en cours -> 'pending'.
+    //    Repli sur le Project (legacy) pour les données pas encore migrées.
+    const vUrl  = gen.fields.video_url     || projet.fields.video_url;
+    const vTask = gen.fields.video_task_id || projet.fields.video_task_id;
+    if (vUrl)  return { statusCode: 200, body: JSON.stringify({ ok: true, video_url: vUrl, already: true }) };
+    if (vTask) return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true }) };
 
     const audioUrl = fullAudioUrl(gen.fields.cloudinary_audio_url || '');
     if (!audioUrl) return { statusCode: 409, body: JSON.stringify({ error: 'Audio source introuvable' }) };
@@ -129,7 +128,7 @@ exports.handler = async (event) => {
     });
     if (!edit) return { statusCode: 409, body: JSON.stringify({ error: 'Paroles vides' }) };
 
-    // 5. Lance le rendu Creatomate (async). webhook + metadata=token -> le callback matche le Project.
+    // 5. Lance le rendu Creatomate (async). webhook + metadata=token -> le callback retrouve la version achetée.
     //    v1 : { source, webhook_url, metadata } (forme documentée) ; v2 : RenderScript au top-level.
     const extra = { webhook_url: `${SITE}/api/callback-paroles-vivantes${process.env.CALLBACK_SECRET ? '?s=' + encodeURIComponent(process.env.CALLBACK_SECRET) : ''}`, metadata: token };
     const payload = (CREATOMATE_VERSION === 'v1')
@@ -149,8 +148,8 @@ exports.handler = async (event) => {
       return { statusCode: 502, body: JSON.stringify({ error: 'Lancement de la vidéo échoué' }) };
     }
 
-    // 6. Stocke l'ID de rendu -> le callback peut aussi matcher par ce champ (en plus du metadata).
-    await fetch(`${API}/Projects/${projet.id}`, {
+    // 6. Stocke l'ID de rendu SUR LA GENERATION -> le callback matche par ce champ (en plus du metadata).
+    await fetch(`${API}/Generations/${gen.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { video_task_id: String(renderId) } })
