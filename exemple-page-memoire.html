@@ -155,6 +155,14 @@
     </div>
   </div>
 
+  <!-- 2b. VERSION INSTRUMENTALE (add-on, montré avec les paroles vivantes) -->
+  <div class="card">
+    <div class="badge">Option</div>
+    <div class="section-title">Sa version instrumentale</div>
+    <p class="section-sub">La trame musicale seule, sans voix, pour une cérémonie ou un fond sonore.</p>
+    <div id="instruWrap"></div>
+  </div>
+
   <!-- 3. PDF DES PAROLES -->
   <div class="card center">
     <div class="section-title" style="margin-bottom:10px;">Les paroles en PDF</div>
@@ -187,6 +195,7 @@
   var AUDIO_START = 0;   /* secondes ; mets ex. 48 pour démarrer au Couplet 2 */
   var VIDEO_URL = '';    /* URL .mp4 de la vidéo paroles vivantes (à remplir après rendu) */
   var PDF_URL   = 'exemple-paroles-mhdl.html';   /* feuille de paroles prête à « Enregistrer en PDF » */
+  var INSTRUMENTAL_URL = '';   /* MP3 instrumental (sans voix) ; vide = « à venir ». Mets l'URL Cloudinary du mix instrumental. */
 
   function audioUrl(){
     var tf = AUDIO_START > 0 ? ('so_' + AUDIO_START + '/') : '';
@@ -267,6 +276,20 @@
     if(PDF_URL){ a.href = PDF_URL; }
     else { a.removeAttribute('href'); a.style.opacity = '.55'; a.style.pointerEvents = 'none';
            a.innerHTML = '<i class="fa-solid fa-file-pdf"></i>&nbsp; PDF des paroles · bientôt'; }
+  })();
+
+  /* ── Version instrumentale : lecteur natif si URL fournie, sinon « à venir ». ── */
+  (function instru(){
+    var w = document.getElementById('instruWrap');
+    if(INSTRUMENTAL_URL){
+      var a = document.createElement('audio');
+      a.src = INSTRUMENTAL_URL; a.controls = true; a.preload = 'none';
+      a.style.width = '100%';
+      w.appendChild(a);
+    } else {
+      w.innerHTML = '<div class="video-frame" style="aspect-ratio:auto;padding:22px;">'
+        + '<div class="video-ph"><i class="fa-solid fa-music"></i>La version instrumentale s\'ajoute ici.</div></div>';
+    }
   })();
 
   /* ── Vidéo paroles vivantes ──────────────────────────────────────────────────
