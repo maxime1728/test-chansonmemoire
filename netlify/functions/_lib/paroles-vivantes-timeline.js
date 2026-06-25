@@ -119,7 +119,7 @@ function textEl({ text, track, time, duration, family, weight, color, size, y, f
 }
 
 // Assemble le RenderScript Creatomate complet à partir des lignes timées.
-function buildEdit({ titre, prenom, lines, introLen, lyricsEnd, songEnd, audioUrl }) {
+function buildEdit({ titre, prenom, cadeau, lines, introLen, lyricsEnd, songEnd, audioUrl }) {
   const elements = [];
 
   // Bande-son (piste 1) : la chanson, bornée à la durée vidéo, fondu de sortie.
@@ -141,7 +141,7 @@ function buildEdit({ titre, prenom, lines, introLen, lyricsEnd, songEnd, audioUr
     }));
     if (prenom) {
       elements.push(textEl({
-        text: 'en mémoire de ' + prenom, track: 3, time: 0, duration: introLen,
+        text: (cadeau ? 'pour ' : 'en mémoire de ') + prenom, track: 3, time: 0, duration: introLen,
         family: FONT_BODY, weight: '400', color: GOLD, size: 30, y: '58%', fadeOut: true
       }));
     }
@@ -163,12 +163,12 @@ function buildEdit({ titre, prenom, lines, introLen, lyricsEnd, songEnd, audioUr
 }
 
 // Façade : paroles brutes + alignement Suno -> RenderScript Creatomate prêt à rendre.
-function buildEditFromLyrics({ titre, prenom, lyrics, alignedWords, audioUrl }) {
+function buildEditFromLyrics({ titre, prenom, cadeau, lyrics, alignedWords, audioUrl }) {
   const displayLines = cleanLyrics(lyrics);
   if (displayLines.length === 0) return null;
   const t = timeLines(displayLines, alignedWords);
   return buildEdit({
-    titre, prenom, audioUrl,
+    titre, prenom, cadeau, audioUrl,
     lines: t.lines, introLen: t.introLen, lyricsEnd: t.lyricsEnd, songEnd: t.songEnd
   });
 }
