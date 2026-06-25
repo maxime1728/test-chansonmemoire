@@ -98,7 +98,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="cm-logo">Chanson<span>Mémoire</span></div>
+  <img src="https://res.cloudinary.com/dcx1tfm47/image/upload/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire" style="height:42px;width:auto;display:block;margin:0 auto 28px;">
   <div class="eyebrow">Ta chanson, pour toujours</div>
   <h1 id="title">Ta chanson</h1>
   <p class="subtitle" id="subtitle"></p>
@@ -204,7 +204,7 @@
   'use strict';
   var UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   var token = new URLSearchParams(window.location.search).get('id') || '';
-  if(!UUID_V4.test(token)){ document.getElementById('title').textContent='Lien invalide'; document.querySelector('.wrap').innerHTML='<div class="cm-logo">Chanson<span>Mémoire</span></div><h1 id="title">Lien invalide</h1>'; return; }
+  if(!UUID_V4.test(token)){ document.getElementById('title').textContent='Lien invalide'; document.querySelector('.wrap').innerHTML='<img src="https://res.cloudinary.com/dcx1tfm47/image/upload/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire" style="height:42px;width:auto;display:block;margin:0 auto 28px;"><h1 id="title">Lien invalide</h1>'; return; }
 
   function post(url, payload){ return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.ok?r.json():null;}); }
 
