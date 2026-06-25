@@ -901,7 +901,7 @@ body {
 .cm-bump small { display:block; font-weight:400; color:var(--cm-text-sub); margin-top:2px; }
 /* ════════ EFFETS (continuité avec l'accueil) ════════ */
 .cm-hero{position:relative;}
-.cm-hero::before{content:"";position:absolute;top:-24px;left:50%;width:560px;max-width:150%;height:320px;transform:translateX(-50%);z-index:-1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(232,201,122,.30),rgba(232,201,122,.06) 48%,transparent 72%);animation:cm-fx-breathe 7s ease-in-out infinite;will-change:transform,opacity;}
+.cm-hero::before{content:"";position:absolute;top:-40px;left:50%;width:640px;max-width:160%;height:380px;transform:translateX(-50%);z-index:-1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(232,201,122,.5),rgba(201,139,176,.18) 42%,transparent 70%);animation:cm-fx-breathe 7s ease-in-out infinite;will-change:transform,opacity;}
 @keyframes cm-fx-breathe{0%,100%{opacity:.55;transform:translateX(-50%) scale(.97);}50%{opacity:1;transform:translateX(-50%) scale(1.06);}}
 #cm-player-root .cm-play-btn{position:relative;}
 #cm-player-root .cm-play-btn::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid rgba(196,150,58,.45);animation:cm-fx-ring 2.6s ease-out infinite;pointer-events:none;}
@@ -909,10 +909,16 @@ body {
 .stripe-btn,.stripe-btn-2,.cm-sticky-btn{position:relative;overflow:hidden;}
 .stripe-btn::after,.stripe-btn-2::after,.cm-sticky-btn::after{content:"";position:absolute;top:0;left:-130%;width:55%;height:100%;background:linear-gradient(110deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-18deg);transition:left .6s;pointer-events:none;}
 @media(hover:hover){.stripe-btn:hover::after,.stripe-btn-2:hover::after,.cm-sticky-btn:hover::after{left:150%;}}
-@media (prefers-reduced-motion:reduce){.cm-hero::before{animation:none;opacity:.7;}#cm-player-root .cm-play-btn::after{display:none;}}
+@media (prefers-reduced-motion:reduce){.cm-hero::before{animation:none;opacity:.7;}#cm-player-root .cm-play-btn::after{display:none;}#cm-loader .cm-spin{animation-duration:1.4s;}}
+/* Roue de chargement — évite le flash hommage->cadeau (masquée dès que song_type est connu) */
+#cm-loader{position:fixed;inset:0;z-index:9999;background:var(--cm-bg);display:flex;align-items:center;justify-content:center;transition:opacity .45s ease;}
+#cm-loader.cm-hide{opacity:0;pointer-events:none;}
+#cm-loader .cm-spin{width:46px;height:46px;border-radius:50%;border:3px solid rgba(92,45,74,.15);border-top-color:var(--cm-gold);animation:cm-spin .8s linear infinite;}
+@keyframes cm-spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
+<div id="cm-loader" aria-hidden="true"><div class="cm-spin"></div></div>
 
 <!-- ══ LOGO ══════════════════════════════════════════ -->
 <header class="cm-header">
@@ -1362,6 +1368,7 @@ body {
   .then(function(r) { return r.ok ? r.json() : null; })
   .then(function(d) {
     if (d && window._CM) { window._CM.type = d.song_type || 'hommage'; if (window.cmPersonnaliser) window.cmPersonnaliser(); }
+    if (window.cmReady) window.cmReady();
     if (!d || !Array.isArray(d.versions) || d.versions.length === 0) return;
     var versions = d.versions;
     var def = versions.length - 1;   /* la plus recente par defaut */
@@ -1428,7 +1435,14 @@ window.cmPersonnaliser = function() {
   /* Sticky (identique) */
   if (nom) setT('stripeBtnSticky', 'Obtenir la chanson de ' + nom);
 };
+window.cmReady = function(){
+  var l = document.getElementById('cm-loader');
+  if (!l || l.classList.contains('cm-hide')) return;
+  l.classList.add('cm-hide');
+  setTimeout(function(){ if (l.parentNode) l.parentNode.removeChild(l); }, 480);
+};
 window.cmPersonnaliser();
+setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet : ne jamais rester bloqué sur la roue */
 
 /* ── STRIPE — session Checkout serveur (version choisie) ──────────────
    Remplace le Payment Link. Crée la session via /api/creer-checkout (prix fixé serveur,
