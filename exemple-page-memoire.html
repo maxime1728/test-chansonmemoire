@@ -112,7 +112,7 @@
   <img src="https://res.cloudinary.com/dcx1tfm47/image/upload/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire" style="height:42px;width:auto;display:block;margin:0 auto 28px;">
   <div class="eyebrow">Sa chanson, pour toujours</div>
   <h1 id="title">Mon homme du lac</h1>
-  <p class="subtitle" id="subtitle">Acoustique folk · Émotionnelle</p>
+  <p class="subtitle" id="subtitle">Gospel · Émotionnelle</p>
 
   <!-- LECTEUR -->
   <div id="cm-player-root">
@@ -135,28 +135,38 @@
   </div>
   <p class="loading" id="loading">La chanson se charge…</p>
 
-  <!-- PAROLES -->
+  <!-- 1. VIDÉO SOUVENIR (photos + paroles) — à produire ensemble (étape 2) -->
   <div class="card">
-    <div class="section-title">Ses paroles</div>
-    <p class="section-sub">Écrites à partir de ses souvenirs : son chalet, son bouilli du samedi, ses matins de pêche.</p>
-    <div class="lyrics" id="lyrics"></div>
+    <div class="badge">En production</div>
+    <div class="section-title">Sa vidéo souvenir</div>
+    <p class="section-sub">Un montage de ses photos au fil des paroles, porté par sa chanson.</p>
+    <div class="video-frame">
+      <div class="video-ph"><i class="fa-solid fa-photo-film"></i>La vidéo souvenir (photos + paroles) s'ajoute ici.</div>
+    </div>
   </div>
 
-  <!-- PDF DES PAROLES -->
+  <!-- 2. VIDÉO PAROLES VIVANTES -->
+  <div class="card" id="video" style="scroll-margin-top:20px;">
+    <div class="badge">Option</div>
+    <div class="section-title">Sa vidéo des paroles</div>
+    <p class="section-sub">Les paroles qui défilent en musique, prêtes à projeter ou à partager.</p>
+    <div class="video-frame" id="videoFrame">
+      <div class="video-ph"><i class="fa-solid fa-film"></i>L'aperçu vidéo se charge…</div>
+    </div>
+  </div>
+
+  <!-- 3. PDF DES PAROLES -->
   <div class="card center">
     <div class="section-title" style="margin-bottom:10px;">Les paroles en PDF</div>
     <p class="section-sub">Une belle version imprimable, à garder ou à offrir.</p>
     <a class="btn btn-block" id="btnPdf" href="#" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i>&nbsp; Télécharger les paroles (PDF)</a>
   </div>
 
-  <!-- VIDÉO PAROLES VIVANTES -->
-  <div class="card" id="video" style="scroll-margin-top:20px;">
-    <div class="badge">Option</div>
-    <div class="section-title">Sa vidéo des paroles</div>
-    <p class="section-sub">Les paroles qui défilent en musique, prêtes à projeter ou à partager.</p>
-    <div class="video-frame" id="videoFrame">
-      <div class="video-ph"><i class="fa-solid fa-film"></i>L'exemple vidéo arrive ici une fois le rendu fait.</div>
-    </div>
+  <!-- 4. PAROLES NORMALES — tout en bas -->
+  <div class="card">
+    <div class="section-title">Ses paroles</div>
+    <p class="section-sub">Écrites à partir de ses souvenirs : son chalet, son bouilli du samedi, ses matins de pêche.</p>
+    <div class="lyrics" id="lyrics"></div>
   </div>
 
   <p class="note center" style="margin-top:24px;">C'est un exemple. Ta page à toi sera unique, à partir de tes souvenirs.</p>
