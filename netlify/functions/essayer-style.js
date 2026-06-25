@@ -20,7 +20,8 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 // caractère près, sinon 422). Empêche aussi d'écrire une valeur arbitraire dans le Project.
 const STYLES = ['Pop', 'Country', 'R&B', 'Rock', 'Jazz', 'Acoustique', 'Douce Mélodie',
   'Orchestre Gospel', 'Hip-Hop', 'Cinématographique', 'Latin / Salsa', 'Reggae', 'Électronique / Dance'];
-const MOODS  = ['Émotionnelle', 'Tendre', 'Paisible', 'Inspirante', 'Reconnaissante', 'Festive', 'Optimiste', 'Mélancolique'];
+const MOODS  = ['Émotionnelle', 'Tendre', 'Paisible', 'Inspirante', 'Reconnaissante', 'Festive', 'Optimiste', 'Mélancolique',
+  'Romantique', 'Joyeuse et entrainante', 'Drôle et enjouée', 'Énergique'];   // + ambiances CADEAU (union)
 const VOICES = ['Masculin', 'Féminin'];
 
 function formulaLiteral(v) {
