@@ -25,6 +25,12 @@
 [functions."recovery-cron"]
   schedule = "*/5 * * * *"
 
+# Rangement Cloudinary (#3) : déplace les assets des projets achetés dans cm_purchased. DORMANT
+# tant que l'env RANGER_CLOUDINARY_ACTIF n'est pas posée (sécurité : tester d'abord via
+# /api/ranger-achat sur un projet). Toutes les 10 min.
+[functions."ranger-cron"]
+  schedule = "*/10 * * * *"
+
 # Relance cover + refaire/régénérer (dropdown `refaire`) : chaque minute (quasi instantané).
 [functions."cover-cron"]
   schedule = "* * * * *"
