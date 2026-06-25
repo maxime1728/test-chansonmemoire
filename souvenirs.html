@@ -353,6 +353,20 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     currentStep = step; updateProgress(step); applyType();
   }
 
+  /* Ambiances ADAPTÉES au type : cadeau (occasions joyeuses) vs hommage (mémoire). Les valeurs
+     correspondent aux ambiances des prompts curés (table Airtable Songs_Styles). */
+  var MOODS_HOMMAGE = [['Émotionnelle','💧'],['Tendre','🌸'],['Paisible','🕊️'],['Inspirante','✨'],['Reconnaissante','🙏'],['Festive','🎉'],['Optimiste','🌤️'],['Mélancolique','🌙']];
+  var MOODS_CADEAU  = [['Inspirante','✨'],['Émotionnelle','💧'],['Romantique','❤️'],['Joyeuse et entrainante','🎉'],['Drôle et enjouée','😄'],['Énergique','⚡'],['Paisible','🕊️']];
+  function renderMoods(cadeau){
+    var box=document.getElementById('choices-mood'); if(!box) return;
+    var set = cadeau ? MOODS_CADEAU : MOODS_HOMMAGE;
+    var stillValid = set.some(function(m){ return m[0]===data.mood; });
+    box.innerHTML = set.map(function(m){
+      return '<button class="cm-choice'+((stillValid && m[0]===data.mood)?' selected':'')+'" data-value="'+m[0]+'"><span class="cm-choice-emoji">'+m[1]+'</span> '+m[0]+'</button>';
+    }).join('');
+    if(!stillValid) data.mood='';   // l'ancienne ambiance n'existe pas dans ce set -> on réinitialise
+  }
+
   /* Adaptation hommage/cadeau : bascule tous les textes [data-h]/[data-c] et placeholders
      [data-ph-h]/[data-ph-c]. {n} = prénom saisi (sinon « cette personne »). */
   function applyType(){
@@ -367,6 +381,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     document.querySelectorAll('[data-ph-h]').forEach(function(el){
       el.placeholder = c ? el.getAttribute('data-ph-c') : el.getAttribute('data-ph-h');
     });
+    renderMoods(c);
   }
   [].forEach.call(document.querySelectorAll('input[name="song_type"]'), function(r){ r.addEventListener('change', applyType); });
   applyType();
@@ -384,7 +399,13 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
   }
   bindChoices('choices-relationship', 'relationship', 4);
   bindChoices('choices-music_style',  'music_style',  5);
-  bindChoices('choices-mood',         'mood',         7);
+  /* Ambiances : délégation (les boutons sont re-rendus par renderMoods selon hommage/cadeau). */
+  document.getElementById('choices-mood').addEventListener('click', function(e){
+    var btn=e.target.closest('.cm-choice'); if(!btn) return;
+    this.querySelectorAll('.cm-choice').forEach(function(b){ b.classList.remove('selected'); });
+    btn.classList.add('selected'); data.mood=btn.dataset.value;
+    setTimeout(function(){ goTo(7); }, 220);
+  });
 
   /* Voix : sélection SANS auto-avance (la langue est sur la même étape) -> bouton Continuer. */
   document.querySelectorAll('#choices-voice .cm-choice').forEach(function(btn){
