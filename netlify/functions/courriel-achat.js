@@ -96,7 +96,9 @@ exports.handler = async (event) => {
       ? [valide(stripeEmail) ? stripeEmail : clientEmail].filter(valide)
       : [...new Set([clientEmail, stripeEmail].filter(valide))];   // achat -> les deux, dédupliqués
 
-    const lien = `${SITE}/page-memoire?id=${encodeURIComponent(token)}`;
+    // #8 : lien = ÉTAPE COURANTE (formule page_url, basée sur funnel_step). À l'achat -> page-chanson ;
+    // après acceptation -> page-memoire. Repli sur page-chanson si la formule n'est pas encore calculée.
+    const lien = projet.fields.page_url || `${SITE}/page-chanson?id=${encodeURIComponent(token)}`;
 
     let subject, html;
     if (kind === 'upsell') {

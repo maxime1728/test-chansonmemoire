@@ -20,7 +20,7 @@ const SITE     = 'https://chansonmemoire.ca';
 
 const MG_KEY    = process.env.MAILGUN_API_KEY;
 const MG_DOMAIN = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;     // transactionnel
-const MG_FROM   = process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';
+const MG_FROM   = process.env.MAILGUN_FROM_ACHAT || process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';   // post-achat -> sous-domaine achat
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -127,9 +127,13 @@ exports.handler = async (event) => {
     });
 
     // 3. Livre cette version + ferme la boucle (prêt pour un éventuel tour suivant).
+    //    purchased_generation_no n'est basculé qu'en POST-achat ; en pré-achat (cover d'aperçu) la
+    //    nouvelle génération devient simplement la plus récente (lire-projet sert la dernière).
+    const projPatch = { approval_status: 'published', cover_task_id: null, cover_launched_at: null };
+    if (Number.isInteger(purchasedNo)) projPatch.purchased_generation_no = newNo;
     await fetch(`${API}/Projects/${projet.id}`, {
       method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { purchased_generation_no: newNo, approval_status: 'published', cover_task_id: null, cover_launched_at: null } })
+      body: JSON.stringify({ fields: projPatch })
     });
 
     // 4. Courriel « nouvelle version prête » (best-effort, voix de marque).
@@ -138,7 +142,7 @@ exports.handler = async (event) => {
       const html = `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.7;max-width:560px;">` +
         `<p style="font-size:18px;color:#5C2D4A;">Votre nouvelle version est prête.</p>` +
         `<p>On a appliqué votre demande de modification. Écoutez et téléchargez la version mise à jour sur votre page :</p>` +
-        `<p style="margin:22px 0;"><a href="${SITE}/page-memoire?id=${encodeURIComponent(p.token)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:12px 22px;border-radius:8px;display:inline-block;">Écouter ma nouvelle version</a></p>` +
+        `<p style="margin:22px 0;"><a href="${p.page_url || (SITE + '/page-memoire?id=' + encodeURIComponent(p.token))}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:12px 22px;border-radius:8px;display:inline-block;">Écouter ma nouvelle version</a></p>` +
         `<p style="color:#7A6070;">— L'équipe Chanson Mémoire</p></div>`;
       await envoyerCourriel(to, 'Votre nouvelle version est prête', html);
     } catch (_) { /* le courriel ne bloque pas la livraison */ }

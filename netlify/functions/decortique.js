@@ -18,6 +18,7 @@ const MG_DOMAIN  = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAI
 const MG_FROM    = process.env.MAILGUN_FROM_ACHAT || process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';   // post-achat -> sous-domaine achat
 const TEAM_EMAIL = process.env.TEAM_NOTIFY_EMAIL;  // destinataire de l'alerte interne « à approuver »
 const SITE       = 'https://chansonmemoire.ca';    // lien page client (= courriel d'achat / nouvelle version)
+const { stripSectionTags } = require('./_lib/lyrics');   // masque les balises [Verse]/[Chorus] à l'affichage client
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -165,15 +166,22 @@ ${demande}`;
     const vno   = gen.generation_no || (Number.isInteger(boughtNo) ? boughtNo : '');
     const refId = `${token.slice(0, 8)}·V${vno}`;
 
-    // 4. Écrit la demande « à approuver » sur le Project (par nom de champ).
+    // 4. Routage (#10). Demande PAROLES SEULEMENT (ni prononciation, ni style) + paroles ajustées
+    //    disponibles -> AUTO-approuvée (cover automatique). Sinon -> en attente de TON approbation.
+    //    Dans TOUS les cas : demande enregistrée + courriel équipe (trace), auto ou manuel.
+    const aPrononc = /prononciation/.test(categories);
+    const aStyle   = /style_ambiance/.test(categories);
+    const autoApprouve = !!(parsed && adjLyrics && !aPrononc && !aStyle);
+
     const fields = {
       correction_request:    `CATÉGORIES : ${categories}\n\nDEMANDE CLIENT :\n${demande}\n\nANALYSE :\n${compteRendu}`,
       adjusted_style_prompt: adjStyle,
       adjusted_lyrics:       adjLyrics,
       mode_correction:       mode,
-      approval_status:       'pending',
+      approval_status:       autoApprouve ? 'approved' : 'pending',
       ref_id:                refId
     };
+    if (autoApprouve) { fields.cover_task_id = ''; fields.cover_launched_at = ''; }   // ré-arme le cover (modifs illimitées)
     const rU = await fetch(`${API}/Projects/${projet.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
@@ -183,13 +191,15 @@ ${demande}`;
       return { statusCode: 502, body: JSON.stringify({ error: 'Enregistrement impossible' }) };
     }
 
-    // 5. Courriels transactionnels (best-effort) — la demande est DÉJÀ enregistrée, ceci ne bloque rien :
-    //    (a) alerte interne « à approuver » à l'équipe ; (b) confirmation chaleureuse au client.
+    const lienClient = p.page_url || `${SITE}/page-chanson?id=${encodeURIComponent(token)}`;
+
+    // 5. Courriels (best-effort). Équipe : TOUJOURS (trace, auto ou à approuver). Client : selon le cas.
     try {
       if (TEAM_EMAIL) {
+        const etat = autoApprouve ? 'AUTO-APPROUVÉE (cover en cours)' : 'À APPROUVER';
         const teamHtml =
           `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.6;max-width:620px;">` +
-          `<h2 style="color:#5C2D4A;margin:0 0 4px;">Demande de modification à approuver</h2>` +
+          `<h2 style="color:#5C2D4A;margin:0 0 4px;">Demande de modification — ${esc(etat)}</h2>` +
           `<p style="color:#7A6070;margin:0 0 16px;">Réf. ${esc(refId)} · ${esc(categories)} · mode ${esc(mode)}</p>` +
           `<p><strong>Personne honorée :</strong> ${esc(p.deceased_name || '')}<br>` +
           `<strong>Titre actuel :</strong> ${esc(gen.song_title || '')}</p>` +
@@ -197,24 +207,24 @@ ${demande}`;
           `<p><strong>Analyse :</strong><br>${esc(compteRendu)}</p>` +
           (adjLyrics ? `<p><strong>Paroles ajustées proposées :</strong><br>${esc(adjLyrics)}</p>` : '') +
           (adjStyle ? `<p><strong>Prompt style ajusté :</strong><br>${esc(adjStyle)}</p>` : '') +
-          `<p style="margin:20px 0;"><a href="${SITE}/page-memoire?id=${encodeURIComponent(token)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;">Voir la page du client</a></p>` +
-          `<p style="color:#7A6070;margin-top:18px;">Pour approuver : passez <code>approval_status</code> à « approved » dans Airtable (projet « ${esc(p.project || '')} »).</p></div>`;
-        await envoyerCourriel(TEAM_EMAIL, `À approuver — ${refId} (${categories})`, teamHtml);
+          `<p style="margin:20px 0;"><a href="${esc(lienClient)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;">Voir la page du client</a></p>` +
+          (autoApprouve
+            ? `<p style="color:#7A6070;margin-top:18px;">Approuvée automatiquement (paroles seulement) : le cover se régénère et part au client. Trace conservée.</p>`
+            : `<p style="color:#7A6070;margin-top:18px;">Pour approuver : passez <code>approval_status</code> à « approved » dans Airtable (projet « ${esc(p.project || '')} »).</p>`) +
+          `</div>`;
+        await envoyerCourriel(TEAM_EMAIL, `${autoApprouve ? 'Auto-approuvée' : 'À approuver'} — ${refId} (${categories})`, teamHtml);
       }
       const to = await emailClient(projet, headers);
-      const clientHtml =
-        `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.7;max-width:560px;">` +
-        `<p>Votre demande de modification est bien reçue.</p>` +
-        `<p>Notre équipe prépare votre nouvelle version avec soin et vous revient très bientôt. Vous n'avez rien à faire d'ici là.</p>` +
-        `<p style="margin:22px 0;"><a href="${SITE}/page-memoire?id=${encodeURIComponent(token)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:12px 22px;border-radius:8px;display:inline-block;">Revoir ma page</a></p>` +
-        `<p style="color:#7A6070;margin-top:18px;">— L'équipe Chanson Mémoire</p></div>`;
-      await envoyerCourriel(to, 'Votre demande de modification est bien reçue', clientHtml);
+      const clientHtml = autoApprouve
+        ? `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.7;max-width:560px;"><p>C'est noté, on applique tes nouvelles paroles.</p><p>Ta chanson se régénère avec ces paroles. Tu recevras un courriel avec le lien dès qu'elle est prête.</p><p style="margin:22px 0;"><a href="${esc(lienClient)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:12px 22px;border-radius:8px;display:inline-block;">Revoir ma page</a></p><p style="color:#7A6070;margin-top:18px;">— L'équipe Chanson Mémoire</p></div>`
+        : `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.7;max-width:560px;"><p>Votre demande de modification est bien reçue.</p><p>Notre équipe la prépare avec soin et vous revient d'ici 24-48 h (pensez à vérifier vos courriels indésirables). Vous n'avez rien à faire d'ici là.</p><p style="margin:22px 0;"><a href="${esc(lienClient)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:12px 22px;border-radius:8px;display:inline-block;">Revoir ma page</a></p><p style="color:#7A6070;margin-top:18px;">— L'équipe Chanson Mémoire</p></div>`;
+      await envoyerCourriel(to, autoApprouve ? 'Tes nouvelles paroles sont en route' : 'Votre demande de modification est bien reçue', clientHtml);
     } catch (_) { /* les courriels ne bloquent jamais l'enregistrement */ }
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ok: true })
+      body: JSON.stringify({ ok: true, auto: autoApprouve, paroles: stripSectionTags(adjLyrics) })
     };
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };

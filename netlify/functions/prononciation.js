@@ -158,6 +158,22 @@ ${(lyrics || '').slice(0, 2500)}`;
       } catch (_) { /* le stockage phonétique ne bloque jamais l'alerte équipe */ }
     }
 
+    // 3c. #12 — Enregistre une DEMANDE À APPROUVER dans Airtable (trace + workflow approbation -> cover).
+    //     Tu approuves (approval_status=approved) -> cover-cron relance lancer-cover, qui utilise la
+    //     version phonétique stockée. Mode 'cover' (mélodie préservée). Best-effort.
+    try {
+      const fields = {
+        correction_request: `CATÉGORIE : prononciation\n\nMOT : ${mot || '(voir « autre »)'}\nINDICATION CLIENT : ${indication || '(rien)'}\nAUTRE : ${autre || '(rien)'}\n\nPHONÉTIQUE PROPOSÉE : ${phonetique || '—'}\nANALYSE : ${explication || '—'}`,
+        mode_correction: 'cover',
+        approval_status: 'pending',
+        ref_id: `${token.slice(0, 8)}·PRON`
+      };
+      await fetch(`${API}/Projects/${projet.id}`, {
+        method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields })
+      });
+    } catch (_) { /* la trace ne bloque jamais la confirmation client */ }
+
     // 4. Courriel à l'équipe (best-effort) — c'est la sortie principale de cette demande.
     try {
       const to = await emailClient(projet, headers);

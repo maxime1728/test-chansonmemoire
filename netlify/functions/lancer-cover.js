@@ -70,18 +70,18 @@ exports.handler = async (event) => {
     const projet = dP.records[0];
     const p = projet.fields;
 
-    // 2. Garde-fous + idempotence (états « rien à faire » -> 200 pour ne pas alarmer Make).
-    if (p.commercial_status !== 'purchased') return { statusCode: 403, body: JSON.stringify({ error: 'Réservé après achat' }) };
-    if (p.approval_status !== 'approved')    return { statusCode: 200, body: JSON.stringify({ ok: true, skipped: 'not_approved' }) };
+    // 2. Garde-fous + idempotence. La cover n'est déclenchée que sur une demande APPROUVÉE
+    //    (post-achat OU pré-achat : prononciation/paroles sur l'aperçu). Plus de garde « purchased ».
+    if (p.approval_status !== 'approved')       return { statusCode: 200, body: JSON.stringify({ ok: true, skipped: 'not_approved' }) };
     if (p.cover_task_id || p.cover_launched_at) return { statusCode: 200, body: JSON.stringify({ ok: true, already: true }) };
 
-    // 3. Version ACHETÉE = mélodie source à couvrir.
-    const purchasedNo = parseInt(p.purchased_generation_no, 10);
-    if (!Number.isInteger(purchasedNo)) return { statusCode: 409, body: JSON.stringify({ error: 'Version achetée inconnue' }) };
+    // 3. Mélodie source à couvrir : version ACHETÉE si connue, sinon DERNIÈRE génération (aperçu pré-achat).
     const projLit = formulaLiteral(p.project);
     if (projLit === null) return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
-    const fG = encodeURIComponent(`AND({project}=${projLit},{generation_no}=${purchasedNo})`);
-    const rG = await fetch(`${API}/Generations?filterByFormula=${fG}&maxRecords=1`, { headers });
+    const purchasedNo = parseInt(p.purchased_generation_no, 10);
+    const fSrc   = Number.isInteger(purchasedNo) ? `AND({project}=${projLit},{generation_no}=${purchasedNo})` : `{project}=${projLit}`;
+    const triSrc = Number.isInteger(purchasedNo) ? '' : '&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc';
+    const rG = await fetch(`${API}/Generations?filterByFormula=${encodeURIComponent(fSrc)}${triSrc}&maxRecords=1`, { headers });
     const dG = await rG.json();
     const gen = dG.records && dG.records[0];
     if (!gen) return { statusCode: 409, body: JSON.stringify({ error: 'Version source introuvable' }) };

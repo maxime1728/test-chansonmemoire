@@ -314,10 +314,18 @@
     .then(function(res){
       if(res && res.ok){
         var m = document.getElementById('modifMsg');
-        m.textContent = 'Demande reçue ✓ Notre équipe la prépare et te revient sous peu.';
+        /* #10 : on montre immédiatement les nouvelles paroles proposées (illimité). */
+        if(res.paroles){
+          var box = document.getElementById('modifParoles');
+          if(!box){ box = document.createElement('pre'); box.id='modifParoles'; box.style.cssText='white-space:pre-wrap;text-align:left;background:#fff;border:1px solid rgba(92,45,74,.15);border-radius:12px;padding:14px;margin-top:14px;font-family:inherit;font-size:14px;line-height:1.65;color:#2E1A28;'; ta.parentNode.insertBefore(box, ta.nextSibling); }
+          box.textContent = res.paroles;
+        }
+        m.textContent = res.auto
+          ? 'Voilà tes nouvelles paroles ✓  Ta chanson se régénère ; tu recevras un courriel avec le lien dès qu’elle est prête. Tu peux encore ajuster si tu veux.'
+          : 'Demande reçue ✓  On la valide et tu reçois ta chanson par courriel d’ici 24-48 h (vérifie tes indésirables).';
         m.style.display = 'block';
-        ta.style.display = 'none'; b.style.display = 'none';
-        document.querySelector('.modif-intro').style.display = 'none';
+        ta.value = '';
+        b.disabled = false; b.textContent = 'Envoyer ma demande de modification';
       } else {
         b.disabled = false; b.textContent = 'Envoyer ma demande de modification';
         alert("Une erreur est survenue. Réessayez.");
