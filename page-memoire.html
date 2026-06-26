@@ -402,19 +402,23 @@
         img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;'
           +(pins[url]?'outline:3px solid #C4963A;outline-offset:-3px;':'')
           +(sel?'box-shadow:0 0 0 3px #fff,0 0 0 6px #5c2d4a;':'');
+        d.setAttribute('data-idx', idx);
         d.appendChild(img);
         d.addEventListener('click',function(){ selectedUrl=(selectedUrl===url?null:url); refresh(); });
-        if(pins[url]){ var pd=document.createElement('div'); pd.textContent='★'; pd.style.cssText='position:absolute;top:3px;left:4px;color:#C4963A;font:700 15px/1 sans-serif;text-shadow:0 1px 2px rgba(0,0,0,.6);pointer-events:none;'; d.appendChild(pd); }
+        // ★ rond doré : visible dès qu'une photo est « importante » (indicateur) OU sélectionnée (toggle).
+        if(pins[url] || sel){
+          var star=ctrlBtn(pins[url]?'★':'☆','position:absolute;top:-7px;left:-7px;width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;font:700 14px/1 sans-serif;background:'+(pins[url]?'#C4963A':'#3a2233')+';color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.45);');
+          star.title='Mettre en avant (durée x1.5)'; star.addEventListener('click',function(e){ e.stopPropagation(); if(pins[url]) delete pins[url]; else pins[url]=1; refresh(); });
+          d.appendChild(star);
+        }
         if(sel){
           var x=ctrlBtn('×','position:absolute;top:-7px;right:-7px;width:24px;height:24px;border-radius:50%;background:#fff;color:#e02424;border:2px solid #e02424;cursor:pointer;font:700 15px/1 sans-serif;');
           x.title='Supprimer'; x.addEventListener('click',function(e){ e.stopPropagation(); selectedUrl=null; removePhoto(url); });
-          var star=ctrlBtn(pins[url]?'★':'☆','position:absolute;top:-7px;left:-7px;width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;font:700 13px/1 sans-serif;background:'+(pins[url]?'#C4963A':'#3a2233')+';color:#fff;');
-          star.title='Mettre en avant (durée x1.5)'; star.addEventListener('click',function(e){ e.stopPropagation(); if(pins[url]) delete pins[url]; else pins[url]=1; refresh(); });
           var lf=ctrlBtn('‹','position:absolute;bottom:-7px;left:-7px;width:24px;height:24px;border-radius:50%;border:none;background:#5c2d4a;color:#fff;cursor:pointer;font:700 17px/1 sans-serif;');
           lf.title='Déplacer à gauche'; lf.addEventListener('click',function(e){ e.stopPropagation(); move(idx,-1); });
           var rt=ctrlBtn('›','position:absolute;bottom:-7px;right:-7px;width:24px;height:24px;border-radius:50%;border:none;background:#5c2d4a;color:#fff;cursor:pointer;font:700 17px/1 sans-serif;');
           rt.title='Déplacer à droite'; rt.addEventListener('click',function(e){ e.stopPropagation(); move(idx,1); });
-          d.appendChild(x); d.appendChild(star); d.appendChild(lf); d.appendChild(rt);
+          d.appendChild(x); d.appendChild(lf); d.appendChild(rt);
         }
         d.addEventListener('dragstart',function(){ dragFrom=idx; d.style.opacity='0.4'; });
         d.addEventListener('dragend',function(){ d.style.opacity='1'; });
@@ -488,6 +492,25 @@
         });
       },15000);
     }
+    // Drag & drop TACTILE (appui maintenu ~220 ms puis on glisse) — en plus des flèches.
+    (function(){
+      var lp=null, dragging=false, di=null, sx=0, sy=0;
+      grid.addEventListener('touchstart',function(e){
+        var cell=e.target.closest('[data-idx]'); if(!cell) return;
+        var i=+cell.getAttribute('data-idx'); sx=e.touches[0].clientX; sy=e.touches[0].clientY; dragging=false;
+        lp=setTimeout(function(){ dragging=true; di=i; selectedUrl=null; cell.style.opacity='0.5'; if(navigator.vibrate) navigator.vibrate(15); },220);
+      },{passive:true});
+      grid.addEventListener('touchmove',function(e){
+        var t=e.touches[0];
+        if(!dragging){ if(Math.abs(t.clientX-sx)>10||Math.abs(t.clientY-sy)>10) clearTimeout(lp); return; }
+        e.preventDefault();
+        var el=document.elementFromPoint(t.clientX,t.clientY), cell=el&&el.closest('[data-idx]'); if(!cell) return;
+        var ti=+cell.getAttribute('data-idx');
+        if(di!==null && ti!==di){ var mv=list.splice(di,1)[0]; list.splice(ti,0,mv); di=ti; refresh(); }
+      },{passive:false});
+      grid.addEventListener('touchend',function(){ clearTimeout(lp); if(dragging){ dragging=false; di=null; refresh(); } },{passive:true});
+      grid.addEventListener('touchcancel',function(){ clearTimeout(lp); dragging=false; di=null; },{passive:true});
+    })();
     if(videoUrl){ showVideo(videoUrl); genBtn.textContent='Refaire ma vidéo souvenir'; }
     refresh();
   }
