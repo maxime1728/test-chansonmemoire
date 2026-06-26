@@ -17,7 +17,7 @@ const { cleanLyrics, timeLines } = require('./paroles-vivantes-timeline');
 const BG = '#241019', CREAM = '#F5F0EA', GOLD = '#C4963A', MAUVE = '#E7C9D8';
 const FONT_TITLE = 'Playfair Display', FONT_BODY = 'EB Garamond';
 const W = 1280, H = 720, FPS = 25;
-const INTRO = 4.0, OUTRO = 5, FADE = 0.3;      // fondu TRÈS court -> passage par le fond sombre bref entre photos
+const INTRO = 4.0, OUTRO = 5, FADE = 0.2;      // fondu bref -> on voit la photo nette plus longtemps, le noir « embarque » moins
 const PHOTO_MIN = 3.6, PHOTO_MAX = 9.0;
 const PIN = 1.5;                                // multiplicateur de durée d'une photo « importante »
 const TRACK_BASE = 10;                          // photos sur des pistes croissantes à partir de 10
