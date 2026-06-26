@@ -33,6 +33,10 @@ const MIN_LEN   = 1.4;   // durée mini d'affichage d'une ligne (lisibilité)
 const PER_LINE  = 3.4;   // cadence de repli quand l'horodatage manque
 const FADE      = 0.8;   // durée des fondus
 
+// Effet du surlignage karaoké : 'karaoke' (le doré REMPLIT le mot progressivement, balayage) ou
+// 'highlight' (le mot BASCULE au doré d'un coup quand il est chanté). Un seul réglage à changer.
+const KARAOKE_EFFECT = 'highlight';
+
 // Retire les balises de structure ([Refrain], (x2)…) et les lignes vides -> lignes à AFFICHER.
 function cleanLyrics(lyrics) {
   return String(lyrics || '')
@@ -158,7 +162,7 @@ function buildEdit({ titre, prenom, cadeau, transcriptWords, introLen, lyricsEnd
     elements.push({
       type: 'text', track: 4, time: 0, duration: songEnd,
       transcript_source: transcriptWords,    // [{ time, duration, value }] -> nos mots horodatés (s)
-      transcript_effect: 'karaoke',           // balayage progressif (vs 'highlight' = mot par mot sec)
+      transcript_effect: KARAOKE_EFFECT,      // 'karaoke' ou 'highlight' (constante en tête de fichier)
       transcript_split: 'word',
       transcript_color: GOLD,                 // couleur du surlignage (mot en train d'être chanté)
       transcript_maximum_length: 42,          // ~1 ligne de paroles par segment affiché
@@ -173,15 +177,24 @@ function buildEdit({ titre, prenom, cadeau, transcriptWords, introLen, lyricsEnd
 
 // Transforme l'alignement Suno (ou un repli cadencé) en transcript_source Creatomate :
 // un tableau [{ time, duration, value }] en SECONDES, un objet par mot, dans l'ordre.
+// Retire les balises de structure ([Intro], [Verse], [Chorus]…) que Suno COLLE au mot, et aplatit
+// les retours à la ligne -> on récupère le VRAI mot, propre (le texte horodaté Suno = nos paroles).
+function cleanWord(w) {
+  return String(w || '')
+    .replace(/\[[^\]]*\]/g, ' ')   // balises entre crochets
+    .replace(/\s+/g, ' ')          // \n et espaces multiples -> une espace
+    .trim();
+}
+
 function buildTranscript(lines, alignedWords) {
   const words = (Array.isArray(alignedWords) ? alignedWords : [])
     .filter(w => w && Number.isFinite(w.startS) && Number.isFinite(w.endS)
-                 && w.endS >= w.startS && String(w.word || '').trim());
+                 && w.endS >= w.startS && cleanWord(w.word));
   if (words.length >= 6) {
     return words.map(w => ({
       time: +Number(w.startS).toFixed(3),
       duration: +Math.max(0.08, w.endS - w.startS).toFixed(3),
-      value: String(w.word).trim()
+      value: cleanWord(w.word)
     }));
   }
   // Repli (pas d'horodatage Suno) : on répartit les mots de chaque ligne sur sa durée chantée.
