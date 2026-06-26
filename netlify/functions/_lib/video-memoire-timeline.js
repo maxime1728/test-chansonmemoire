@@ -89,13 +89,10 @@ function buildVideoMemoire({ titre, prenom, cadeau, photos, lyrics, alignedWords
   for (let i = 0; i < slots; i++) {
     const url  = list[i % list.length];
     const time = +(showStart + i * per).toFixed(3);
-    const dur  = +(per + FADE).toFixed(3);               // chevauchement = FADE
-    const zoomIn = (i % 2 === 0);
+    const dur  = +(per + FADE).toFixed(3);               // chevauchement = FADE -> fondu enchaîné
     elements.push({
       type: 'image', track: 3 + (i % 2), time, duration: dur, source: url,
       width: '100%', height: '100%', fit: 'cover', x_alignment: '50%', y_alignment: '50%',
-      scale: zoomIn ? [{ time: 0, value: '104%' }, { time: dur, value: '116%' }]
-                    : [{ time: 0, value: '116%' }, { time: dur, value: '104%' }],
       animations: [
         { time: 0,     duration: FADE, easing: 'quadratic-out', type: 'fade' },
         { time: 'end', duration: FADE, easing: 'quadratic-in',  type: 'fade', reversed: true }
