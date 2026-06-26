@@ -96,7 +96,7 @@ exports.handler = async (event) => {
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ typecast: true, fields: {
           expediteur:   to || '',
-          sujet:        `Demande de modification${p.deceased_name ? ' — ' + p.deceased_name : ''}`,
+          sujet:        `Demande de modification${p.deceased_name ? ' : ' + p.deceased_name : ''}`,
           message:      demande,
           recu_le:      new Date().toISOString(),
           statut:       'a_verifier',

@@ -171,7 +171,7 @@ exports.handler = async (event) => {
     const method = existing ? 'PATCH' : 'POST';
     const rStore = await fetch(url, {
       method, headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: champs })
+      body: JSON.stringify({ fields: champs, typecast: true })   // typecast : repondre_de est un menu deroulant (singleSelect) -> une nouvelle adresse d'arrivee cree le choix au lieu d'un 422 qui ferait perdre le courriel
     });
     if (!rStore.ok) {
       console.error('[courriel-entrant] store', rStore.status, await rStore.text().catch(() => ''));

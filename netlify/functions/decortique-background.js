@@ -56,6 +56,8 @@ PAROLES AJUSTEES (en francais quebecois) — UNIQUEMENT si la demande touche par
 
 VOIX DE MARQUE : solution-first, digne, jamais ouvrir sur le deuil ; pas de cliches.
 
+TYPOGRAPHIE : n'utilise JAMAIS le tiret cadratin/long (—) dans tes textes (compte_rendu, paroles) ; mets une virgule, un deux-points, une parenthese ou un point a la place.
+
 SORTIE — reponds UNIQUEMENT avec un objet JSON valide, sans texte autour, guillemets droits :
 {"categories":["..."],"mode":"cover","compte_rendu":"<resume clair pour l'equipe, en francais>","adjusted_style_prompt":"<prompt style en anglais respectant les regles dures>","adjusted_lyrics":"<paroles ajustees en quebecois OU chaine vide>"}`;
 
@@ -144,18 +146,18 @@ ${demande}`;
     //    simple et personnalisable ; pas l'analyse technique (qui est pour l'equipe, sur le Projet).
     if (convoId) {
       const lien    = p.page_url || `${SITE}/page-chanson?id=${encodeURIComponent(token)}`;
-      const surNom  = p.deceased_name ? ` pour la chanson de ${p.deceased_name}` : '';
+      const surNom  = p.deceased_name ? ` concernant la chanson de ${p.deceased_name}` : '';
+      // Corps seulement : la salutation du moment + la signature (Nathalie, L'equipe Chanson Memoire) sont
+      // ajoutees automatiquement a l'envoi par repondre-courriel. Lien en markdown -> cliquable, courriel plus propre.
       const brouillon =
 `Bonjour,
 
-C'est bien note pour votre demande${surNom}. On s'en occupe avec soin.
+C'est bien noté pour votre demande${surNom}. On s'en occupe avec soin.
 
-Des que votre nouvelle version est prete, vous pourrez l'ecouter ici :
-${lien}
-
-Au plaisir,
-Nathalie, Chanson Memoire`;
-      try { await patch(CONVOS, convoId, { brouillon_ia: brouillon, confiance_ia: 'basse' }); } catch (_) {}
+Dès que votre nouvelle version sera prête, vous pourrez l'écouter ici : [votre page Chanson Mémoire](${lien}).`;
+      // paroles_corrigees / prompt_style : versions EDITABLES visibles dans la vue Modifications (l'equipe ajuste
+      // puis coche `appliquer` -> appliquer-modification les pousse sur le Projet). Brouillon = reponse client.
+      try { await patch(CONVOS, convoId, { brouillon_ia: brouillon, confiance_ia: 'basse', paroles_corrigees: adjLyrics, prompt_style: adjStyle }); } catch (_) {}
     }
 
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };

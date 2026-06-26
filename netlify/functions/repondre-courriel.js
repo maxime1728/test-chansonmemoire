@@ -32,10 +32,27 @@ function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Enveloppe le texte (saisi/édité par l'humain) dans le template de marque. PAS de signature ajoutée
-// (le texte la contient déjà) — juste un pied discret en lettrage.
+// Liens markdown [texte](https://url) -> rendus. URLs http(s) uniquement (anti-injection javascript:).
+const RE_LIEN = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+function liensTexte(s) { return String(s || '').replace(RE_LIEN, '$1 ($2)'); }
+
+// Salutation selon l'heure locale du Québec (America/Toronto) : « Bonne journée » le jour, « Bonne soirée » le soir.
+function salutationHeure() {
+  let h = 12;
+  try { h = parseInt(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto', hour: 'numeric', hour12: false }).format(new Date()), 10); } catch (_) {}
+  if (!Number.isInteger(h)) h = 12;
+  return (h % 24) >= 18 ? 'Bonne soirée' : 'Bonne journée';
+}
+
+// Pied ajouté automatiquement à l'envoi : salutation du moment + signature Nathalie / L'équipe Chanson Mémoire.
+function piedAuto() { return `${salutationHeure()},\nNathalie\nL'équipe Chanson Mémoire`; }
+
+// Enveloppe le texte (saisi/édité par l'humain) dans le template de marque, liens markdown rendus cliquables.
+// La signature est gérée par piedAuto() au moment de l'envoi (voir handler), pas ici.
 function corpsHtml(texte) {
-  const t = esc(texte).replace(/\r?\n/g, '<br>');
+  const t = esc(texte)
+    .replace(RE_LIEN, (m, txt, url) => `<a href="${url}" style="color:#7A4F9E;">${txt}</a>`)
+    .replace(/\r?\n/g, '<br>');
   return `<div style="font-family:Georgia,'Times New Roman',serif;color:#2E1A28;line-height:1.7;font-size:16px;max-width:560px;">` +
     `<div>${t}</div>` +
     `<hr style="border:none;border-top:1px solid #E5DAE0;margin:24px 0 12px;">` +
@@ -67,8 +84,12 @@ exports.handler = async (event) => {
     if (!to.includes('@')) return { statusCode: 409, body: JSON.stringify({ error: 'Destinataire invalide' }) };
 
     // 2. Le texte à envoyer : la réponse finale, sinon le brouillon IA.
-    const corps = ((f.reponse && f.reponse.trim()) ? f.reponse : (f.brouillon_ia || '')).trim();
+    let corps = ((f.reponse && f.reponse.trim()) ? f.reponse : (f.brouillon_ia || '')).trim();
     if (!corps) return { statusCode: 409, body: JSON.stringify({ error: 'Aucun texte à envoyer (réponse et brouillon vides)' }) };
+
+    // 2b. Pied automatique : salutation selon l'heure + signature Nathalie / L'équipe Chanson Mémoire.
+    //     Sauté si le texte est déjà signé ainsi (évite le double-pied sur un texte rédigé à la main).
+    if (!/l['']équipe chanson mémoire/i.test(corps)) corps = `${corps}\n\n${piedAuto()}`;
 
     // 3. Sujet « Re: … » (dédupliqué).
     let subject = (f.sujet || '').toString().trim() || 'votre message';
@@ -86,7 +107,7 @@ exports.handler = async (event) => {
     form.append('from', from);
     form.append('to', to);
     form.append('subject', subject);
-    form.append('text', corps);
+    form.append('text', liensTexte(corps));
     form.append('html', corpsHtml(corps));
     const msgId = (f.message_id || '').toString().trim();
     if (msgId) {
