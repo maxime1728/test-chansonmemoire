@@ -133,11 +133,12 @@ exports.handler = async (event) => {
       return { statusCode: 502, body: JSON.stringify({ error: 'Lancement de la cover échoué' }) };
     }
 
-    // 5. Marque (idempotence + matching callback).
+    // 5. Marque (idempotence + matching callback). pending_cover_style = prompt EXACT envoye a Suno ->
+    //    callback-cover le copie sur gen_style_prompt de la nouvelle version (historique du style).
     await fetch(`${API}/Projects/${projet.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { cover_task_id: String(taskId), cover_launched_at: new Date().toISOString() } })
+      body: JSON.stringify({ fields: { cover_task_id: String(taskId), cover_launched_at: new Date().toISOString(), pending_cover_style: style } })
     });
 
     return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true }) };
