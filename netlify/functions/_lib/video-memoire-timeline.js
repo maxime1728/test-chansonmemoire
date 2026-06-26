@@ -17,7 +17,7 @@ const { cleanLyrics, timeLines } = require('./paroles-vivantes-timeline');
 const BG = '#241019', CREAM = '#F5F0EA', GOLD = '#C4963A', MAUVE = '#E7C9D8';
 const FONT_TITLE = 'Playfair Display', FONT_BODY = 'EB Garamond';
 const W = 1280, H = 720, FPS = 25;
-const INTRO = 4.0, OUTRO = 5, FADE = 0.8;      // durée du crossfade (fondu doux d'une photo à l'autre, SANS passage par le noir)
+const INTRO = 4.0, OUTRO = 5, FADE = 0.3;      // durée du crossfade (fondu d'une photo à l'autre, SANS passage par le noir)
 const PHOTO_MIN = 3.6, PHOTO_MAX = 9.0;
 const PIN = 1.5;                                // multiplicateur de durée d'une photo « importante »
 const TRACK_BASE = 10;                          // photos sur des pistes croissantes à partir de 10
