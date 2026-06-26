@@ -1,6 +1,6 @@
 // netlify/functions/_lib/paroles-vivantes-timeline.js
 //
-// Construit le RenderScript CREATOMATE pour la vidéo PAROLES VIVANTES (fondu doux ligne par ligne).
+// Construit le RenderScript CREATOMATE pour la vidéo PAROLES VIVANTES (karaoké « ligne active »).
 // Module PARTAGÉ entre lancer-paroles-vivantes.js (production) et tools/rendu-test.js (sandbox) :
 // une seule source de vérité pour le design -> aucune divergence entre le rendu test et le rendu livré.
 //
@@ -19,6 +19,7 @@ const BG    = '#241019';   // plum profond (famille du #2E1A28 du PDF)
 const CREAM = '#F5F0EA';   // crème — corps des paroles
 const GOLD  = '#C4963A';   // doré — accent « en mémoire de »
 const MAUVE = '#E7C9D8';   // mauve clair, lisible sur fond sombre — titre
+const DIM   = '#9A8693';   // crème grisée : lignes de contexte (précédente / suivante) autour de la ligne active
 
 const FONT_TITLE = 'Playfair Display';   // Google Font (serif élégant)
 const FONT_BODY  = 'EB Garamond';        // Google Font (serif lisible)
@@ -151,11 +152,23 @@ function buildEdit({ titre, prenom, cadeau, lines, introLen, lyricsEnd, songEnd,
     family: FONT_TITLE, weight: '700', color: MAUVE, size: 56, y: '50%', fadeOut: true
   }));
 
-  // Paroles (piste 4) — peintes en DERNIER = au-dessus. Une ligne à la fois, en fondu.
-  lines.forEach(l => {
+  // Paroles (piste 4) : karaoké « ligne active ». La ligne chantée est dorée et agrandie au
+  // centre ; la précédente et la suivante restent visibles, atténuées, au-dessus et en dessous.
+  // La fenêtre glisse au rythme du chant (timing par ligne). Peintes en dernier (donc au-dessus).
+  lines.forEach((l, i) => {
+    const prev = lines[i - 1], next = lines[i + 1];
+    if (prev) elements.push(textEl({
+      text: prev.text, track: 4, time: l.start, duration: l.length,
+      family: FONT_BODY, weight: '400', color: DIM, size: 30, y: '33%'
+    }));
+    if (next) elements.push(textEl({
+      text: next.text, track: 4, time: l.start, duration: l.length,
+      family: FONT_BODY, weight: '400', color: DIM, size: 30, y: '67%'
+    }));
     elements.push(textEl({
       text: l.text, track: 4, time: l.start, duration: l.length,
-      family: FONT_BODY, weight: '400', color: CREAM, size: 44, fadeOut: true
+      family: FONT_BODY, weight: '700', color: GOLD, size: 50, y: '50%',
+      fadeOut: (i === lines.length - 1)
     }));
   });
 
