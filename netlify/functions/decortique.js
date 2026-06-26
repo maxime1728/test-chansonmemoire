@@ -181,7 +181,7 @@ ${demande}`;
       approval_status:       autoApprouve ? 'approved' : 'pending',
       ref_id:                refId
     };
-    if (autoApprouve) { fields.cover_task_id = ''; fields.cover_launched_at = ''; }   // ré-arme le cover (modifs illimitées)
+    if (autoApprouve) { fields.cover_task_id = null; fields.cover_launched_at = null; }   // ré-arme le cover (modifs illimitées) — null et jamais '' : '' fait échouer le PATCH (422) sur cover_launched_at (champ date)
     const rU = await fetch(`${API}/Projects/${projet.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
