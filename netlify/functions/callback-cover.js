@@ -121,6 +121,7 @@ exports.handler = async (event) => {
     if (src.gen_music_style) fields.gen_music_style = src.gen_music_style;
     if (src.gen_mood)        fields.gen_mood        = src.gen_mood;
     if (src.gen_voice)       fields.gen_voice       = src.gen_voice;
+    if (p.pending_cover_style && p.pending_cover_style.trim()) fields.gen_style_prompt = p.pending_cover_style.trim();   // prompt de style exact de cette version (historique)
     await fetch(`${API}/Generations`, {
       method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields })
@@ -129,7 +130,7 @@ exports.handler = async (event) => {
     // 3. Livre cette version + ferme la boucle (prêt pour un éventuel tour suivant).
     //    purchased_generation_no n'est basculé qu'en POST-achat ; en pré-achat (cover d'aperçu) la
     //    nouvelle génération devient simplement la plus récente (lire-projet sert la dernière).
-    const projPatch = { approval_status: 'published', cover_task_id: null, cover_launched_at: null };
+    const projPatch = { approval_status: 'published', cover_task_id: null, cover_launched_at: null, pending_cover_style: null };
     if (Number.isInteger(purchasedNo)) { projPatch.purchased_generation_no = newNo; projPatch.purchased_song_title = fields.song_title; }   // #2 : titre acheté à jour
     await fetch(`${API}/Projects/${projet.id}`, {
       method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },

@@ -54,4 +54,29 @@ async function styleFor({ music_style, mood, cadeau, language }) {
   }
 }
 
-module.exports = { styleFor };
+// Catalogue de reference : tous les styles musicaux curés POUR UNE AMBIANCE (× Cadeau/Memoire), avec leur
+// « Prompt Complet » (accent adapte a la langue). Sert d'INSPIRATION a l'IA quand le client veut un autre
+// style. Best-effort : renvoie [] si la table/le reseau echoue. Cap a 30 lignes (une ambiance ~13 styles).
+async function cataloguePourAmbiance({ mood, cadeau, language }) {
+  try {
+    if (!mood || !BASE_ID || !AT_TOKEN) return [];
+    const mo = formulaLiteral(mood);
+    const cm = formulaLiteral(cadeau ? 'Cadeau' : 'Mémoire');
+    if (mo === null || cm === null) return [];
+    const formula = `AND({Ambiance}=${mo},{Cadeau/Mémoire}=${cm})`;
+    const url = `${API}/${encodeURIComponent(TABLE)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=30`;
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${AT_TOKEN}` } });
+    if (!r.ok) return [];
+    const swap = ACCENT_SWAP[language];
+    return (((await r.json()).records) || []).map((rec) => {
+      const f = rec.fields || {};
+      let prompt = String(f['Prompt Complet'] || '').trim();
+      if (swap && prompt) prompt = prompt.split(QC_ACCENT).join(swap);
+      return { style: f['Style Musical'] || '', prompt };
+    }).filter((x) => x.style && x.prompt);
+  } catch (_) {
+    return [];
+  }
+}
+
+module.exports = { styleFor, cataloguePourAmbiance };

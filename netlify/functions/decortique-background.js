@@ -24,6 +24,7 @@ const PROJECTS = 'Projects', GENERATIONS = 'Generations', CONVOS = 'tbl3KBgXthCP
 
 const { analyserModif } = require('./_lib/analyse-modif');
 const { piedAuto } = require('./_lib/pied-courriel');
+const { styleFor, cataloguePourAmbiance } = require('./_lib/style');
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -74,10 +75,16 @@ exports.handler = async (event) => {
       : encodeURIComponent(`{project}=${projLit}`);
     const triG = Number.isInteger(boughtNo) ? '' : '&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc';
     const rG  = await fetch(`${API}/${GENERATIONS}?filterByFormula=${fG}${triG}&maxRecords=1`, { headers });
-    const gen = ((((await rG.json()).records) || [])[0] || {}).fields || {};
+    const genRec = (((await rG.json()).records) || [])[0] || null;
+    const gen = (genRec && genRec.fields) || {};
 
-    // 2. Analyse partagee (Claude) : categories + compte-rendu + prompt style + paroles ajustees. Best-effort.
-    const { categories, mode, compteRendu: crIA, adjStyle, adjLyrics } = await analyserModif({ apiKey, demande, p, gen });
+    // Prompt de style de reference : celui stocke sur la version (gen_style_prompt), sinon le prompt cure (styleFor).
+    const styleActuel = (gen.gen_style_prompt && gen.gen_style_prompt.trim())
+      || await styleFor({ music_style: gen.gen_music_style || p.music_style, mood: gen.gen_mood || p.mood, cadeau: p.song_type === 'cadeau', language: p.language });
+    const catalogue = await cataloguePourAmbiance({ mood: gen.gen_mood || p.mood, cadeau: p.song_type === 'cadeau', language: p.language });
+
+    // 2. Analyse partagee (Claude) : categories + compte-rendu + prompt style (ajuste depuis l'actuel) + paroles. Best-effort.
+    const { categories, mode, compteRendu: crIA, adjStyle, adjLyrics } = await analyserModif({ apiKey, demande, p, gen, styleActuel, catalogue });
     const compteRendu = crIA || '(analyse automatique indisponible, a traiter manuellement)';
 
     // 3. Enrichit le Projet : paroles/style PROPOSES (editables). approval_status reste 'pending' (approbation
@@ -104,7 +111,9 @@ Bonne nouvelle${surNom} : votre nouvelle version est prête. Vous pouvez l'écou
 ${piedAuto()}`;
       // paroles_corrigees / prompt_style : versions EDITABLES visibles dans la vue Modifications (l'equipe ajuste
       // puis coche `appliquer` -> appliquer-modification les pousse sur le Projet). Brouillon = reponse client.
-      try { await patch(CONVOS, convoId, { brouillon_ia: brouillon, confiance_ia: 'basse', paroles_corrigees: adjLyrics, prompt_style: adjStyle, modif_pregeneree: true }); } catch (_) {}
+      const champsConvo = { brouillon_ia: brouillon, confiance_ia: 'basse', paroles_corrigees: adjLyrics, prompt_style: adjStyle, modif_pregeneree: true };
+      if (genRec) champsConvo.generation_a_travailler = [genRec.id];   // pre-remplit la version de reference (achetee/plus recente), modifiable a la main
+      try { await patch(CONVOS, convoId, champsConvo); } catch (_) {}
     }
 
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };

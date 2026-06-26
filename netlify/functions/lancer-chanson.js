@@ -43,7 +43,8 @@ const GEN = {
   post_purchase:     'fldqsaG2QJqefc6LN',
   gen_music_style:   'fldHoOpXerV6rsn5V',
   gen_mood:          'fld4MMXVW7zbF1tfb',
-  gen_voice:         'fld8gcBdP0smafuKR'
+  gen_voice:         'fld8gcBdP0smafuKR',
+  gen_style_prompt:  'fldgAJw6ssqj95vHT'
 };
 const PROJ_FUNNEL_STEP = 'fldepcYRBoQsGoVkJ';   // Projects.funnel_step
 
@@ -201,6 +202,7 @@ exports.handler = async (event) => {
     if (p.music_style) fields[GEN.gen_music_style] = p.music_style;
     if (p.mood)        fields[GEN.gen_mood]        = p.mood;
     if (p.voice)       fields[GEN.gen_voice]       = p.voice;
+    if (style)         fields[GEN.gen_style_prompt] = style;   // prompt de style exact de cette version (historique)
 
     const rC = await fetch(`${API}/Generations`, {
       method: 'POST',

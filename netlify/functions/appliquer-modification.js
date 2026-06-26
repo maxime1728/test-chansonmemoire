@@ -48,7 +48,15 @@ exports.handler = async (event) => {
 
     const paroles = (f.paroles_corrigees || '').toString().trim();
     const style   = (f.prompt_style || '').toString().trim();
-    const vno     = parseInt(f.version_a_travailler, 10);   // version source choisie (sinon défaut côté lancer-cover)
+    // Version source : la generation liee (generation_a_travailler) en priorite, sinon le nombre version_a_travailler.
+    let vno = parseInt(f.version_a_travailler, 10);
+    const genLink = (Array.isArray(f.generation_a_travailler) && f.generation_a_travailler[0]) || null;
+    if (genLink) {
+      try {
+        const rGen = await fetch(`${API}/Generations/${genLink}`, { headers });
+        if (rGen.ok) { const gno = parseInt(((await rGen.json()).fields || {}).generation_no, 10); if (Number.isInteger(gno)) vno = gno; }
+      } catch (_) {}
+    }
 
     // 2. Lit le Projet (mode_correction sert de repli si aucune action n'est choisie).
     const rP = await fetch(`${API}/${PROJECTS}/${projetId}`, { headers });
