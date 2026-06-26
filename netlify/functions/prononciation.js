@@ -16,6 +16,7 @@ const MG_DOMAIN  = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAI
 const MG_FROM    = process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';
 const TEAM_EMAIL = process.env.TEAM_NOTIFY_EMAIL;   // destinataire de l'alerte interne
 const SITE       = 'https://chansonmemoire.ca';
+const CONVOS     = 'tbl3KBgXthCPromxF';   // table Conversations (cockpit support / modifications)
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -174,9 +175,36 @@ ${(lyrics || '').slice(0, 2500)}`;
       });
     } catch (_) { /* la trace ne bloque jamais la confirmation client */ }
 
-    // 4. Courriel à l'équipe (best-effort) — c'est la sortie principale de cette demande.
+    // Courriel du prospect (réutilisé pour la ligne Conversations + l'alerte équipe).
+    const to = await emailClient(projet, headers);
+
+    // 3d. Ligne Conversations (cockpit) : la demande apparaît dans la file comme le post-achat -> brouillon-cron
+    //     rédige une réponse, tu traites depuis la vue Modifications. (Pré-achat : la régé reste manuelle via
+    //     l'aperçu, le bouton Appliquer ne relance que les projets achetés.)
     try {
-      const to = await emailClient(projet, headers);
+      const demande = [
+        mot         ? `Mot à corriger : ${mot}` : '',
+        indication  ? `Indication du client : ${indication}` : '',
+        autre       ? `Autre : ${autre}` : '',
+        phonetique  ? `Phonétique proposée : ${phonetique}` : ''
+      ].filter(Boolean).join('\n');
+      await fetch(`${API}/${CONVOS}`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ typecast: true, fields: {
+          expediteur:   to || '',
+          sujet:        `Correction aperçu${p.deceased_name ? ' : ' + p.deceased_name : ''}`,
+          message:      demande || '(voir le projet)',
+          recu_le:      new Date().toISOString(),
+          statut:       'a_verifier',
+          categorie_ia: 'modification',
+          Projet:       [projet.id]
+        } })
+      });
+    } catch (_) { /* la ligne cockpit ne bloque jamais l'alerte courriel */ }
+
+    // 4. Courriel à l'équipe (best-effort) — alerte interne complémentaire.
+    try {
       if (TEAM_EMAIL) {
         const html =
           `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.6;max-width:620px;">` +
