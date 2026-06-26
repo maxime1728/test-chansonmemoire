@@ -1,6 +1,6 @@
 // netlify/functions/_lib/paroles-vivantes-timeline.js
 //
-// Construit le RenderScript CREATOMATE pour la vidéo PAROLES VIVANTES (karaoké « ligne active »).
+// Construit le RenderScript CREATOMATE pour la vidéo PAROLES VIVANTES (paroles en fondu, mot par mot).
 // Module PARTAGÉ entre lancer-paroles-vivantes.js (production) et tools/rendu-test.js (sandbox) :
 // une seule source de vérité pour le design -> aucune divergence entre le rendu test et le rendu livré.
 //
@@ -19,7 +19,6 @@ const BG    = '#241019';   // plum profond (famille du #2E1A28 du PDF)
 const CREAM = '#F5F0EA';   // crème — corps des paroles
 const GOLD  = '#C4963A';   // doré — accent « en mémoire de »
 const MAUVE = '#E7C9D8';   // mauve clair, lisible sur fond sombre — titre
-const DIM   = '#9A8693';   // crème grisée : lignes de contexte (précédente / suivante) autour de la ligne active
 
 const FONT_TITLE = 'Playfair Display';   // Google Font (serif élégant)
 const FONT_BODY  = 'EB Garamond';        // Google Font (serif lisible)
@@ -152,24 +151,23 @@ function buildEdit({ titre, prenom, cadeau, lines, introLen, lyricsEnd, songEnd,
     family: FONT_TITLE, weight: '700', color: MAUVE, size: 56, y: '50%', fadeOut: true
   }));
 
-  // Paroles (piste 4) : karaoké « ligne active ». La ligne chantée est dorée et agrandie au
-  // centre ; la précédente et la suivante restent visibles, atténuées, au-dessus et en dessous.
-  // La fenêtre glisse au rythme du chant (timing par ligne). Peintes en dernier (donc au-dessus).
-  lines.forEach((l, i) => {
-    const prev = lines[i - 1], next = lines[i + 1];
-    if (prev) elements.push(textEl({
-      text: prev.text, track: 4, time: l.start, duration: l.length,
-      family: FONT_BODY, weight: '400', color: DIM, size: 30, y: '33%'
-    }));
-    if (next) elements.push(textEl({
-      text: next.text, track: 4, time: l.start, duration: l.length,
-      family: FONT_BODY, weight: '400', color: DIM, size: 30, y: '67%'
-    }));
-    elements.push(textEl({
-      text: l.text, track: 4, time: l.start, duration: l.length,
-      family: FONT_BODY, weight: '700', color: GOLD, size: 50, y: '50%',
-      fadeOut: (i === lines.length - 1)
-    }));
+  // Paroles (piste 4) : une ligne à la fois, centrée. Les MOTS apparaissent un par un en fondu,
+  // au fil du chant (animation par mot, split=word), au lieu d'un bloc d'un coup. La révélation
+  // s'étale sur la durée chantée de la ligne. Peintes en dernier (donc au-dessus).
+  lines.forEach(l => {
+    const reveal = Math.min(Math.max(l.length * 0.7, 0.9), 2.6);   // durée d'apparition des mots
+    elements.push({
+      type: 'text', track: 4, time: l.start, duration: l.length, text: l.text,
+      font_family: FONT_BODY, font_weight: '400', font_size: 46,
+      fill_color: CREAM, line_height: '132%',
+      width: '84%', x_alignment: '50%', y_alignment: '50%',
+      animations: [
+        // Apparition MOT PAR MOT (chaque mot fond en entrée, décalé sur la durée de la ligne).
+        { time: 0, duration: reveal, easing: 'quadratic-out', type: 'fade', split: 'word', scope: 'split-clip' },
+        // Sortie en fondu de la ligne entière à la fin.
+        { time: 'end', duration: FADE, easing: 'quadratic-in', type: 'fade', reversed: true }
+      ]
+    });
   });
 
   return { output_format: 'mp4', width: W, height: H, frame_rate: FPS, fill_color: BG, elements };
