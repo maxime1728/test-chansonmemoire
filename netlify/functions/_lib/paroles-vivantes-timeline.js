@@ -155,15 +155,16 @@ function buildEdit({ titre, prenom, cadeau, lines, introLen, lyricsEnd, songEnd,
   // au fil du chant (animation par mot, split=word), au lieu d'un bloc d'un coup. La révélation
   // s'étale sur la durée chantée de la ligne. Peintes en dernier (donc au-dessus).
   lines.forEach(l => {
-    const reveal = Math.min(Math.max(l.length * 0.7, 0.9), 2.6);   // durée d'apparition des mots
+    const reveal = Math.max(l.length * 0.85, 1.0);   // les mots s'étalent sur (presque) toute la durée chantée de la ligne
     elements.push({
       type: 'text', track: 4, time: l.start, duration: l.length, text: l.text,
       font_family: FONT_BODY, font_weight: '400', font_size: 46,
       fill_color: CREAM, line_height: '132%',
       width: '84%', x_alignment: '50%', y_alignment: '50%',
       animations: [
-        // Apparition MOT PAR MOT (chaque mot fond en entrée, décalé sur la durée de la ligne).
-        { time: 0, duration: reveal, easing: 'quadratic-out', type: 'fade', split: 'word', scope: 'split-clip' },
+        // Apparition MOT PAR MOT : type d'animation TEXTE (text-fade) + split=word => chaque mot
+        // fond en entrée, décalé automatiquement sur la durée de la ligne (effet karaoké).
+        { time: 0, duration: reveal, easing: 'quadratic-out', type: 'text-fade', split: 'word', scope: 'split-clip' },
         // Sortie en fondu de la ligne entière à la fin.
         { time: 'end', duration: FADE, easing: 'quadratic-in', type: 'fade', reversed: true }
       ]
