@@ -70,6 +70,10 @@ function readPhotos(projet) {
   try { const a = JSON.parse(projet.fields.memoire_photos || '[]'); return Array.isArray(a) ? a : []; }
   catch (_) { return []; }
 }
+function readPinned(projet) {
+  try { const a = JSON.parse(projet.fields.memoire_pinned || '[]'); return Array.isArray(a) ? a : []; }
+  catch (_) { return []; }
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Méthode non permise' }) };
@@ -112,8 +116,8 @@ exports.handler = async (event) => {
     const gen = dG.records && dG.records[0];
     if (!gen || !gen.fields.lyrics) return { statusCode: 409, body: JSON.stringify({ error: 'Chanson introuvable' }) };
 
-    // 4. Idempotence PAR VERSION (sauf force = aperçus multi-styles).
-    if (!body.force && gen.fields.video_memoire_url)     return { statusCode: 200, body: JSON.stringify({ ok: true, video_memoire_url: gen.fields.video_memoire_url, already: true }) };
+    // 4. Idempotence PAR VERSION (force = aperçus ; regenerate = le client refait après modif).
+    if (!body.force && !body.regenerate && gen.fields.video_memoire_url) return { statusCode: 200, body: JSON.stringify({ ok: true, video_memoire_url: gen.fields.video_memoire_url, already: true }) };
     if (!body.force && gen.fields.video_memoire_task_id) return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true }) };
 
     const audioUrl = fullAudioUrl(gen.fields.cloudinary_audio_url || '');
@@ -129,9 +133,10 @@ exports.handler = async (event) => {
       photos, lyrics: gen.fields.lyrics || '', alignedWords, audioUrl, clipStart,
       style:       body.style || 'fullscreen',
       maxDuration: Number(body.maxDuration) > 0 ? Number(body.maxDuration) : 0,
-      naissance:   body.naissance || '',
-      deces:       body.deces || '',
-      citation:    body.citation || ''
+      naissance:   body.naissance || projet.fields.memoire_naissance || '',
+      deces:       body.deces     || projet.fields.memoire_deces     || '',
+      citation:    body.citation  || projet.fields.memoire_citation  || '',
+      pinned:      Array.isArray(body.pinned) ? body.pinned : readPinned(projet)
     });
     if (!edit) return { statusCode: 409, body: JSON.stringify({ error: 'Diaporama vide' }) };
 

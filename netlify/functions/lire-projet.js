@@ -120,9 +120,10 @@ exports.handler = async (event) => {
     // (du_60 inclus DANS la signature -> non contournable). L'URL complète n'est jamais exposée avant achat.
     const audioUrl = buildAudioUrl(gen.cloudinary_audio_url || '', isPaid ? '' : 'du_60');
 
-    // Photos de la vidéo mémoire (liste d'URLs Cloudinary stockée sur le Project).
-    let memoirePhotos = [];
+    // Photos de la vidéo mémoire (ordre) + photos « importantes » (liste d'URLs sur le Project).
+    let memoirePhotos = [], memoirePinned = [];
     try { const a = JSON.parse(projet.fields.memoire_photos || '[]'); if (Array.isArray(a)) memoirePhotos = a; } catch (_) {}
+    try { const a = JSON.parse(projet.fields.memoire_pinned || '[]'); if (Array.isArray(a)) memoirePinned = a; } catch (_) {}
 
     // 3. Réponse FILTRÉE — uniquement l'utile pour l'affichage
     return {
@@ -145,7 +146,11 @@ exports.handler = async (event) => {
         instrumental_url:  toHttps(gen.instrumental_url || projet.fields.instrumental_url || ''),  // add-on instrumentale livrée (Suno separate_vocal) — token-gaté
         video_url:         toHttps(gen.video_url        || projet.fields.video_url        || ''),  // add-on paroles vivantes livrée (Creatomate) — token-gaté
         video_memoire_url: toHttps(gen.video_memoire_url || ''),                                    // add-on vidéo mémoire (diaporama photos) — token-gaté
-        memoire_photos:    memoirePhotos                                                            // photos uploadées par le client (liste d'URLs) pour la vidéo mémoire
+        memoire_photos:    memoirePhotos,                                                           // photos uploadées (ordre) pour la vidéo mémoire
+        memoire_pinned:    memoirePinned,                                                           // photos « importantes » (durée ×1.5)
+        memoire_naissance: projet.fields.memoire_naissance || '',                                  // carte d'ouverture vidéo mémoire
+        memoire_deces:     projet.fields.memoire_deces || '',
+        memoire_citation:  projet.fields.memoire_citation || ''
         // PAS d'email, PAS de stripe_*, PAS d'attribution. Volontaire. vocal_url volontairement NON exposé (interne).
       })
     };
