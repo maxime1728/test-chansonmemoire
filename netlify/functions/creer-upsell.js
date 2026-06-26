@@ -22,7 +22,8 @@ const UUID_V4  = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 // Add-ons proposés -> variable d'env du Prix Stripe (price_…) correspondant.
 const UPSELLS = {
   instrumental:     'STRIPE_PRICE_INSTRUMENTAL',
-  paroles_vivantes: 'STRIPE_PRICE_PAROLES_VIVANTES'
+  paroles_vivantes: 'STRIPE_PRICE_PAROLES_VIVANTES',
+  pdf_paroles:      'STRIPE_PRICE_PDF'
 };
 
 function formulaLiteral(v) {

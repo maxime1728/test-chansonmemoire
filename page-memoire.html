@@ -131,13 +131,13 @@
     <p class="note">Elle t'appartient, garde-la pour toujours.</p>
   </div>
 
-  <!-- CADEAU (v1 : paroles en PDF seulement) -->
+  <!-- PDF DES PAROLES (upsell payant ; l'affichage prêt/en préparation est réutilisé après paiement) -->
   <div class="card" id="cadeauxCard">
-    <div class="section-title">Tes cadeaux inclus</div>
-    <p class="section-sub" id="cadeauxSub">En plus de ta chanson : <strong>les paroles en PDF</strong>. Prêtes sur cette page en quelques instants.</p>
+    <div class="section-title">Les paroles en PDF</div>
+    <p class="section-sub" id="cadeauxSub">Une belle feuille de tes paroles, mise en page, à imprimer ou à garder précieusement. Reçue par courriel et téléchargeable ici.</p>
 
     <div id="cadeauxChooser">
-      <div style="margin-top:6px;"><button class="btn btn-block" id="btnCadeaux" type="button">Préparer mes cadeaux</button></div>
+      <div style="margin-top:6px;"><button class="btn btn-block" id="btnCadeaux" type="button">Obtenir le PDF · 7,99 $</button></div>
       <p class="ok-msg" id="cadeauxMsg" style="display:none;"></p>
     </div>
 
@@ -294,13 +294,12 @@
 
   /* ── Préparer mon cadeau (paroles en PDF) ── */
   document.getElementById('btnCadeaux').addEventListener('click',function(){
-    var b=this; b.disabled=true; b.textContent='Préparation de tes cadeaux…';
-    /* lancer-cadeau = PDF des paroles (pdfkit -> Cloudinary). Le signet n'est pas actif pour l'instant. */
-    post('/api/lancer-cadeau',{token:token}).then(function(res){
-      var pdf=res&&res.pdf_url;
-      if(pdf){ showCadeauxReady(pdf); }
-      else { b.disabled=false; b.textContent='Préparer mes cadeaux'; alert("La préparation n'a pas abouti. Réessaie dans un instant."); }
-    }).catch(function(){ b.disabled=false; b.textContent='Préparer mes cadeaux'; alert("La préparation n'a pas abouti. Réessaie dans un instant."); });
+    var b=this; b.disabled=true; b.textContent='Un instant…';
+    /* PDF des paroles = upsell payant : creer-upsell -> Stripe Checkout. Make D appelle lancer-cadeau après paiement. */
+    post('/api/creer-upsell',{token:token, upsell_type:'pdf_paroles'}).then(function(res){
+      if(res && res.url){ window.location.href=res.url; return; }   /* -> Stripe Checkout */
+      b.disabled=false; b.textContent='Obtenir le PDF · 7,99 $'; alert("Paiement indisponible pour le moment. Réessaie.");
+    }).catch(function(){ b.disabled=false; b.textContent='Obtenir le PDF · 7,99 $'; alert("Une erreur est survenue."); });
   });
 
   /* ── Demande de modification (decortique : Claude analyse + prépare l'approbation) ── */
