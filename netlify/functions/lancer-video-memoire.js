@@ -129,7 +129,8 @@ exports.handler = async (event) => {
       photos, lyrics: gen.fields.lyrics || '', alignedWords, audioUrl, clipStart,
       style:       body.style || 'fullscreen',
       maxDuration: Number(body.maxDuration) > 0 ? Number(body.maxDuration) : 0,
-      dates:       body.dates || '',
+      naissance:   body.naissance || '',
+      deces:       body.deces || '',
       citation:    body.citation || ''
     });
     if (!edit) return { statusCode: 409, body: JSON.stringify({ error: 'Diaporama vide' }) };

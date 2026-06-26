@@ -18,7 +18,7 @@ const BG    = '#241019', CREAM = '#F5F0EA', GOLD = '#C4963A', MAUVE = '#E7C9D8';
 const FONT_TITLE = 'Playfair Display', FONT_BODY = 'EB Garamond';
 const W = 1280, H = 720, FPS = 25;
 const INTRO = 4.0, OUTRO = 5, FADE = 1.0;
-const PHOTO_MIN = 3.6, PHOTO_MAX = 6.5;   // durée d'affichage d'une photo (hors chevauchement)
+const PHOTO_MIN = 3.6, PHOTO_MAX = 9.0;   // durée d'affichage d'une photo (hors chevauchement) — s'adapte au nb de photos
 
 function capFirst(s) { s = String(s || '').trim(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 function sentenceCase(s, keep) {
@@ -55,7 +55,7 @@ function fadeInOut() {
 }
 
 function buildVideoMemoire({ titre, prenom, cadeau, photos, lyrics, alignedWords, audioUrl,
-                             clipStart = 0, style = 'fullscreen', maxDuration = 0, dates = '', citation = '' }) {
+                             clipStart = 0, style = 'fullscreen', maxDuration = 0, naissance = '', deces = '', citation = '' }) {
   const list = (Array.isArray(photos) ? photos : []).filter(u => typeof u === 'string' && /^https:\/\//.test(u));
   if (!list.length) return null;
 
@@ -110,7 +110,9 @@ function buildVideoMemoire({ titre, prenom, cadeau, photos, lyrics, alignedWords
   // Cartes titre (pistes 7-9, AU-DESSUS) : ouverture (titre + dédicace + dates + citation) puis fin.
   const titreAff  = sentenceCase(titre || 'Pour toujours', prenom);
   const prenomAff = capFirst(prenom);
-  const dedicace  = (cadeau ? 'Pour ' : 'En mémoire de ') + prenomAff + (dates ? '  ·  ' + dates : '');
+  const datesStr  = (naissance && deces) ? (String(naissance).trim() + ' – ' + String(deces).trim())
+                                         : String(naissance || deces || '').trim();
+  const dedicace  = (cadeau ? 'Pour ' : 'En mémoire de ') + prenomAff + (datesStr ? '  ·  ' + datesStr : '');
   elements.push(textEl({ text: titreAff, track: 7, time: 0, duration: INTRO,
     family: FONT_TITLE, weight: '700', color: MAUVE, size: 62, y: '38%', fadeOut: true }));
   if (prenomAff) elements.push(textEl({ text: dedicace, track: 8, time: 0, duration: INTRO,
