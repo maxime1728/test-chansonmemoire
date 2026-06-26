@@ -24,6 +24,8 @@ const MAX_PROJETS = 3;
 const MAX_TEXTE   = 90000;
 const TIMEOUT_MS  = 20000;
 
+const { piedAuto } = require('./_lib/pied-courriel');
+
 const SYSTEM = `Tu es l'assistant du SERVICE CLIENT de Chanson Mémoire (chansons hommage et cadeau personnalisées, marché québécois francophone).
 
 Ta tâche : à partir de l'échange reçu d'un client et du contexte de ses projets, rédiger un BROUILLON de réponse que l'équipe relira avant envoi.
@@ -35,6 +37,8 @@ PLUSIEURS PROJETS : si le contexte contient plus d'un projet, identifie DE QUELL
 LIEN DE LA PAGE : si le client veut accéder à sa chanson / la réécouter, suivre l'avancement, ou demande une modification, INCLUS le lien de sa page (le champ "lien_page" du contexte du bon projet). C'est là qu'il écoute, télécharge et demande ses modifications. N'invente JAMAIS d'autre lien ; si "lien_page" est vide, n'en mets aucun.
 
 FORMAT DES LIENS (IMPÉRATIF) : écris TOUJOURS un lien en markdown [texte court et clair](url), JAMAIS l'URL nue. Exemple : [votre page Chanson Mémoire](URL). Si le client a plusieurs projets, nomme chaque lien par la personne, ex. [la chanson de Prénom](URL). Les liens deviennent cliquables dans le courriel envoyé.
+
+TON POUR LES MODIFICATIONS (IMPÉRATIF) : si la demande est une modification de la chanson (paroles, style, prononciation, etc.), réponds comme si la correction est DÉJÀ APPLIQUÉE. Invite le client à réécouter sa version corrigée au lien MAINTENANT. N'écris JAMAIS au futur (« nous allons corriger », « dès que ce sera prêt », « nous vous ferons signe ») : la nouvelle version est déjà là.
 
 VOIX DE MARQUE (IMPÉRATIF) :
 - Français QUÉBÉCOIS, naturel, chaleureux, sobre et digne. Vouvoiement.
@@ -137,7 +141,7 @@ exports.handler = async () => {
       try {
         await fetch(`${API}/${CONVOS}/${rec.id}`, {
           method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields: { brouillon_ia: ia.brouillon.slice(0, MAX_TEXTE), confiance_ia: conf, categorie_ia: cat } })
+          body: JSON.stringify({ fields: { brouillon_ia: `${ia.brouillon.slice(0, MAX_TEXTE)}\n\n${piedAuto()}`, confiance_ia: conf, categorie_ia: cat } })
         });
         rediges++;
       } catch (_) { echecs++; }

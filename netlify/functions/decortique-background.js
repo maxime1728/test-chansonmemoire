@@ -23,6 +23,7 @@ const SECRET  = process.env.DECORTIQUE_SECRET || '';
 const PROJECTS = 'Projects', GENERATIONS = 'Generations', CONVOS = 'tbl3KBgXthCPromxF';
 
 const { analyserModif } = require('./_lib/analyse-modif');
+const { piedAuto } = require('./_lib/pied-courriel');
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -93,14 +94,14 @@ exports.handler = async (event) => {
     if (convoId) {
       const lien    = p.page_url || `${SITE}/page-chanson?id=${encodeURIComponent(token)}`;
       const surNom  = p.deceased_name ? ` concernant la chanson de ${p.deceased_name}` : '';
-      // Corps seulement : la salutation du moment + la signature (Nathalie, L'equipe Chanson Memoire) sont
-      // ajoutees automatiquement a l'envoi par repondre-courriel. Lien en markdown -> cliquable, courriel plus propre.
+      // Ton ACCOMPLI (le courriel part apres que l'equipe a applique la modif) + pied visible (salutation + signature).
+      // Lien en markdown -> rendu cliquable a l'envoi par repondre-courriel.
       const brouillon =
 `Bonjour,
 
-C'est bien noté pour votre demande${surNom}. On s'en occupe avec soin.
+Bonne nouvelle${surNom} : votre nouvelle version est prête. Vous pouvez l'écouter ici : [votre page Chanson Mémoire](${lien}).
 
-Dès que votre nouvelle version sera prête, vous pourrez l'écouter ici : [votre page Chanson Mémoire](${lien}).`;
+${piedAuto()}`;
       // paroles_corrigees / prompt_style : versions EDITABLES visibles dans la vue Modifications (l'equipe ajuste
       // puis coche `appliquer` -> appliquer-modification les pousse sur le Projet). Brouillon = reponse client.
       try { await patch(CONVOS, convoId, { brouillon_ia: brouillon, confiance_ia: 'basse', paroles_corrigees: adjLyrics, prompt_style: adjStyle, modif_pregeneree: true }); } catch (_) {}

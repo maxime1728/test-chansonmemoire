@@ -28,6 +28,8 @@ const MG_FROM   = process.env.MAILGUN_FROM_SUPPORT || 'Chanson Mémoire <nathali
 const CONVOS = 'tbl3KBgXthCPromxF';
 const REC_ID = /^rec[A-Za-z0-9]{14}$/;
 
+const { piedAuto } = require('./_lib/pied-courriel');
+
 function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -36,16 +38,7 @@ function esc(s) {
 const RE_LIEN = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
 function liensTexte(s) { return String(s || '').replace(RE_LIEN, '$1 ($2)'); }
 
-// Salutation selon l'heure locale du Québec (America/Toronto) : « Bonne journée » le jour, « Bonne soirée » le soir.
-function salutationHeure() {
-  let h = 12;
-  try { h = parseInt(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto', hour: 'numeric', hour12: false }).format(new Date()), 10); } catch (_) {}
-  if (!Number.isInteger(h)) h = 12;
-  return (h % 24) >= 18 ? 'Bonne soirée' : 'Bonne journée';
-}
-
-// Pied ajouté automatiquement à l'envoi : salutation du moment + signature Nathalie / L'équipe Chanson Mémoire.
-function piedAuto() { return `${salutationHeure()},\nNathalie\nL'équipe Chanson Mémoire`; }
+// salutationHeure() + piedAuto() : centralises dans _lib/pied-courriel.js (partages avec les brouillons).
 
 // Enveloppe le texte (saisi/édité par l'humain) dans le template de marque, liens markdown rendus cliquables.
 // La signature est gérée par piedAuto() au moment de l'envoi (voir handler), pas ici.
