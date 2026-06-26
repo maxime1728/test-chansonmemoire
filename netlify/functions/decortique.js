@@ -81,7 +81,9 @@ exports.handler = async (event) => {
       body: JSON.stringify({ fields: {
         correction_request: `DEMANDE CLIENT (analyse en cours) :\n${demande}`,
         approval_status: 'pending',
-        ref_id: refId
+        ref_id: refId,
+        cover_task_id: null,        // re-arme le cover : ton approbation future relancera lancer-cover
+        cover_launched_at: null     // null et JAMAIS '' ('' = 422 sur ce champ date)
       } })
     });
 
