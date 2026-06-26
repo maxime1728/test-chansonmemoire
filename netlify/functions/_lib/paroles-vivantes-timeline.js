@@ -24,7 +24,7 @@ const FONT_TITLE = 'Playfair Display';   // Google Font (serif élégant)
 const FONT_BODY  = 'EB Garamond';        // Google Font (serif lisible)
 
 // ── Dimensions ────────────────────────────────────────────────────────────────
-const W = 1280, H = 720, FPS = 30;
+const W = 1280, H = 720, FPS = 25;   // 25 fps (réf. tarif Creatomate) = ~17% de crédits en moins vs 30, fluidité préservée
 
 // ── Réglages temporels (secondes) ─────────────────────────────────────────────
 const INTRO_MIN = 3.5;   // durée minimale de la carte-titre, même si la voix entre tôt
@@ -35,7 +35,7 @@ const FADE      = 0.8;   // durée des fondus
 
 // Effet du surlignage karaoké : 'karaoke' (le doré REMPLIT le mot progressivement, balayage) ou
 // 'highlight' (le mot BASCULE au doré d'un coup quand il est chanté). Un seul réglage à changer.
-const KARAOKE_EFFECT = 'highlight';
+const KARAOKE_EFFECT = 'karaoke';
 
 // Retire les balises de structure ([Refrain], (x2)…) et les lignes vides -> lignes à AFFICHER.
 function cleanLyrics(lyrics) {
@@ -186,18 +186,66 @@ function cleanWord(w) {
     .trim();
 }
 
-function buildTranscript(lines, alignedWords) {
-  const words = (Array.isArray(alignedWords) ? alignedWords : [])
-    .filter(w => w && Number.isFinite(w.startS) && Number.isFinite(w.endS)
-                 && w.endS >= w.startS && cleanWord(w.word));
-  if (words.length >= 6) {
-    return words.map(w => ({
-      time: +Number(w.startS).toFixed(3),
-      duration: +Math.max(0.08, w.endS - w.startS).toFixed(3),
-      value: cleanWord(w.word)
-    }));
+// Aligne les VRAIS mots (le texte = source de vérité) sur les timings Suno. Comme Suno aligne déjà le
+// texte fourni, les deux séquences sont quasi identiques : on GARDE le mot du texte (ça corrige les
+// coquilles de Suno) avec le timing Suno. Les petits décalages (un mot en trop d'un côté) sont
+// rattrapés par une fenêtre de resynchronisation.
+function alignToRealText(realWords, suno) {
+  const norm = s => String(s).toLowerCase()
+    .replace(/[.,!?;:«»"()…]/g, '').replace(/[’'`]/g, "'").trim();
+  const out = [];
+  const N = realWords.length, M = suno.length, WIN = 6;
+  let i = 0, j = 0;
+  while (i < N && j < M) {
+    if (norm(realWords[i]) === norm(suno[j].value)) {
+      out.push({ time: suno[j].time, duration: suno[j].duration, value: realWords[i] });
+      i++; j++; continue;
+    }
+    let fj = -1;   // realWords[i] retrouvé plus loin côté Suno -> Suno a inséré des mots
+    for (let k = j + 1; k < Math.min(M, j + 1 + WIN); k++) {
+      if (norm(suno[k].value) === norm(realWords[i])) { fj = k; break; }
+    }
+    let fi = -1;   // suno[j] retrouvé plus loin côté texte -> le texte a des mots sans audio
+    for (let k = i + 1; k < Math.min(N, i + 1 + WIN); k++) {
+      if (norm(realWords[k]) === norm(suno[j].value)) { fi = k; break; }
+    }
+    if (fj !== -1 && (fi === -1 || (fj - j) <= (fi - i))) {
+      j = fj;                                    // saute les mots Suno en trop (ad-libs)
+    } else if (fi !== -1) {                       // interpole les vrais mots intermédiaires
+      const tEnd = suno[j].time;
+      const tStart = out.length ? out[out.length - 1].time + out[out.length - 1].duration
+                                : Math.max(0, tEnd - 0.3 * (fi - i));
+      const step = Math.max(0.05, (tEnd - tStart) / (fi - i + 1));
+      for (let k = i; k < fi; k++) {
+        out.push({ time: +(tStart + (k - i) * step).toFixed(3), duration: +(step * 0.9).toFixed(3), value: realWords[k] });
+      }
+      i = fi;
+    } else {                                      // substitution : on garde le vrai mot + timing courant
+      out.push({ time: suno[j].time, duration: suno[j].duration, value: realWords[i] });
+      i++; j++;
+    }
   }
-  // Repli (pas d'horodatage Suno) : on répartit les mots de chaque ligne sur sa durée chantée.
+  while (i < N) {                                 // vrais mots restants en fin -> on enchaîne
+    const prev = out.length ? out[out.length - 1] : { time: 0, duration: 0.4 };
+    out.push({ time: +(prev.time + prev.duration).toFixed(3), duration: 0.4, value: realWords[i] });
+    i++;
+  }
+  return out;
+}
+
+function buildTranscript(realWords, lines, alignedWords) {
+  const suno = (Array.isArray(alignedWords) ? alignedWords : [])
+    .filter(w => w && Number.isFinite(w.startS) && Number.isFinite(w.endS) && w.endS >= w.startS)
+    .map(w => ({
+      value: cleanWord(w.word),
+      time: +Number(w.startS).toFixed(3),
+      duration: +Math.max(0.08, w.endS - w.startS).toFixed(3)
+    }))
+    .filter(w => w.value);
+
+  if (suno.length >= 6 && realWords && realWords.length) return alignToRealText(realWords, suno);
+
+  // Repli (pas d'horodatage Suno) : on répartit les vrais mots sur la cadence des lignes.
   const out = [];
   lines.forEach(l => {
     const ws = String(l.text).split(/\s+/).filter(Boolean);
@@ -215,12 +263,13 @@ function buildTranscript(lines, alignedWords) {
 function buildEditFromLyrics({ titre, prenom, cadeau, lyrics, alignedWords, audioUrl }) {
   const displayLines = cleanLyrics(lyrics);
   if (displayLines.length === 0) return null;
+  const realWords = displayLines.join(' ').split(/\s+/).filter(Boolean);   // VRAIS mots (texte = vérité)
   const t = timeLines(displayLines, alignedWords);
   return buildEdit({
     titre, prenom, cadeau, audioUrl,
-    transcriptWords: buildTranscript(t.lines, alignedWords),
+    transcriptWords: buildTranscript(realWords, t.lines, alignedWords),
     introLen: t.introLen, lyricsEnd: t.lyricsEnd, songEnd: t.songEnd
   });
 }
 
-module.exports = { cleanLyrics, timeLines, buildTranscript, buildEdit, buildEditFromLyrics, FONT_TITLE, FONT_BODY };
+module.exports = { cleanLyrics, cleanWord, timeLines, alignToRealText, buildTranscript, buildEdit, buildEditFromLyrics, FONT_TITLE, FONT_BODY };

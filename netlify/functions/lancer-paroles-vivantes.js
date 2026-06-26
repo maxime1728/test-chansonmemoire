@@ -128,6 +128,17 @@ exports.handler = async (event) => {
     });
     if (!edit) return { statusCode: 409, body: JSON.stringify({ error: 'Paroles vides' }) };
 
+    // DRY-RUN (debug) : renvoie le texte+timings générés SANS rien rendre (0 crédit Creatomate).
+    // Sert à vérifier l'alignement sur le vrai texte avant de dépenser un rendu.
+    if (body.dryRun) {
+      const tr = (edit.elements.find(e => Array.isArray(e.transcript_source)) || {}).transcript_source || [];
+      return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        ok: true, dryRun: true, count: tr.length,
+        text: tr.map(w => w.value).join(' '),
+        first: tr.slice(0, 8), last: tr.slice(-8)
+      }) };
+    }
+
     // 5. Lance le rendu Creatomate (async). webhook + metadata=token -> le callback retrouve la version achetée.
     //    v1 : { source, webhook_url, metadata } (forme documentée) ; v2 : RenderScript au top-level.
     const extra = { webhook_url: `${SITE}/api/callback-paroles-vivantes${process.env.CALLBACK_SECRET ? '?s=' + encodeURIComponent(process.env.CALLBACK_SECRET) : ''}`, metadata: token };
