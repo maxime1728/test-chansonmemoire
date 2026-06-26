@@ -20,7 +20,7 @@ const MG_KEY    = process.env.MAILGUN_API_KEY;       // no-op si absent
 const MG_DOMAIN = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;        // sous-domaine TRANSACTIONNEL
 const MG_FROM   = process.env.MAILGUN_FROM_ACHAT || process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';   // post-achat -> sous-domaine achat
 
-const UPSELL_LABEL = { instrumental: 'la version instrumentale', paroles_vivantes: 'les paroles vivantes en vidéo' };
+const UPSELL_LABEL = { instrumental: 'la version instrumentale', paroles_vivantes: 'les paroles vivantes en vidéo', pdf_paroles: 'les paroles en PDF' };
 
 function formulaLiteral(v) {
   const s = String(v);
