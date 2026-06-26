@@ -431,6 +431,7 @@
       infos.style.display=list.length>0?'block':'none';
       genWrap.style.display=list.length>0?'block':'none';
       genBtn.disabled=list.length<MIN;
+      grid.style.touchAction = (selectedUrl || touchDragUrl) ? 'none' : '';   // photo sélectionnée ou en cours de glisser -> pas de scroll qui coupe
     }
     function removePhoto(url){
       list=list.filter(function(u){return u!==url;}); delete pins[url]; refresh();
