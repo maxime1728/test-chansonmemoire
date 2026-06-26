@@ -24,7 +24,7 @@ const PROJECTS = 'Projects', GENERATIONS = 'Generations', CONVOS = 'tbl3KBgXthCP
 
 const { analyserModif } = require('./_lib/analyse-modif');
 const { piedAuto } = require('./_lib/pied-courriel');
-const { styleFor } = require('./_lib/style');
+const { styleFor, cataloguePourAmbiance } = require('./_lib/style');
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -81,9 +81,10 @@ exports.handler = async (event) => {
     // Prompt de style de reference : celui stocke sur la version (gen_style_prompt), sinon le prompt cure (styleFor).
     const styleActuel = (gen.gen_style_prompt && gen.gen_style_prompt.trim())
       || await styleFor({ music_style: gen.gen_music_style || p.music_style, mood: gen.gen_mood || p.mood, cadeau: p.song_type === 'cadeau', language: p.language });
+    const catalogue = await cataloguePourAmbiance({ mood: gen.gen_mood || p.mood, cadeau: p.song_type === 'cadeau', language: p.language });
 
     // 2. Analyse partagee (Claude) : categories + compte-rendu + prompt style (ajuste depuis l'actuel) + paroles. Best-effort.
-    const { categories, mode, compteRendu: crIA, adjStyle, adjLyrics } = await analyserModif({ apiKey, demande, p, gen, styleActuel });
+    const { categories, mode, compteRendu: crIA, adjStyle, adjLyrics } = await analyserModif({ apiKey, demande, p, gen, styleActuel, catalogue });
     const compteRendu = crIA || '(analyse automatique indisponible, a traiter manuellement)';
 
     // 3. Enrichit le Projet : paroles/style PROPOSES (editables). approval_status reste 'pending' (approbation

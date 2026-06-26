@@ -13,7 +13,7 @@
 // Best-effort : jamais d'exception qui casse le cron. Env : ANTHROPIC_API_KEY, AIRTABLE_TOKEN, AIRTABLE_BASE_ID.
 
 const { analyserModif } = require('./_lib/analyse-modif');
-const { styleFor } = require('./_lib/style');
+const { styleFor, cataloguePourAmbiance } = require('./_lib/style');
 
 const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
@@ -81,10 +81,11 @@ exports.handler = async () => {
         // Prompt de style de reference : gen_style_prompt de la version, sinon le prompt cure (styleFor).
         const styleActuel = (gen.gen_style_prompt && gen.gen_style_prompt.trim())
           || await styleFor({ music_style: gen.gen_music_style || p.music_style, mood: gen.gen_mood || p.mood, cadeau: p.song_type === 'cadeau', language: p.language });
+        const catalogue = await cataloguePourAmbiance({ mood: gen.gen_mood || p.mood, cadeau: p.song_type === 'cadeau', language: p.language });
 
         // Analyse partagee : la demande = le message du fil.
         const demande = (f.message || '').toString().trim().slice(0, 4000);
-        const res = await analyserModif({ apiKey: ANTHROPIC_KEY, demande, p, gen, styleActuel });
+        const res = await analyserModif({ apiKey: ANTHROPIC_KEY, demande, p, gen, styleActuel, catalogue });
         if (!res.ok) { echecs++; continue; }   // Anthropic indispo -> on reessaiera (auto-reparation), ne pas marquer
 
         // Versions editables + version de reference pre-remplie sur la Conversation ; mode sur le Projet.
