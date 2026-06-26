@@ -44,6 +44,16 @@
 [functions."brouillon-cron"]
   schedule = "* * * * *"
 
+# Pré-génération paroles + prompt des demandes de modification non passées par decortique (pré-achat /
+# courriels). Découplé, auto-réparant. Chaque minute.
+[functions."modif-cron"]
+  schedule = "* * * * *"
+
+# Application des modifications : traite les conversations cochées « appliquer » (pousse vers le Projet +
+# relance Suno via refaire). Chaque minute (réactif).
+[functions."appliquer-cron"]
+  schedule = "* * * * *"
+
 # Moteur multi-séquences (Bienvenue post-achat, puis parrainage/cross-sell) via la table Inscriptions. Horaire.
 [functions."sequences-cron"]
   schedule = "@hourly"
