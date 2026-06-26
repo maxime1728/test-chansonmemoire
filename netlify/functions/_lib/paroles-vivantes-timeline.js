@@ -162,9 +162,9 @@ function buildEdit({ titre, prenom, cadeau, lines, introLen, lyricsEnd, songEnd,
       fill_color: CREAM, line_height: '132%',
       width: '84%', x_alignment: '50%', y_alignment: '50%',
       animations: [
-        // Apparition MOT PAR MOT : type d'animation TEXTE (text-fade) + split=word => chaque mot
-        // fond en entrée, décalé automatiquement sur la durée de la ligne (effet karaoké).
-        { time: 0, duration: reveal, easing: 'quadratic-out', type: 'text-fade', split: 'word', scope: 'split-clip' },
+        // Apparition MOT PAR MOT : animation TEXTE (text-slide, type confirmé) + split=word => chaque
+        // mot entre un par un (léger fondu + montée), décalé automatiquement sur la durée de la ligne.
+        { time: 0, duration: reveal, easing: 'quadratic-out', type: 'text-slide', direction: 'up', split: 'word', scope: 'split-clip' },
         // Sortie en fondu de la ligne entière à la fin.
         { time: 'end', duration: FADE, easing: 'quadratic-in', type: 'fade', reversed: true }
       ]
