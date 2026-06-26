@@ -50,6 +50,26 @@ function countWords(line) {
   return (String(line).match(/\S+/g) || []).length;
 }
 
+// Majuscule initiale seulement (le reste inchangé) — pour un prénom.
+function capFirst(s) {
+  s = String(s || '').trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+// « Casse phrase » FR : 1re lettre majuscule, reste minuscule, mais on REPROTÈGE le prénom du défunt
+// s'il apparaît dans le titre (ex. « POUR TOUJOURS MICHEL » -> « Pour toujours Michel »).
+function sentenceCase(s, keep) {
+  let t = String(s || '').trim();
+  if (!t) return t;
+  t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+  const k = String(keep || '').trim();
+  if (k) {
+    const re = new RegExp('\\b' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+    t = t.replace(re, capFirst(k));
+  }
+  return t;
+}
+
 // Calcule pour chaque ligne { text, start, length } + introLen + lyricsEnd + songEnd.
 // alignedWords = tableau Suno [{ word, startS, endS, success }] (peut être vide -> repli).
 function timeLines(displayLines, alignedWords) {
@@ -144,21 +164,24 @@ function buildEdit({ titre, prenom, cadeau, transcriptWords, introLen, lyricsEnd
     family: FONT_TITLE, weight: '700', color: CREAM, size: 22, y: '92%'
   }));
 
-  // Cartes titre (piste 3) : intro (titre + « en mémoire de … ») puis fin.
+  // Cartes titre (piste 3) : intro (titre + « En mémoire de … ») puis fin. Titre en casse phrase
+  // (majuscule au début), dédicace avec « En mémoire de » / « Pour » + prénom capitalisé.
+  const titreAff  = sentenceCase(titre || 'Pour toujours', prenom);
+  const prenomAff = capFirst(prenom);
   if (introLen > 0.8) {
     elements.push(textEl({
-      text: titre || 'Pour toujours', track: 3, time: 0, duration: introLen,
+      text: titreAff, track: 3, time: 0, duration: introLen,
       family: FONT_TITLE, weight: '700', color: MAUVE, size: 64, y: '44%', fadeOut: true
     }));
-    if (prenom) {
+    if (prenomAff) {
       elements.push(textEl({
-        text: (cadeau ? 'pour ' : 'en mémoire de ') + prenom, track: 3, time: 0, duration: introLen,
+        text: (cadeau ? 'Pour ' : 'En mémoire de ') + prenomAff, track: 3, time: 0, duration: introLen,
         family: FONT_BODY, weight: '400', color: GOLD, size: 30, y: '58%', fadeOut: true
       }));
     }
   }
   elements.push(textEl({
-    text: titre || 'Pour toujours', track: 3, time: Math.max(0, lyricsEnd), duration: OUTRO,
+    text: titreAff, track: 3, time: Math.max(0, lyricsEnd), duration: OUTRO,
     family: FONT_TITLE, weight: '700', color: MAUVE, size: 56, y: '50%', fadeOut: true
   }));
 

@@ -136,6 +136,7 @@ exports.handler = async (event) => {
       const au = edit.elements.find(e => e.type === 'audio') || {};
       return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         ok: true, dryRun: true, count: tr.length, clipStart,
+        titles: edit.elements.filter(e => e.track === 3).map(e => e.text),
         audio_time: au.time || 0, audio_trim_start: au.trim_start || 0,
         text: tr.map(w => w.value).join(' '),
         first: tr.slice(0, 8), last: tr.slice(-8)
