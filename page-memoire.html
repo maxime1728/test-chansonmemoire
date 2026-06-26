@@ -185,7 +185,7 @@
   <!-- VIDÉO MÉMOIRE : photos du client + chanson -->
   <div class="card" id="videoMemoireCard" style="display:none;">
     <div class="section-title">Ta vidéo souvenir</div>
-    <p class="section-sub">Un montage tout en douceur de tes photos, porté par ta chanson (10 à 60 photos). <b>Glisse</b> une photo pour changer l'ordre, <b>★</b> pour la mettre en avant (elle reste plus longtemps).</p>
+    <p class="section-sub">Un montage tout en douceur de tes photos, porté par ta chanson (10 à 60 photos). <b>Touche une photo</b> pour la sélectionner, puis <b>‹ ›</b> pour la déplacer, <b>★</b> pour la mettre en avant (durée ×1,5), <b>×</b> pour la retirer.</p>
     <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
     <div style="margin-top:6px;"><button class="btn btn-ghost btn-block" id="btnAddPhotos" type="button"><i class="fa-solid fa-images"></i>&nbsp; Ajouter mes photos</button></div>
     <p class="section-sub" id="photoCount" style="margin-top:10px;display:none;"></p>
@@ -386,7 +386,9 @@
     var infos=document.getElementById('memoireInfos'), frame=document.getElementById('videoMemoireFrame');
     var fN=document.getElementById('memNaissance'), fD=document.getElementById('memDeces'), fC=document.getElementById('memCitation');
     fN.value=naissance||''; fD.value=deces||''; fC.value=citation||'';
-    var dragFrom=null;
+    var dragFrom=null, selectedUrl=null;
+    function move(idx, delta){ var j=idx+delta; if(j<0||j>=list.length) return; var t=list[idx]; list[idx]=list[j]; list[j]=t; refresh(); }
+    function ctrlBtn(txt, css){ var b=document.createElement('button'); b.type='button'; b.textContent=txt; b.style.cssText=css; return b; }
 
     function showVideo(url){ frame.style.display='block'; frame.innerHTML='<video src="'+url+'" controls playsinline style="width:100%;height:100%;display:block;"></video>'; }
     function thumb(url){ return url.replace('/upload/','/upload/w_200,h_200,c_fill,q_auto,f_auto/'); }
@@ -394,20 +396,31 @@
     function refresh(){
       grid.innerHTML='';
       list.forEach(function(url, idx){
-        var d=document.createElement('div'); d.style.cssText='position:relative;cursor:grab;'; d.draggable=true;
+        var sel=(selectedUrl===url);
+        var d=document.createElement('div'); d.style.cssText='position:relative;cursor:pointer;'; d.draggable=true;
         var img=document.createElement('img'); img.src=thumb(url); img.loading='lazy'; img.draggable=false;
-        img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;'+(pins[url]?'outline:3px solid #C4963A;outline-offset:-3px;':'');
-        var star=document.createElement('button'); star.type='button'; star.textContent='★'; star.title='Mettre en avant (durée x1.5)';
-        star.style.cssText='position:absolute;top:-6px;left:-6px;width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;font:700 12px/1 sans-serif;background:'+(pins[url]?'#C4963A':'#3a2233')+';color:#fff;';
-        star.addEventListener('click',function(e){ e.stopPropagation(); if(pins[url]) delete pins[url]; else pins[url]=1; refresh(); });
-        var x=document.createElement('button'); x.type='button'; x.textContent='×'; x.title='Retirer';
-        x.style.cssText='position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:#5c2d4a;color:#fff;cursor:pointer;font:700 14px/1 sans-serif;';
-        x.addEventListener('click',function(e){ e.stopPropagation(); removePhoto(url); });
+        img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;'
+          +(pins[url]?'outline:3px solid #C4963A;outline-offset:-3px;':'')
+          +(sel?'box-shadow:0 0 0 3px #fff,0 0 0 6px #5c2d4a;':'');
+        d.appendChild(img);
+        d.addEventListener('click',function(){ selectedUrl=(selectedUrl===url?null:url); refresh(); });
+        if(pins[url]){ var pd=document.createElement('div'); pd.textContent='★'; pd.style.cssText='position:absolute;top:3px;left:4px;color:#C4963A;font:700 15px/1 sans-serif;text-shadow:0 1px 2px rgba(0,0,0,.6);pointer-events:none;'; d.appendChild(pd); }
+        if(sel){
+          var x=ctrlBtn('×','position:absolute;top:-7px;right:-7px;width:24px;height:24px;border-radius:50%;background:#fff;color:#e02424;border:2px solid #e02424;cursor:pointer;font:700 15px/1 sans-serif;');
+          x.title='Supprimer'; x.addEventListener('click',function(e){ e.stopPropagation(); selectedUrl=null; removePhoto(url); });
+          var star=ctrlBtn(pins[url]?'★':'☆','position:absolute;top:-7px;left:-7px;width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;font:700 13px/1 sans-serif;background:'+(pins[url]?'#C4963A':'#3a2233')+';color:#fff;');
+          star.title='Mettre en avant (durée x1.5)'; star.addEventListener('click',function(e){ e.stopPropagation(); if(pins[url]) delete pins[url]; else pins[url]=1; refresh(); });
+          var lf=ctrlBtn('‹','position:absolute;bottom:-7px;left:-7px;width:24px;height:24px;border-radius:50%;border:none;background:#5c2d4a;color:#fff;cursor:pointer;font:700 17px/1 sans-serif;');
+          lf.title='Déplacer à gauche'; lf.addEventListener('click',function(e){ e.stopPropagation(); move(idx,-1); });
+          var rt=ctrlBtn('›','position:absolute;bottom:-7px;right:-7px;width:24px;height:24px;border-radius:50%;border:none;background:#5c2d4a;color:#fff;cursor:pointer;font:700 17px/1 sans-serif;');
+          rt.title='Déplacer à droite'; rt.addEventListener('click',function(e){ e.stopPropagation(); move(idx,1); });
+          d.appendChild(x); d.appendChild(star); d.appendChild(lf); d.appendChild(rt);
+        }
         d.addEventListener('dragstart',function(){ dragFrom=idx; d.style.opacity='0.4'; });
         d.addEventListener('dragend',function(){ d.style.opacity='1'; });
         d.addEventListener('dragover',function(e){ e.preventDefault(); });
         d.addEventListener('drop',function(e){ e.preventDefault(); if(dragFrom===null||dragFrom===idx) return; var mv=list.splice(dragFrom,1)[0]; list.splice(idx,0,mv); dragFrom=null; refresh(); });
-        d.appendChild(img); d.appendChild(star); d.appendChild(x); grid.appendChild(d);
+        grid.appendChild(d);
       });
       countEl.style.display='block';
       countEl.textContent=list.length+' / '+MAX+' photos'+(list.length<MIN?(' · minimum '+MIN):'');
