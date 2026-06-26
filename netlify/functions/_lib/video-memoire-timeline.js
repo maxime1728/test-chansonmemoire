@@ -17,7 +17,7 @@ const { cleanLyrics, timeLines } = require('./paroles-vivantes-timeline');
 const BG = '#241019', CREAM = '#F5F0EA', GOLD = '#C4963A', MAUVE = '#E7C9D8';
 const FONT_TITLE = 'Playfair Display', FONT_BODY = 'EB Garamond';
 const W = 1280, H = 720, FPS = 25;
-const INTRO = 4.0, OUTRO = 5, FADE = 0.7;      // fondu raccourci -> moins de « noir » entre photos
+const INTRO = 4.0, OUTRO = 5, FADE = 0.5;      // fondu court -> léger passage par le fond sombre entre photos (voulu mais discret)
 const PHOTO_MIN = 3.6, PHOTO_MAX = 9.0;
 const PIN = 1.5;                                // multiplicateur de durée d'une photo « importante »
 const TRACK_BASE = 10;                          // photos sur des pistes croissantes à partir de 10
@@ -82,28 +82,31 @@ function buildVideoMemoire({ titre, prenom, cadeau, photos, lyrics, alignedWords
     elements.push(a);
   }
 
-  // Photos sur pistes CROISSANTES (chacune au-dessus de la précédente) -> fondu enchaîné sans noir.
+  // Photos en FONDU ENCHAÎNÉ (léger passage par le fond sombre, voulu). Pistes 3 & 4 alternées : la
+  // suivante apparaît en fondu pendant que la précédente s'efface. FADE court = noir bref et discret.
   seq.forEach((s, i) => {
-    const last = i === seq.length - 1;
     const framed = style === 'framed' || (style === 'mix' && i % 2 === 1);
-    const fadeAnims = [{ time: 0, duration: FADE, easing: 'quadratic-out', type: 'fade' }];
-    if (last) fadeAnims.push({ time: 'end', duration: FADE, easing: 'quadratic-in', type: 'fade', reversed: true });
+    const fadeAnims = [
+      { time: 0,     duration: FADE, easing: 'quadratic-out', type: 'fade' },
+      { time: 'end', duration: FADE, easing: 'quadratic-in',  type: 'fade', reversed: true }
+    ];
+    const tk = 3 + (i % 2);
     if (framed) {
-      elements.push({ type: 'image', track: TRACK_BASE + i * 2, time: s.time, duration: s.dur, source: blurredBg(s.url),
+      elements.push({ type: 'image', track: 2, time: s.time, duration: s.dur, source: blurredBg(s.url),
         width: '100%', height: '100%', fit: 'cover', animations: fadeAnims.slice() });
-      elements.push({ type: 'image', track: TRACK_BASE + i * 2 + 1, time: s.time, duration: s.dur, source: s.url,
+      elements.push({ type: 'image', track: tk, time: s.time, duration: s.dur, source: s.url,
         width: '74%', height: '74%', fit: 'cover', x_alignment: '50%', y_alignment: '47%',
         border_radius: '1.5 vmin', shadow_color: 'rgba(0,0,0,0.55)', shadow_blur: '4 vmin', shadow_y: '1 vmin',
         animations: [kenBurns(s.dur, i)].concat(fadeAnims) });
     } else {
-      elements.push({ type: 'image', track: TRACK_BASE + i, time: s.time, duration: s.dur, source: s.url,
+      elements.push({ type: 'image', track: tk, time: s.time, duration: s.dur, source: s.url,
         width: '100%', height: '100%', fit: 'cover', x_alignment: '50%', y_alignment: '50%',
         animations: [kenBurns(s.dur, i)].concat(fadeAnims) });
     }
   });
 
   // Signature + cartes titre sur des pistes TRÈS hautes -> toujours au-dessus des photos.
-  const TOP = TRACK_BASE + seq.length * 2 + 100;
+  const TOP = 100;
   elements.push(textEl({ text: 'Chanson Mémoire', track: TOP, time: 0, duration: songEnd,
     family: FONT_TITLE, weight: '700', color: CREAM, size: 22, y: '93%' }));
 
