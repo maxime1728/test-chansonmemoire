@@ -120,6 +120,10 @@ exports.handler = async (event) => {
     // (du_60 inclus DANS la signature -> non contournable). L'URL complète n'est jamais exposée avant achat.
     const audioUrl = buildAudioUrl(gen.cloudinary_audio_url || '', isPaid ? '' : 'du_60');
 
+    // Photos de la vidéo mémoire (liste d'URLs Cloudinary stockée sur le Project).
+    let memoirePhotos = [];
+    try { const a = JSON.parse(projet.fields.memoire_photos || '[]'); if (Array.isArray(a)) memoirePhotos = a; } catch (_) {}
+
     // 3. Réponse FILTRÉE — uniquement l'utile pour l'affichage
     return {
       statusCode: 200,
@@ -139,7 +143,9 @@ exports.handler = async (event) => {
         pdf_url:           toHttps(gen.pdf_url          || projet.fields.pdf_url          || ''),  // PDF paroles — propriété du client, token-gaté
         signet_url:        toHttps(gen.signet_url       || projet.fields.signet_url       || ''),  // signet commémoration
         instrumental_url:  toHttps(gen.instrumental_url || projet.fields.instrumental_url || ''),  // add-on instrumentale livrée (Suno separate_vocal) — token-gaté
-        video_url:         toHttps(gen.video_url        || projet.fields.video_url        || '')   // add-on paroles vivantes livrée (Creatomate) — token-gaté
+        video_url:         toHttps(gen.video_url        || projet.fields.video_url        || ''),  // add-on paroles vivantes livrée (Creatomate) — token-gaté
+        video_memoire_url: toHttps(gen.video_memoire_url || ''),                                    // add-on vidéo mémoire (diaporama photos) — token-gaté
+        memoire_photos:    memoirePhotos                                                            // photos uploadées par le client (liste d'URLs) pour la vidéo mémoire
         // PAS d'email, PAS de stripe_*, PAS d'attribution. Volontaire. vocal_url volontairement NON exposé (interne).
       })
     };

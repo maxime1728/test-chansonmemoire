@@ -182,12 +182,17 @@
     <p class="ok-msg" id="memoireMsg" style="display:none;color:var(--cm-gold-light);"></p>
   </div>
 
-  <!-- UPSELL VIDÉO -->
-  <div class="card">
-    <div class="section-title">Bientôt : ta vidéo souvenir</div>
-    <p class="section-sub">Un montage personnalisé à partir de tes photos et vidéos, porté par ta chanson. Le tout accompagné par notre équipe.</p>
-    <div style="margin-top:6px;"><button class="btn btn-ghost btn-block" id="btnWaitVideo" type="button">Ça m'intéresse, tiens-moi au courant</button></div>
-    <p class="ok-msg" id="videoMsg" style="display:none;"></p>
+  <!-- VIDÉO MÉMOIRE : photos du client + chanson -->
+  <div class="card" id="videoMemoireCard" style="display:none;">
+    <div class="section-title">Ta vidéo souvenir</div>
+    <p class="section-sub">Un montage tout en douceur de tes photos, porté par ta chanson. Ajoute de 10 à 60 photos, on s'occupe du reste.</p>
+    <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+    <div style="margin-top:6px;"><button class="btn btn-ghost btn-block" id="btnAddPhotos" type="button"><i class="fa-solid fa-images"></i>&nbsp; Ajouter mes photos</button></div>
+    <p class="section-sub" id="photoCount" style="margin-top:10px;display:none;"></p>
+    <div id="photoGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px;margin-top:12px;"></div>
+    <div id="genVideoWrap" style="margin-top:14px;display:none;"><button class="btn btn-block" id="btnGenVideo" type="button" disabled>Générer ma vidéo souvenir</button></div>
+    <p class="ok-msg" id="videoMemoireMsg" style="display:none;"></p>
+    <div class="video-frame" id="videoMemoireFrame" style="display:none;margin-top:14px;"></div>
   </div>
 
   <!-- CRÉER POUR QUELQU'UN D'AUTRE (placé ici, post-achat, pour ne pas nuire à la conversion de l'aperçu) -->
@@ -244,6 +249,7 @@
     if(d.pdf_url){ showCadeauxReady(d.pdf_url); }
     else if(d.cadeaux_requested){ showCadeauxPending(); }
     initUpsell(d.commercial_status === 'purchased', { instrumental: d.instrumental_url, paroles_vivantes: d.video_url });
+    initVideoMemoire(d.commercial_status === 'purchased', d.memoire_photos, d.video_memoire_url);
   }).catch(function(){ loading.textContent='Une erreur est survenue.'; });
 
   var cadeauTimer=null;
@@ -324,7 +330,7 @@
     });
   }
   waitlist('btnWaitMemoire','memoireMsg',{waitlist_memoire:true},"Tu es sur la liste ✓ On t'écrira au lancement.");
-  waitlist('btnWaitVideo','videoMsg',{waitlist_video:true},'Parfait ✓ On te contactera pour ta vidéo souvenir.');
+  /* « btnWaitVideo » remplacé par l'upload de la vidéo mémoire (voir initVideoMemoire plus bas). */
 
   /* ── Upsell post-achat (add-ons payants) — affiché uniquement aux acheteurs (pic émotionnel). ──
      delivered = { instrumental: url|'', paroles_vivantes: url|'' } : add-on déjà livré -> téléchargement. */
@@ -355,6 +361,90 @@
     if(new URLSearchParams(window.location.search).get('upsell_ok')){
       var m=document.getElementById('upsellMsg'); if(m){ m.textContent='Merci ! Ton complément est en préparation, on t’écrit dès qu’il est prêt.'; m.style.display='block'; }
     }
+  }
+
+  /* ── Vidéo mémoire : upload des photos (10–60, direct vers Cloudinary) puis génération. ── */
+  function initVideoMemoire(purchased, photos, videoUrl){
+    var card=document.getElementById('videoMemoireCard');
+    if(!card || !purchased) return;
+    card.style.display='block';
+    var MIN=10, MAX=60;
+    var list = Array.isArray(photos) ? photos.slice() : [];
+    var input=document.getElementById('photoInput'), grid=document.getElementById('photoGrid');
+    var countEl=document.getElementById('photoCount'), genWrap=document.getElementById('genVideoWrap');
+    var genBtn=document.getElementById('btnGenVideo'), addBtn=document.getElementById('btnAddPhotos');
+    var frame=document.getElementById('videoMemoireFrame');
+
+    function showVideo(url){ frame.style.display='block'; frame.innerHTML='<video src="'+url+'" controls playsinline style="width:100%;height:100%;display:block;"></video>'; }
+    function thumb(url){ return url.replace('/upload/','/upload/w_160,h_160,c_fill,q_auto,f_auto/'); }
+    function refresh(){
+      grid.innerHTML='';
+      list.forEach(function(url){
+        var d=document.createElement('div'); d.style.position='relative';
+        var img=document.createElement('img'); img.src=thumb(url); img.loading='lazy';
+        img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;';
+        var x=document.createElement('button'); x.type='button'; x.textContent='×'; x.title='Retirer';
+        x.style.cssText='position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:#5c2d4a;color:#fff;cursor:pointer;font:700 14px/1 sans-serif;';
+        x.addEventListener('click',function(){ removePhoto(url); });
+        d.appendChild(img); d.appendChild(x); grid.appendChild(d);
+      });
+      countEl.style.display='block';
+      countEl.textContent=list.length+' / '+MAX+' photos'+(list.length<MIN?(' · minimum '+MIN):'');
+      genWrap.style.display = list.length>0 ? 'block':'none';
+      genBtn.disabled = list.length<MIN;
+    }
+    function removePhoto(url){
+      list=list.filter(function(u){return u!==url;}); refresh();
+      post('/api/supprimer-photo-memoire',{token:token,url:url});
+    }
+    function uploadOne(file){
+      return post('/api/signer-upload-photo',{token:token}).then(function(sig){
+        if(!sig || !sig.signature) throw new Error('sig');
+        var fd=new FormData();
+        fd.append('file',file); fd.append('api_key',sig.api_key); fd.append('timestamp',sig.timestamp);
+        fd.append('folder',sig.folder); fd.append('signature',sig.signature);
+        return fetch('https://api.cloudinary.com/v1_1/'+sig.cloud_name+'/image/upload',{method:'POST',body:fd});
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if(!d.secure_url) throw new Error('up');
+        return post('/api/ajouter-photo-memoire',{token:token,url:d.secure_url}).then(function(a){
+          if(a && a.ok && list.indexOf(d.secure_url)<0){ list.push(d.secure_url); refresh(); }
+        });
+      });
+    }
+    addBtn.addEventListener('click',function(){ input.click(); });
+    input.addEventListener('change',function(){
+      var files=[].slice.call(input.files||[]); input.value='';
+      if(!files.length) return;
+      addBtn.disabled=true; var old=addBtn.innerHTML; var i=0;
+      (function next(){
+        if(i>=files.length || list.length>=MAX){ addBtn.disabled=false; addBtn.innerHTML=old; if(list.length>=MAX) alert('Maximum '+MAX+' photos.'); return; }
+        addBtn.textContent='Envoi '+(i+1)+'/'+files.length+'…';
+        uploadOne(files[i]).catch(function(){}).then(function(){ i++; next(); });
+      })();
+    });
+    genBtn.addEventListener('click',function(){
+      if(list.length<MIN){ alert('Ajoute au moins '+MIN+' photos.'); return; }
+      genBtn.disabled=true; genBtn.textContent='Création en cours…';
+      post('/api/lancer-video-memoire',{token:token}).then(function(res){
+        var m=document.getElementById('videoMemoireMsg');
+        if(res && (res.ok||res.pending||res.video_memoire_url)){
+          if(res.video_memoire_url){ showVideo(res.video_memoire_url); }
+          m.textContent='Ta vidéo souvenir est en création ✓ Elle apparaîtra ici dans quelques minutes (et par courriel).';
+          m.style.display='block'; pollVideo();
+        } else { genBtn.disabled=false; genBtn.textContent='Générer ma vidéo souvenir'; alert('Création indisponible pour le moment.'); }
+      }).catch(function(){ genBtn.disabled=false; genBtn.textContent='Générer ma vidéo souvenir'; });
+    });
+    var pollT=null;
+    function pollVideo(){
+      if(pollT) return;
+      pollT=setInterval(function(){
+        post('/api/lire-projet',{token:token}).then(function(d){
+          if(d && d.video_memoire_url){ clearInterval(pollT); pollT=null; showVideo(d.video_memoire_url); genWrap.style.display='none'; }
+        });
+      },15000);
+    }
+    if(videoUrl){ showVideo(videoUrl); genWrap.style.display='none'; }
+    refresh();
   }
 })();
 </script>
