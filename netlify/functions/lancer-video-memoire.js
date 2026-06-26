@@ -112,9 +112,9 @@ exports.handler = async (event) => {
     const gen = dG.records && dG.records[0];
     if (!gen || !gen.fields.lyrics) return { statusCode: 409, body: JSON.stringify({ error: 'Chanson introuvable' }) };
 
-    // 4. Idempotence PAR VERSION.
-    if (gen.fields.video_memoire_url)     return { statusCode: 200, body: JSON.stringify({ ok: true, video_memoire_url: gen.fields.video_memoire_url, already: true }) };
-    if (gen.fields.video_memoire_task_id) return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true }) };
+    // 4. Idempotence PAR VERSION (sauf force = aperçus multi-styles).
+    if (!body.force && gen.fields.video_memoire_url)     return { statusCode: 200, body: JSON.stringify({ ok: true, video_memoire_url: gen.fields.video_memoire_url, already: true }) };
+    if (!body.force && gen.fields.video_memoire_task_id) return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true }) };
 
     const audioUrl = fullAudioUrl(gen.fields.cloudinary_audio_url || '');
     if (!audioUrl) return { statusCode: 409, body: JSON.stringify({ error: 'Audio source introuvable' }) };
@@ -126,7 +126,11 @@ exports.handler = async (event) => {
       titre:  gen.fields.song_title || '',
       prenom: projet.fields.deceased_name || '',
       cadeau: projet.fields.song_type === 'cadeau',
-      photos, lyrics: gen.fields.lyrics || '', alignedWords, audioUrl, clipStart
+      photos, lyrics: gen.fields.lyrics || '', alignedWords, audioUrl, clipStart,
+      style:       body.style || 'fullscreen',
+      maxDuration: Number(body.maxDuration) > 0 ? Number(body.maxDuration) : 0,
+      dates:       body.dates || '',
+      citation:    body.citation || ''
     });
     if (!edit) return { statusCode: 409, body: JSON.stringify({ error: 'Diaporama vide' }) };
 
@@ -153,14 +157,16 @@ exports.handler = async (event) => {
       return { statusCode: 502, body: JSON.stringify({ error: 'Lancement de la vidéo échoué' }) };
     }
 
-    // 6. Stocke l'ID de rendu sur la Generation (clé de match du callback).
-    await fetch(`${API}/Generations/${gen.id}`, {
-      method: 'PATCH',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { video_memoire_task_id: String(renderId) } })
-    });
+    // 6. Stocke l'ID de rendu sur la Generation (clé de match du callback). Pas en mode force (aperçus).
+    if (!body.force) {
+      await fetch(`${API}/Generations/${gen.id}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { video_memoire_task_id: String(renderId) } })
+      });
+    }
 
-    return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true }) };
+    return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true, renderId: String(renderId) }) };
   } catch (err) {
     console.error('[lancer-video-memoire]', err && err.message);
     return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
