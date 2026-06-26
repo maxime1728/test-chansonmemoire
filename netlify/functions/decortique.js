@@ -1,24 +1,27 @@
 // netlify/functions/decortique.js
-// E/F v1 — Analyse une DEMANDE DE MODIFICATION post-achat et la prépare pour approbation.
-// Claude route la demande libre en 5 catégories (paroles / style+ambiance / prononciation /
-// souvenirs / titre), produit un compte-rendu + un PROMPT STYLE ajusté (règles dures), et propose
-// des paroles ajustées si la demande touche les paroles. Écrit la demande « à approuver » sur le
-// Project ; Maxime/Brigitte valident, puis la relance Suno/cover se branchera (couche suivante :
-// aller-retour courriel Mailgun + chaîne cover Suno, encore gated).
-// Sécurité : POST, UUID v4 strict, formule échappée, gaté `purchased`, secrets en env.
+// DEMANDE DE MODIFICATION post-achat — ENREGISTREMENT RAPIDE (front du flux « corrections »).
+//
+// But : la demande doit apparaitre dans Airtable A TOUS LES COUPS. L'ancien code appelait Claude AVANT
+// d'ecrire -> le timeout Netlify (10 s) coupait la fonction pendant Claude et l'ecriture n'avait jamais
+// lieu (demande perdue). Ici on INVERSE : on ecrit d'abord, on analyse ensuite.
+//   1. Valide (POST, UUID v4, demande, gate purchased).
+//   2. ENREGISTRE TOUT DE SUITE : la demande brute sur le Projet (correction_request + approval_status=pending)
+//      ET une ligne dans Conversations (la file de l'equipe), liee au Projet.
+//   3. Repond « Demande recue » au client (rapide).
+//   4. Lance l'analyse Claude en ARRIERE-PLAN (decortique-background) : elle propose paroles/style + un
+//      brouillon de reponse client, tout EDITABLE. L'equipe approuve manuellement -> cover-cron regenere.
+//
+// Securite : POST, UUID v4 strict, formule echappee, gate purchased, secret partage pour le worker.
+// Env : AIRTABLE_TOKEN, AIRTABLE_BASE_ID, DECORTIQUE_SECRET.
 
 const BASE_ID = process.env.AIRTABLE_BASE_ID;
 const TOKEN   = process.env.AIRTABLE_TOKEN;
 const API     = `https://api.airtable.com/v0/${BASE_ID}`;
+const SITE    = 'https://chansonmemoire.ca';
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SECRET  = process.env.DECORTIQUE_SECRET || '';
 
-// Mailgun TRANSACTIONNEL (post-achat). No-op si non configuré (ne casse jamais l'enregistrement).
-const MG_KEY     = process.env.MAILGUN_API_KEY;
-const MG_DOMAIN  = process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN;     // sous-domaine transactionnel (= celui de lancer-cadeau)
-const MG_FROM    = process.env.MAILGUN_FROM_ACHAT || process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonmemoire.ca>';   // post-achat -> sous-domaine achat
-const TEAM_EMAIL = process.env.TEAM_NOTIFY_EMAIL;  // destinataire de l'alerte interne « à approuver »
-const SITE       = 'https://chansonmemoire.ca';    // lien page client (= courriel d'achat / nouvelle version)
-const { stripSectionTags } = require('./_lib/lyrics');   // masque les balises [Verse]/[Chorus] à l'affichage client
+const PROJECTS = 'Projects', CLIENTS = 'Clients', CONVOS = 'tbl3KBgXthCPromxF';
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -27,66 +30,25 @@ function formulaLiteral(v) {
   return null;
 }
 
-function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>'); }
-
-// Courriel Mailgun (HTML). best-effort -> false si non configuré / échec.
-async function envoyerCourriel(to, subject, html) {
-  if (!MG_KEY || !MG_DOMAIN || !to || !to.includes('@')) return false;
-  const form = new FormData();
-  form.append('from', MG_FROM);
-  form.append('to', to);
-  form.append('subject', subject);
-  form.append('html', html);
-  const auth = 'Basic ' + Buffer.from('api:' + MG_KEY).toString('base64');
-  const r = await fetch(`https://api.mailgun.net/v3/${MG_DOMAIN}/messages`, { method: 'POST', headers: { Authorization: auth }, body: form });
-  return r.ok;
-}
-
-// Courriel de l'acheteur (sur le Client lié) — jamais exposé au navigateur.
+// Courriel de l'acheteur (sur le Client lie) — pour la ligne Conversations (jamais expose au navigateur).
 async function emailClient(projet, headers) {
   try {
     const link  = projet.fields.Client;
     const recId = Array.isArray(link) ? link[0] : null;
     if (!recId) return '';
-    const r = await fetch(`${API}/Clients/${recId}`, { headers });
+    const r = await fetch(`${API}/${CLIENTS}/${recId}`, { headers });
     if (!r.ok) return '';
     const d = await r.json();
     return (d.fields && d.fields.email) || '';
   } catch (_) { return ''; }
 }
 
-const SYSTEM = `Tu prépares une DEMANDE DE MODIFICATION post-achat pour une chanson hommage (Chanson Mémoire, Québec). Tu N'EXÉCUTES pas tout : tu analyses la demande et prépares le travail pour l'équipe.
-
-CATÉGORISE la demande dans une ou plusieurs des 5 catégories EXACTES : "paroles", "style_ambiance", "prononciation", "souvenirs", "titre".
-
-MODE : "cover" par défaut (garde la mélodie existante, ajuste les paroles). "regeneration" UNIQUEMENT si le client veut une autre musique / mélodie / style.
-
-PROMPT STYLE AJUSTÉ (en anglais, directives musicales courtes) — RÈGLES DURES, non négociables :
-- JAMAIS de noms d'artistes ni de titres de chansons existantes.
-- TOUJOURS inclure "Quebec French accent, Canadian French".
-- NE mentionne JAMAIS le genre de la voix ("male voice" / "female voice", "homme", "femme") : la voix est DÉJÀ choisie par le client et gérée séparément (vocalGender Suno). N'inclus rien sur la voix dans le prompt style.
-- Ne contredis PAS le style/ambiance existants, sauf demande explicite du client.
-- Format : genre, instrumentation, tempo, langue/accent (PAS de voix).
-
-PAROLES AJUSTÉES (en français québécois) — UNIQUEMENT si la demande touche paroles/souvenirs/prononciation :
-- Garde TOUT ce qui fonctionne ; applique SEULEMENT la demande. N'invente AUCUN fait, nom ni lieu.
-- Sinon, renvoie une chaîne vide "".
-
-VOIX DE MARQUE : solution-first, digne, jamais ouvrir sur le deuil ; pas de clichés.
-
-SORTIE — réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, guillemets droits :
-{"categories":["..."],"mode":"cover","compte_rendu":"<résumé clair pour l'équipe, en français>","adjusted_style_prompt":"<prompt style en anglais respectant les règles dures>","adjusted_lyrics":"<paroles ajustées en québécois OU chaîne vide>"}`;
-
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Méthode non permise' }) };
-  }
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { statusCode: 500, body: JSON.stringify({ error: 'Configuration serveur manquante' }) };
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Methode non permise' }) };
 
   let body;
   try { body = JSON.parse(event.body || '{}'); }
-  catch (e) { return { statusCode: 400, body: JSON.stringify({ error: 'Requête invalide' }) }; }
+  catch (e) { return { statusCode: 400, body: JSON.stringify({ error: 'Requete invalide' }) }; }
 
   const token   = (body.token || '').trim();
   const demande = (body.demande || '').toString().trim().slice(0, 4000);
@@ -96,137 +58,73 @@ exports.handler = async (event) => {
   const headers = { Authorization: `Bearer ${TOKEN}` };
 
   try {
-    // 1. Project par token (token validé UUID -> littéral sûr).
+    // 1. Project par token (UUID valide -> litteral sur). Gate purchased.
     const fP = encodeURIComponent(`{token}=${formulaLiteral(token)}`);
-    const rP = await fetch(`${API}/Projects?filterByFormula=${fP}&maxRecords=1`, { headers });
+    const rP = await fetch(`${API}/${PROJECTS}?filterByFormula=${fP}&maxRecords=1`, { headers });
     const dP = await rP.json();
     if (!dP.records || dP.records.length === 0) {
-      return { statusCode: 404, body: JSON.stringify({ error: 'Introuvable' }) };   // 404 nu
+      return { statusCode: 404, body: JSON.stringify({ error: 'Introuvable' }) };
     }
     const projet = dP.records[0];
     const p = projet.fields;
-    // Corrections = post-achat uniquement (vérif serveur).
     if (p.commercial_status !== 'purchased') {
-      return { statusCode: 403, body: JSON.stringify({ error: 'Non autorisé' }) };
+      return { statusCode: 403, body: JSON.stringify({ error: 'Non autorise' }) };
     }
 
-    // 2. Version de référence : la version ACHETÉE si connue, sinon la plus récente.
-    const projLit = formulaLiteral(p.project);
-    if (projLit === null) return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
-    const boughtNo = parseInt(p.purchased_generation_no, 10);
-    const fG = Number.isInteger(boughtNo)
-      ? encodeURIComponent(`AND({project}=${projLit}, {generation_no}=${boughtNo})`)
-      : encodeURIComponent(`{project}=${projLit}`);
-    const triG = Number.isInteger(boughtNo) ? '' : '&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc';
-    const rG = await fetch(`${API}/Generations?filterByFormula=${fG}${triG}&maxRecords=1`, { headers });
-    const dG = await rG.json();
-    const gen = (dG.records && dG.records[0]) ? dG.records[0].fields : {};
+    const refId = `${token.slice(0, 8)}·V${p.purchased_generation_no || ''}`;
 
-    // 3. Claude : analyse + compte-rendu + prompt style ajusté + paroles ajustées (si pertinent).
-    const userPrompt =
-`Détails du projet :
-- Personne honorée : ${p.deceased_name || ''}
-- Style actuel : ${gen.gen_music_style || p.music_style || ''}
-- Ambiance actuelle : ${gen.gen_mood || p.mood || ''}
-- Voix : ${gen.gen_voice || p.voice || ''}
-- Titre actuel : ${gen.song_title || ''}
-
-PAROLES ACTUELLES :
-${gen.lyrics || ''}
-
-DEMANDE DU CLIENT (à analyser) :
-${demande}`;
-
-    // Analyse Claude — best-effort. #11 : si elle échoue, on N'INTERROMPT PAS : la demande sera
-    // quand même enregistrée et l'équipe prévenue (jamais de demande perdue).
-    let parsed = null;
-    try {
-      const rC = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 3000, system: SYSTEM, messages: [{ role: 'user', content: userPrompt }] })
-      });
-      const data = await rC.json();
-      if (rC.ok) {
-        let txt = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
-        txt = txt.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const a = txt.indexOf('{'), z = txt.lastIndexOf('}');
-        if (a !== -1 && z !== -1 && z > a) txt = txt.slice(a, z + 1);
-        try { parsed = JSON.parse(txt); } catch (_) { parsed = null; }
-      }
-    } catch (_) { parsed = null; }
-
-    const categories  = (parsed && Array.isArray(parsed.categories)) ? parsed.categories.join(', ') : '';
-    const mode        = (parsed && parsed.mode === 'regeneration') ? 'regeneration' : 'cover';
-    const compteRendu = (((parsed && parsed.compte_rendu) || '').toString().slice(0, 3000)) || '(analyse automatique indisponible — à traiter manuellement)';
-    const adjStyle    = ((parsed && parsed.adjusted_style_prompt) || '').toString().slice(0, 2000);
-    const adjLyrics   = ((parsed && parsed.adjusted_lyrics) || '').toString().slice(0, 6000);
-
-    // ref_id = [token8·V#] (suivi interne).
-    const vno   = gen.generation_no || (Number.isInteger(boughtNo) ? boughtNo : '');
-    const refId = `${token.slice(0, 8)}·V${vno}`;
-
-    // 4. Routage (#10). Demande PAROLES SEULEMENT (ni prononciation, ni style) + paroles ajustées
-    //    disponibles -> AUTO-approuvée (cover automatique). Sinon -> en attente de TON approbation.
-    //    Dans TOUS les cas : demande enregistrée + courriel équipe (trace), auto ou manuel.
-    const aPrononc = /prononciation/.test(categories);
-    const aStyle   = /style_ambiance/.test(categories);
-    const autoApprouve = !!(parsed && adjLyrics && !aPrononc && !aStyle);
-
-    const fields = {
-      correction_request:    `CATÉGORIES : ${categories}\n\nDEMANDE CLIENT :\n${demande}\n\nANALYSE :\n${compteRendu}`,
-      adjusted_style_prompt: adjStyle,
-      adjusted_lyrics:       adjLyrics,
-      mode_correction:       mode,
-      approval_status:       autoApprouve ? 'approved' : 'pending',
-      ref_id:                refId
-    };
-    if (autoApprouve) { fields.cover_task_id = null; fields.cover_launched_at = null; }   // ré-arme le cover (modifs illimitées) — null et jamais '' : '' fait échouer le PATCH (422) sur cover_launched_at (champ date)
-    const rU = await fetch(`${API}/Projects/${projet.id}`, {
+    // 2. ENREGISTREMENT IMMEDIAT (l'imperatif : rien ne doit etre perdu, meme si la suite echoue).
+    //    a) Demande brute sur le Projet -> visible + base de l'approbation manuelle (cover-cron).
+    await fetch(`${API}/${PROJECTS}/${projet.id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields })
+      body: JSON.stringify({ fields: {
+        correction_request: `DEMANDE CLIENT (analyse en cours) :\n${demande}`,
+        approval_status: 'pending',
+        ref_id: refId,
+        cover_task_id: null,        // re-arme le cover : ton approbation future relancera lancer-cover
+        cover_launched_at: null     // null et JAMAIS '' ('' = 422 sur ce champ date)
+      } })
     });
-    if (!rU.ok) {
-      return { statusCode: 502, body: JSON.stringify({ error: 'Enregistrement impossible' }) };
-    }
 
-    const lienClient = p.page_url || `${SITE}/page-chanson?id=${encodeURIComponent(token)}`;
-
-    // 5. Courriels (best-effort). Équipe : TOUJOURS (trace, auto ou à approuver). Client : selon le cas.
+    //    b) Ligne Conversations (file de l'equipe), liee au Projet. typecast cree le choix 'modification'.
+    let convoId = '';
     try {
-      if (TEAM_EMAIL) {
-        const etat = autoApprouve ? 'AUTO-APPROUVÉE (cover en cours)' : 'À APPROUVER';
-        const teamHtml =
-          `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.6;max-width:620px;">` +
-          `<h2 style="color:#5C2D4A;margin:0 0 4px;">Demande de modification — ${esc(etat)}</h2>` +
-          `<p style="color:#7A6070;margin:0 0 16px;">Réf. ${esc(refId)} · ${esc(categories)} · mode ${esc(mode)}</p>` +
-          `<p><strong>Personne honorée :</strong> ${esc(p.deceased_name || '')}<br>` +
-          `<strong>Titre actuel :</strong> ${esc(gen.song_title || '')}</p>` +
-          `<p><strong>Demande du client :</strong><br>${esc(demande)}</p>` +
-          `<p><strong>Analyse :</strong><br>${esc(compteRendu)}</p>` +
-          (adjLyrics ? `<p><strong>Paroles ajustées proposées :</strong><br>${esc(adjLyrics)}</p>` : '') +
-          (adjStyle ? `<p><strong>Prompt style ajusté :</strong><br>${esc(adjStyle)}</p>` : '') +
-          `<p style="margin:20px 0;"><a href="${esc(lienClient)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;">Voir la page du client</a></p>` +
-          (autoApprouve
-            ? `<p style="color:#7A6070;margin-top:18px;">Approuvée automatiquement (paroles seulement) : le cover se régénère et part au client. Trace conservée.</p>`
-            : `<p style="color:#7A6070;margin-top:18px;">Pour approuver : passez <code>approval_status</code> à « approved » dans Airtable (projet « ${esc(p.project || '')} »).</p>`) +
-          `</div>`;
-        await envoyerCourriel(TEAM_EMAIL, `${autoApprouve ? 'Auto-approuvée' : 'À approuver'} — ${refId} (${categories})`, teamHtml);
-      }
       const to = await emailClient(projet, headers);
-      const clientHtml = autoApprouve
-        ? `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.7;max-width:560px;"><p>C'est noté, on applique tes nouvelles paroles.</p><p>Ta chanson se régénère avec ces paroles. Tu recevras un courriel avec le lien dès qu'elle est prête.</p><p style="margin:22px 0;"><a href="${esc(lienClient)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:12px 22px;border-radius:8px;display:inline-block;">Revoir ma page</a></p><p style="color:#7A6070;margin-top:18px;">— L'équipe Chanson Mémoire</p></div>`
-        : `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.7;max-width:560px;"><p>Votre demande de modification est bien reçue.</p><p>Notre équipe la prépare avec soin et vous revient d'ici 24-48 h (pensez à vérifier vos courriels indésirables). Vous n'avez rien à faire d'ici là.</p><p style="margin:22px 0;"><a href="${esc(lienClient)}" style="background:#5C2D4A;color:#F5F0EA;text-decoration:none;padding:12px 22px;border-radius:8px;display:inline-block;">Revoir ma page</a></p><p style="color:#7A6070;margin-top:18px;">— L'équipe Chanson Mémoire</p></div>`;
-      await envoyerCourriel(to, autoApprouve ? 'Tes nouvelles paroles sont en route' : 'Votre demande de modification est bien reçue', clientHtml);
-    } catch (_) { /* les courriels ne bloquent jamais l'enregistrement */ }
+      const rConvo = await fetch(`${API}/${CONVOS}`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ typecast: true, fields: {
+          expediteur:   to || '',
+          sujet:        `Demande de modification${p.deceased_name ? ' — ' + p.deceased_name : ''}`,
+          message:      demande,
+          recu_le:      new Date().toISOString(),
+          statut:       'a_verifier',
+          categorie_ia: 'modification',
+          Projet:       [projet.id]
+        } })
+      });
+      if (rConvo.ok) convoId = (await rConvo.json()).id || '';
+    } catch (_) { /* la demande est deja sur le Projet : on ne bloque pas */ }
 
+    // 3. Lance l'analyse en ARRIERE-PLAN (background function -> 202 immediat, pas de timeout). Best-effort :
+    //    si l'invocation rate, la demande brute reste enregistree et l'equipe la voit quand meme.
+    try {
+      await fetch(`${SITE}/.netlify/functions/decortique-background`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: SECRET, token, demande, convoId })
+      });
+    } catch (_) {}
+
+    // 4. Reponse rapide au client. auto:false + paroles vides -> la page affiche « Demande recue, par courriel ».
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ok: true, auto: autoApprouve, paroles: stripSectionTags(adjLyrics) })
+      body: JSON.stringify({ ok: true, auto: false, paroles: '' })
     };
   } catch (err) {
+    console.error('[decortique]', err && err.message);
     return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
   }
 };
