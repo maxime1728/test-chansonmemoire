@@ -425,7 +425,12 @@
 
     /* ── CONFIRMER → PROD (Make B → Suno) ── */
     async function confirmerProd(){
-      fermerPopup();
+      /* Le lancement (fetch lancer-chanson) prend quelques secondes : on garde la popup ouverte
+         avec un état « chargement » sur le bouton, plutôt qu'un écran figé sans feedback. */
+      var oui = document.querySelector('.popup-oui');
+      if(oui && !oui.dataset.label){ oui.dataset.label = oui.textContent; }
+      function restaurerOui(){ if(oui){ oui.disabled=false; oui.textContent = oui.dataset.label || 'Oui, créer ma chanson'; } }
+      if(oui){ oui.disabled=true; oui.textContent='Création en cours…'; }
       try {
         var res = await fetch(WEBHOOK_MAKE_B,{
           method:'POST',
@@ -436,6 +441,7 @@
         try { data = await res.json(); } catch(e){}
         if(data && data.status === 'plafond'){
           // Plafond atteint -> on affiche le message « nous contacter », pas de redirection.
+          restaurerOui(); fermerPopup();
           setTexte('erreur-detail', data.message || "Tu as atteint la limite de régénérations. Écris-nous et on t'aidera avec plaisir.");
           montrer('etat-erreur');
           return;
@@ -443,10 +449,12 @@
         if(!res.ok || !(data && data.ok)) throw new Error('launch');   // échec du lancement -> pas de fausse page d'attente
       } catch(e){
         console.error('lancer-chanson error:', e);
+        restaurerOui(); fermerPopup();
         alert("La création de la chanson n'a pas pu démarrer. Réessaie dans un instant.");
         montrer('contenu');   // on re-montre les paroles + le bouton, pour réessayer
         return;
       }
+      fermerPopup();
       montrer('etat-soumission');
       setTimeout(function(){ window.location.href=URL_ATTENTE+'?id='+encodeURIComponent(token); }, 2500);
     }

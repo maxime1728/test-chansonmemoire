@@ -879,6 +879,12 @@ body {
   cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;
 }
 .cm-modal-select:focus { outline: none; border-color: var(--cm-plum-mid); }
+.cm-modal-input {
+  width: 100%; padding: 11px 14px; border-radius: 12px;
+  border: var(--cm-border-w) solid var(--cm-mauve); background: var(--cm-white);
+  color: var(--cm-text); font-family: 'Mulish', sans-serif; font-size: 14px; font-weight: 600;
+}
+.cm-modal-input:focus { outline: none; border-color: var(--cm-plum-mid); }
 .cm-modal-textarea {
   width: 100%; padding: 12px 14px; border-radius: 12px;
   border: var(--cm-border-w) solid var(--cm-mauve); background: var(--cm-white);
@@ -1257,7 +1263,7 @@ body {
     <div id="cm-cap-help" style="display:none;">
       <p class="cm-modal-hint" id="cm-cap-msg">Tu as exploré plusieurs versions pour cette personne, c'est la limite ici. On aimerait t'aider à créer LA version qui lui ressemble : laisse-nous ton courriel et on t'accompagne avec plaisir.</p>
       <label class="cm-modal-label" for="cm-cap-email">Ton courriel</label>
-      <input class="cm-modal-select" id="cm-cap-email" type="email" inputmode="email" placeholder="toi@exemple.ca">
+      <input class="cm-modal-input" id="cm-cap-email" type="email" inputmode="email" placeholder="toi@exemple.ca">
       <div class="cm-modal-actions">
         <button type="button" class="cm-modal-confirm" id="cm-cap-send">On m'aide avec plaisir</button>
       </div>
@@ -1271,11 +1277,10 @@ body {
   <div class="cm-modal" role="dialog" aria-modal="true" aria-labelledby="cm-pron-title">
     <button type="button" class="cm-modal-close" id="cm-pron-close" aria-label="Fermer">&times;</button>
     <div class="cm-modal-title" id="cm-pron-title">Erreur de prononciation</div>
-    <p class="cm-modal-sub">Indique-nous le mot mal prononcé : on le corrige et on te renvoie l'aperçu.</p>
 
     <div id="cm-pron-form">
       <label class="cm-modal-label" for="cm-pron-mot">Quel mot est mal prononcé ?</label>
-      <input class="cm-modal-select" id="cm-pron-mot" type="text" placeholder="Ex. : Ghislaine" maxlength="120">
+      <input class="cm-modal-input" id="cm-pron-mot" type="text" placeholder="Ex. : Ghislaine" maxlength="120">
 
       <label class="cm-modal-label" for="cm-pron-comment">Comment ça devrait sonner ? <span class="cm-modal-opt">(optionnel)</span></label>
       <textarea class="cm-modal-textarea" id="cm-pron-comment" rows="2" placeholder="Ex. : « Ghislaine » se dit « Jislaine ». Ou « juin » se dit « ju-un »."></textarea>
