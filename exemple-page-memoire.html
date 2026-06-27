@@ -159,14 +159,13 @@
   <!-- 3. PDF DES PAROLES -->
   <div class="card center">
     <div class="section-title" style="margin-bottom:10px;">Les paroles en PDF</div>
-    <p class="section-sub">Une belle version imprimable, à garder ou à offrir.</p>
-    <a class="btn btn-block" id="btnPdf" href="#" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i>&nbsp; Télécharger les paroles (PDF)</a>
+    <p class="section-sub">Une belle mise en page de ses paroles, à garder ou à offrir.</p>
+    <a class="btn btn-block" id="btnPdf" href="#paroles"><i class="fa-solid fa-eye"></i>&nbsp; Voir un exemple</a>
   </div>
 
   <!-- 4. PAROLES NORMALES — tout en bas -->
   <div class="card" id="paroles" style="scroll-margin-top:24px;">
     <div class="section-title">Ses paroles</div>
-    <p class="section-sub">Écrites à partir de ses souvenirs : son chalet, son bouilli du samedi, ses matins de pêche.</p>
     <div class="lyrics" id="lyrics"></div>
   </div>
 
@@ -187,7 +186,7 @@
   var AUDIO_PUBLIC_ID = 'v1782355169/MON_HOMME_DU_LAC_EMOTIONNELLE_lwwoy1.mp3';
   var AUDIO_START = 0;   /* secondes ; mets ex. 48 pour démarrer au Couplet 2 */
   var VIDEO_URL = 'https://res.cloudinary.com/dcx1tfm47/video/upload/v1782488664/paroles-vivantes/video_8ab1ad06-88d9-43c3-af90-59d6b1c3430e.mp4';    /* vidéo paroles vivantes (karaoké doré, titre OK, couplet 2 -> fin) */
-  var PDF_URL   = 'exemple-paroles-mhdl.html';   /* feuille de paroles prête à « Enregistrer en PDF » */
+  var PDF_URL   = '#paroles';   /* scroll vers la section « Ses paroles » en bas de CETTE page (plus de page lyrics-seules séparée) */
   var INSTRUMENTAL_URL = 'https://res.cloudinary.com/dcx1tfm47/video/upload/v1782358834/Instrumental._Mon_homme_du_lac_rjkts5.mp3';   /* trame de la vidéo + téléchargement */
 
   function audioUrl(){
