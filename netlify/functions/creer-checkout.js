@@ -10,6 +10,7 @@ const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
 const API      = `https://api.airtable.com/v0/${BASE_ID}`;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+const { lierPub } = require('./_lib/pub-join');   // jointure last_pub en code (ex-Make « Jointure Pub »)
 
 const UUID_V4     = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PRICE_CENTS = 13997;     // 139,97 $ CAD — prix fixé serveur
@@ -62,6 +63,29 @@ exports.handler = async (event) => {
     const projet  = dP.records[0];
     const projLit = formulaLiteral(projet.fields.project);
     if (projLit === null) return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
+
+    // LAST-TOUCH a la conversion : le creatif qui a (re)amene le client jusqu'a l'achat. Met a jour
+    // last_utm_* du Projet (distinct du first-touch). Best-effort, jamais bloquant pour le paiement.
+    try {
+      const lt = body.last_touch || {};
+      if (lt.utm_source || lt.utm_campaign || lt.utm_content) {
+        const lf = {
+          fldAs0LwECqTSxOgF: String(lt.utm_source   || ''),   // last_utm_source
+          fld8e6vKwG3lI74Yq: String(lt.utm_medium   || ''),   // last_utm_medium
+          fldsifC3yx55b561h: String(lt.utm_campaign || ''),   // last_utm_campaign
+          fldK7yie7Vc3dqVux: String(lt.utm_content  || ''),   // last_utm_content (cle jointure last_pub)
+          fldhcXo9zrM34STzG: String(lt.utm_term     || ''),   // last_utm_term
+          fldZQdydtpwXKCxyu: String(lt.landing_page || '')    // last_landing_page
+        };
+        if (lt.at) lf.fldMUwpw5ivyjXggZ = lt.at;              // last_touch_at
+        await fetch(`${API}/Projects/${projet.id}`, {
+          method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: lf, typecast: true })
+        });
+        // LAST-touch : lie le creatif de conversion (last_pub = Pub dont ad_name = last utm_content).
+        await lierPub(API, headers, projet.id, lt.utm_content, 'fld3BBWOYqlkMYec9');
+      }
+    } catch (_) { /* l'attribution ne doit jamais casser le checkout */ }
 
     // 2. Récupère TOUTES les Generations (comme lire-versions) pour calculer le RANG affiché
     //    (V1, V2…) parmi les versions JOUABLES — et valider que la version demandée existe (anti-tamper).
