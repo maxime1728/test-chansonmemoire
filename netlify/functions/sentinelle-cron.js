@@ -150,3 +150,7 @@ exports.handler = async () => {
     return { statusCode: 200, body: JSON.stringify({ ok: false }) };
   }
 };
+
+// Observabilite : heartbeat Healthchecks (dead man's switch) + capture Sentry. Voir _lib/cron.js.
+const { withCron } = require('./_lib/cron');
+exports.handler = withCron('sentinelle-cron', exports.handler);
