@@ -927,6 +927,8 @@ body {
 .cm-fx-reveal.cm-fx-in{opacity:1;transform:none;}
 @media (prefers-reduced-motion:reduce){.cm-fx-reveal{opacity:1;transform:none;transition:none;}}
 </style>
+<!-- Attribution Meta : rafraichit le last-touch si le client revient ici via une pub de reciblage. -->
+<script src="/js/cm-attrib.js"></script>
 </head>
 <body>
 <div id="cm-loader" aria-hidden="true"><div class="cm-spin"></div></div>
@@ -1507,11 +1509,18 @@ setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet
   if (token) loadVersions();   /* préchauffe au chargement */
 
   /* Lance la session Stripe pour une version précise. */
+  function cmReadLast(){ try{ return JSON.parse(localStorage.getItem('cm_last_touch') || '{}') || {}; }catch(e){ return {}; } }
   function startCheckout(genNo, bumps) {
     if (!genNo) { busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant."); return; }
+    /* last-touch courant : le creatif qui a (re)amene le client jusqu'a l'achat -> creer-checkout
+       met a jour last_utm_* du Projet avant Stripe. Attribution de la CONVERSION, distincte du first-touch. */
+    var lt = cmReadLast();
     fetch('/api/creer-checkout', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ token: token, generation_no: genNo, bumps: bumps || [] })
+      body: JSON.stringify({ token: token, generation_no: genNo, bumps: bumps || [], last_touch: {
+        utm_source: lt.utm_source||'', utm_medium: lt.utm_medium||'', utm_campaign: lt.utm_campaign||'',
+        utm_content: lt.utm_content||'', utm_term: lt.utm_term||'', landing_page: lt.landing_page||'', at: lt.at||''
+      }})
     })
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(d){

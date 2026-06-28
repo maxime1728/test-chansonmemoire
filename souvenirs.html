@@ -10,6 +10,8 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <!-- Polices de /revision : l'ecran d'attente reprend exactement la charte de la page paroles (zero difference au passage). -->
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Attribution Meta first/last-touch : capter tot, avant tout le reste (donnee first-party). -->
+<script src="/js/cm-attrib.js"></script>
 <style>
 :root{--cm-plum-dark:#5C2D4A;--cm-plum-mid:#8B4A6E;--cm-mauve:#C98BB0;--cm-gold:#C4963A;--cm-gold-light:#E8C97A;--cm-white:#FDFAF7;--cm-bg:#F8F4F0;--cm-text:#2E1A28;--cm-text-sub:#7A6070;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -309,6 +311,12 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
 
   /* ── ATTRIBUTION META ── */
   function getParam(n){ return new URLSearchParams(window.location.search).get(n) || ''; }
+  /* Paniers first-touch / last-touch poses par cm-attrib.js (localStorage). Repli sur l'URL courante
+     si le panier est vide (ex. localStorage bloque, ou pub qui pointe direct sur /souvenirs). */
+  function cmTouch(k){ try{ return JSON.parse(localStorage.getItem(k) || '{}') || {}; }catch(e){ return {}; } }
+  var cmFirst = cmTouch('cm_first_touch');
+  var cmLast  = cmTouch('cm_last_touch');
+  function cmF(o,n){ return (o && o[n]) || getParam(n) || ''; }
 
   /* ── Pixel Meta (consentement requis) + dédup CAPI via eventID = sha256(token.evt) ── */
   function cmConsentOK(){ try{ return localStorage.getItem('cm_consent')==='yes'; }catch(e){ return false; } }
@@ -334,15 +342,25 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
     memory_to_keep:   '',
     email:            '',
     consentement:     false,
-    fbclid:       getParam('fbclid'),
+    fbclid:       (cmLast.fbclid || cmFirst.fbclid || getParam('fbclid')),
     fbp:          getCookie('_fbp'),
     fbc:          getCookie('_fbc'),
-    utm_source:   getParam('utm_source'),
-    utm_medium:   getParam('utm_medium'),
-    utm_campaign: getParam('utm_campaign'),
-    utm_content:  getParam('utm_content'),
-    utm_term:     getParam('utm_term'),
-    landing_page: window.location.pathname
+    /* FIRST-TOUCH (origine) -> champs utm_* + landing_page + first_touch_at sur le Projet */
+    utm_source:   cmF(cmFirst,'utm_source'),
+    utm_medium:   cmF(cmFirst,'utm_medium'),
+    utm_campaign: cmF(cmFirst,'utm_campaign'),
+    utm_content:  cmF(cmFirst,'utm_content'),
+    utm_term:     cmF(cmFirst,'utm_term'),
+    landing_page: cmFirst.landing_page || window.location.pathname,
+    first_touch_at: cmFirst.at || '',
+    /* LAST-TOUCH (dernier creatif vu) -> champs last_* sur le Projet */
+    last_utm_source:   cmF(cmLast,'utm_source'),
+    last_utm_medium:   cmF(cmLast,'utm_medium'),
+    last_utm_campaign: cmF(cmLast,'utm_campaign'),
+    last_utm_content:  cmF(cmLast,'utm_content'),
+    last_utm_term:     cmF(cmLast,'utm_term'),
+    last_landing_page: cmLast.landing_page || window.location.pathname,
+    last_touch_at: cmLast.at || ''
   };
 
   let currentStep = 1;

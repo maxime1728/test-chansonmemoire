@@ -25,7 +25,9 @@ const GEN_SECRET = process.env.GENERATE_LYRICS_SECRET || '';
 const CLIENTS = 'tblQbF1OlE3uRxFra', PROJECTS = 'tblh7O8eoog7RyTMJ', GENS = 'tblfrHFe1zH9apNlp';
 // IDs de champ copiés du blueprint MAKE A -> immunisé aux renommages.
 const CL = { email:'flds762OXVwiSORrZ', consent_status:'fldHrKcSlZGEpbiqc', consent_date:'fldMS8vhM9hMXBkOW', first_contact:'fldkS8Tnbo1b5sQuU', last_activity:'flduovxyibPoAdIyJ' };
-const P  = { token:'fldqBcPOplqI7pmTh', Client:'fldAGBhUTrR92bj9a', deceased_name:'fldKuvHVlbPByevNw', Relationship:'fld6sRU6B4gyCvDcV', music_style:'fldyN8cSNrud5PTqW', voice:'fld2ll76GVBTwlrii', mood:'fldo65IejcTOJ6Rgj', language:'fldjXJvehP7DguRdB', song_type:'fldZ5BLAu7eAUhBH6', what_made_unique:'flduGHNsYUGFVJPpW', memories:'flduEXUksZuTGkLCH', memory_to_keep:'fldFZZyQN8I91uRIg', commercial_status:'fldLFpeLNHU0ewF7A', funnel_step:'fldepcYRBoQsGoVkJ', cgv:'fldS53tPp8cmA6hUP', utm_source:'flddBuQWS7VDEQ6Tf', utm_medium:'fldoyM5VqCWvuHupH', utm_campaign:'fldM7MOvA9JSB4TIy', utm_content:'fld717FXmUvBBAahC', utm_term:'fldHS6EXLgJ8xS2hq', fbclid:'fldACzVAZnXIg8Y6F', fbc:'fldH7NqGl1x4iYNUT', fbp:'fldUTYL1ECRDz6ZZ7', landing_page:'fldBCASJabBdbQzf6' };
+const P  = { token:'fldqBcPOplqI7pmTh', Client:'fldAGBhUTrR92bj9a', deceased_name:'fldKuvHVlbPByevNw', Relationship:'fld6sRU6B4gyCvDcV', music_style:'fldyN8cSNrud5PTqW', voice:'fld2ll76GVBTwlrii', mood:'fldo65IejcTOJ6Rgj', language:'fldjXJvehP7DguRdB', song_type:'fldZ5BLAu7eAUhBH6', what_made_unique:'flduGHNsYUGFVJPpW', memories:'flduEXUksZuTGkLCH', memory_to_keep:'fldFZZyQN8I91uRIg', commercial_status:'fldLFpeLNHU0ewF7A', funnel_step:'fldepcYRBoQsGoVkJ', cgv:'fldS53tPp8cmA6hUP', utm_source:'flddBuQWS7VDEQ6Tf', utm_medium:'fldoyM5VqCWvuHupH', utm_campaign:'fldM7MOvA9JSB4TIy', utm_content:'fld717FXmUvBBAahC', utm_term:'fldHS6EXLgJ8xS2hq', fbclid:'fldACzVAZnXIg8Y6F', fbc:'fldH7NqGl1x4iYNUT', fbp:'fldUTYL1ECRDz6ZZ7', landing_page:'fldBCASJabBdbQzf6',
+  // Attribution : utm_* + landing_page ci-dessus = FIRST-touch. Bloc LAST-touch + horodatages :
+  first_touch_at:'fldmkjQbhTcEQgFVA', last_utm_source:'fldAs0LwECqTSxOgF', last_utm_medium:'fld8e6vKwG3lI74Yq', last_utm_campaign:'fldsifC3yx55b561h', last_utm_content:'fldK7yie7Vc3dqVux', last_utm_term:'fldhcXo9zrM34STzG', last_touch_at:'fldMUwpw5ivyjXggZ', last_landing_page:'fldZQdydtpwXKCxyu' };
 const G  = { project:'fldzXsnRLrkvPbO6p', generation_no:'fldYQz30pRWwQfnYd', type:'fld0ElSpJMdrMkAJy', lyrics:'fld9q1iqsYSx6iGaI', song_title:'fldlcfIdzfDFaG9EG', suggestions:'fldmxQuzUg8iALDGF', generation_status:'fldUnmeYy9Uk4zBDq' };
 function formulaLiteral(v) { const s = String(v); if (!s.includes('"')) return `"${s}"`; if (!s.includes("'")) return `'${s}'`; return null; }
 
@@ -102,6 +104,12 @@ async function traiterDirect(propre, headers) {
     pf[P.utm_source] = propre.utm_source; pf[P.utm_medium] = propre.utm_medium; pf[P.utm_campaign] = propre.utm_campaign;
     pf[P.utm_content] = propre.utm_content; pf[P.utm_term] = propre.utm_term; pf[P.fbclid] = propre.fbclid;
     pf[P.fbc] = propre.fbc; pf[P.fbp] = propre.fbp; pf[P.landing_page] = propre.landing_page;
+    // LAST-touch (dernier creatif vu) : bloc distinct du first-touch (utm_* ci-dessus).
+    pf[P.last_utm_source] = propre.last_utm_source; pf[P.last_utm_medium] = propre.last_utm_medium; pf[P.last_utm_campaign] = propre.last_utm_campaign;
+    pf[P.last_utm_content] = propre.last_utm_content; pf[P.last_utm_term] = propre.last_utm_term; pf[P.last_landing_page] = propre.last_landing_page;
+    // Horodatages : seulement si presents (vide -> on n'ecrit pas le champ dateTime).
+    if (propre.first_touch_at) pf[P.first_touch_at] = propre.first_touch_at;
+    if (propre.last_touch_at)  pf[P.last_touch_at]  = propre.last_touch_at;
     const rp = await fetch(`${API}/${PROJECTS}`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: pf, typecast: true }) });
     if (!rp.ok) { console.error('[soumettre-survey direct] create projet:', (await rp.text()).slice(0, 300)); return { ok: false, error: 'projet' }; }
     projet = await rp.json();
