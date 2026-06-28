@@ -58,6 +58,12 @@
 [functions."sequences-cron"]
   schedule = "@hourly"
 
+# Rattrapage jointure Projet<->Pub (first_pub + last_pub) : lie les Projets dont la Pub n'existait pas
+# encore au moment de la conversion (Insights tire la dépense Meta sur un cycle). Remplace Make « Jointure
+# Pub/Hook ». Idempotent (ne pose que les liens manquants). Horaire.
+[functions."pub-join-cron"]
+  schedule = "@hourly"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
