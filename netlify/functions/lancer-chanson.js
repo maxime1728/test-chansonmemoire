@@ -218,6 +218,8 @@ exports.handler = async (event) => {
     // 6. Project -> song_generating (best-effort, ne bloque jamais la chanson).
     try {
       const pf = {}; pf[PROJ_FUNNEL_STEP] = 'song_generating';
+      // Horodatage funnel : 1re fois seulement (le client a confirme ses paroles + atteint l'attente).
+      if (!projet.fields || !projet.fields.song_generating_at) pf['fldrjOsHXxfbDjTox'] = new Date().toISOString();
       await fetch(`${API}/Projects/${projet.id}`, {
         method: 'PATCH',
         headers: { ...headers, 'Content-Type': 'application/json' },

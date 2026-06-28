@@ -823,7 +823,12 @@ function tSeek(seekDiv,e){
 (function(){var c=localStorage.getItem('cm_consent');if(!c){document.getElementById('consent').classList.add('show');}else if(c==='yes'){loadPixel();}})();
 function consentSet(ok){localStorage.setItem('cm_consent',ok?'yes':'no');var b=document.getElementById('consent');b.classList.remove('show','docked');if(ok)loadPixel();}
 function reopenConsent(){var b=document.getElementById('consent');b.classList.add('show');if(document.getElementById('sticky').classList.contains('show'))b.classList.add('docked');else b.classList.remove('docked');}
-function loadPixel(){if(window._px)return;window._px=true;!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','909919758755200');fbq('track','PageView');}
+function cmGetCookie(n){var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return m?m.pop():'';}
+function loadPixel(){if(window._px)return;window._px=true;!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','909919758755200');
+  /* PageView avec eventID partagé -> dédup avec le PageView CAPI serveur (capi-pageview). Index = page d'entrée #1. */
+  var evid;try{evid=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now()+'-'+Math.random().toString(16).slice(2));}catch(e){evid=String(Date.now());}
+  fbq('track','PageView',{},{eventID:evid});
+  try{var p=new URLSearchParams(location.search);fetch('/api/capi-pageview',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({event_id:evid,fbclid:p.get('fbclid')||'',fbp:cmGetCookie('_fbp'),fbc:cmGetCookie('_fbc'),src:location.pathname})}).catch(function(){});}catch(e){}}
 
 /* ════ FAQ ════ */
 function qFaq(btn){var i=btn.closest('.faq-item'),open=i.classList.contains('open');document.querySelectorAll('.faq-item.open').forEach(function(x){x.classList.remove('open');x.querySelector('.faq-q').setAttribute('aria-expanded','false');});if(!open){i.classList.add('open');btn.setAttribute('aria-expanded','true');}}

@@ -64,6 +64,12 @@
 [functions."pub-join-cron"]
   schedule = "@hourly"
 
+# Insights Meta : tire la dépense/diffusion par pub (API Marketing) -> Pubs + Pubs_Performance. Remplace
+# le scénario Make « Insights » (4796178). INERTE tant que META_AD_ACCOUNT_ID / META_MARKETING_TOKEN ne
+# sont pas posées en env. Chaque heure (fenêtre last_3d, upsert idempotent par perf_key ; API Meta gratuite).
+[functions."insights-cron"]
+  schedule = "@hourly"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"

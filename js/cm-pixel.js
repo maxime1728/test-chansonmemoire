@@ -16,10 +16,21 @@
 
   function consent() { try { return localStorage.getItem('cm_consent'); } catch (e) { return null; } }
 
+  function getCookie(n) { var m = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)'); return m ? m.pop() : ''; }
   function loadPixel() {
     if (window._px) return; window._px = true;
     !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments) }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s) }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', PIXEL_ID); fbq('track', 'PageView');
+    fbq('init', PIXEL_ID);
+    // PageView avec eventID partagé -> dédup avec le PageView CAPI serveur (capi-pageview).
+    var evid; try { evid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(16).slice(2)); } catch (e) { evid = String(Date.now()); }
+    fbq('track', 'PageView', {}, { eventID: evid });
+    try {
+      var p = new URLSearchParams(location.search);
+      fetch('/api/capi-pageview', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        body: JSON.stringify({ event_id: evid, fbclid: p.get('fbclid') || '', fbp: getCookie('_fbp'), fbc: getCookie('_fbc'), src: location.pathname })
+      }).catch(function () {});
+    } catch (e) {}
   }
 
   async function eid(s) {

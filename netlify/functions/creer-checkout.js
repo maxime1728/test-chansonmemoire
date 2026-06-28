@@ -68,7 +68,7 @@ exports.handler = async (event) => {
     // last_utm_* du Projet (distinct du first-touch). Best-effort, jamais bloquant pour le paiement.
     try {
       const lt = body.last_touch || {};
-      if (lt.utm_source || lt.utm_campaign || lt.utm_content) {
+      if (lt.utm_source || lt.utm_campaign || lt.utm_content || lt.fbclid) {
         const lf = {
           fldAs0LwECqTSxOgF: String(lt.utm_source   || ''),   // last_utm_source
           fld8e6vKwG3lI74Yq: String(lt.utm_medium   || ''),   // last_utm_medium
@@ -78,6 +78,10 @@ exports.handler = async (event) => {
           fldZQdydtpwXKCxyu: String(lt.landing_page || '')    // last_landing_page
         };
         if (lt.at) lf.fldMUwpw5ivyjXggZ = lt.at;              // last_touch_at
+        // Refresh fbclid/fbc avec le CLIC DE CONVERSION (le plus recent) -> la CAPI Purchase porte le
+        // bon clic pour les achats tardifs via reciblage. On n'ecrase PAS si absent (preserve le 1er clic).
+        if (lt.fbclid) lf.fldACzVAZnXIg8Y6F = String(lt.fbclid);   // fbclid
+        if (lt.fbc)    lf.fldH7NqGl1x4iYNUT = String(lt.fbc);      // fbc (cookie = timestamp clic correct)
         await fetch(`${API}/Projects/${projet.id}`, {
           method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
           body: JSON.stringify({ fields: lf, typecast: true })

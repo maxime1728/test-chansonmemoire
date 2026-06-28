@@ -149,6 +149,19 @@ exports.handler = async (event) => {
   if (process.env.SURVEY_DIRECT === '1') {
     try {
       const res = await traiterDirect(propre, { Authorization: `Bearer ${AT_TOKEN}` });
+      // Lead CAPI serveur (ex-MAKE A) : MAKE A est éteint en mode DIRECT, donc on déclenche nous-mêmes
+      // l'event Lead côté serveur (dédup avec le pixel navigateur via event_id = token.lead). IP/UA du
+      // vrai client (il appelle ce endpoint directement) -> meilleure qualité de matching Meta. Best-effort.
+      if (res && res.ok) {
+        try {
+          const ip = (event.headers['x-nf-client-connection-ip'] || event.headers['x-forwarded-for'] || '').split(',')[0].trim();
+          const ua = event.headers['user-agent'] || '';
+          await fetch(`${SITE}/api/suivi-funnel`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token, event: 'lead', client_ip_address: ip, client_user_agent: ua })
+          });
+        } catch (_) {}
+      }
       return { statusCode: res.ok ? 200 : 502, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(res) };
     } catch (err) {
       console.error('[soumettre-survey direct]', err && err.message);
