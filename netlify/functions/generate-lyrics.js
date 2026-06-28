@@ -176,7 +176,28 @@ function parseModel(data) {
   const debut = clean.indexOf('{');
   const fin   = clean.lastIndexOf('}');
   if (debut !== -1 && fin !== -1 && fin > debut) clean = clean.slice(debut, fin + 1);
-  try { return JSON.parse(clean); } catch { return null; }
+  try { return JSON.parse(clean); } catch (_) { /* repli ci-dessous */ }
+
+  // REPLI TOLERANT : le prompt demande de "vrais sauts de ligne" dans "lyrics" -> le modele met
+  // parfois des newlines BRUTS dans la valeur JSON (= JSON invalide) -> JSON.parse echoue. On extrait
+  // alors les champs a la main (cause intermittente n°1 des paroles manquantes).
+  try {
+    const titleM   = clean.match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    const lyricsM  = clean.match(/"lyrics"\s*:\s*"([\s\S]*?)"\s*,\s*"suggestions"\s*:/);
+    const suggM    = clean.match(/"suggestions"\s*:\s*\[([\s\S]*?)\]/);
+    if (lyricsM) {
+      const unescape = s => String(s).replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+      const lyrics = unescape(lyricsM[1]);
+      let suggestions = [];
+      if (suggM) {
+        try { suggestions = JSON.parse('[' + suggM[1] + ']'); }
+        catch (_) { suggestions = (suggM[1].match(/"((?:[^"\\]|\\.)*)"/g) || []).map(s => unescape(s.slice(1, -1))); }
+      }
+      if (lyrics.trim()) return { title: titleM ? unescape(titleM[1]) : '', lyrics, suggestions };
+    }
+    if (/"error"\s*:\s*"invalid_input"/.test(clean)) return { error: 'invalid_input' };
+  } catch (_) {}
+  return null;
 }
 
 function normSuggestions(s) {
@@ -447,3 +468,6 @@ ${modifications}`;
     return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
   }
 };
+
+// Expose pour les tests CI (verrouille le repli tolerant aux sauts de ligne bruts). N'affecte pas le handler.
+exports.parseModel = parseModel;
