@@ -85,9 +85,9 @@
 
 # Canari END-TO-END : rejoue une vraie soumission de sondage (canari -> sans Lead CAPI), verifie
 # l'ecriture (Client/Projet/attribution/Generation), PUIS supprime les donnees test. Alerte si echec.
-# Toutes les 6 h (chaque run genere des paroles via Anthropic -> on limite le cout).
+# 1x/jour (8h UTC ~ 4h Quebec) : chaque run genere des paroles via Anthropic -> on limite le cout.
 [functions."e2e-canari-cron"]
-  schedule = "0 */6 * * *"
+  schedule = "0 8 * * *"
 
 [[redirects]]
   from = "/api/*"
