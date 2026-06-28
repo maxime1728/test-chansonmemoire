@@ -39,20 +39,6 @@ function nettoyer(v) {
   return v.replace(CTRL, ' ').replace(/[\\"]/g, "'").trim();
 }
 
-async function creerGeneration(headers, projetId, no, type, lyr) {
-  const f = {};
-  f[G.project] = [projetId]; f[G.generation_no] = no; f[G.type] = type;
-  f[G.lyrics] = lyr.lyrics; f[G.song_title] = lyr.title || ''; f[G.generation_status] = 'lyrics_generated';
-  if (lyr.suggestions) f[G.suggestions] = (typeof lyr.suggestions === 'string') ? lyr.suggestions : JSON.stringify(lyr.suggestions);
-  await fetch(`${API}/${GENS}`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: f, typecast: true }) });
-}
-async function dernierNo(headers, projetPrimary) {
-  const lit = formulaLiteral(projetPrimary); if (lit === null) return 0;
-  const r = await fetch(`${API}/${GENS}?filterByFormula=${encodeURIComponent(`{project}=${lit}`)}&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=1`, { headers });
-  if (!r.ok) return 0;
-  const g = (((await r.json()).records) || [])[0];
-  return (g && Number(g.fields.generation_no)) || 0;
-}
 
 // REMPLACE MAKE A : Client (upsert par courriel) + Project (si nouveau token) + Generation, via generate-lyrics.
 async function traiterDirect(propre, headers) {
@@ -87,24 +73,8 @@ async function traiterDirect(propre, headers) {
   const litT = formulaLiteral(token);
   if (litT) { const r = await fetch(`${API}/${PROJECTS}?filterByFormula=${encodeURIComponent(`{token}=${litT}`)}&maxRecords=1`, { headers }); if (r.ok) projet = (((await r.json()).records) || [])[0] || null; }
 
-  // 3. Paroles (generate-lyrics). Échec -> on crée quand même le Projet (revision pourra réessayer).
-  let lyr = null;
-  try {
-    const rl = await fetch(`${SITE}/api/generate-lyrics`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret: GEN_SECRET, deceased_name: propre.deceased_name, relationship: propre.relationship, music_style: propre.music_style, mood: propre.mood, what_made_unique: propre.what_made_unique, memories: propre.memories, memory_to_keep: propre.memory_to_keep, language: propre.language, song_type: propre.song_type })
-    });
-    const dl = await rl.json().catch(() => ({}));
-    if (rl.ok && dl && dl.lyrics) lyr = dl;
-    else {
-      // Echec de generation synchrone : on rend la cause VISIBLE (Sentry) au lieu de la jeter.
-      // dl contient anthropic_status / anthropic_detail (mode create) -> on saura si c'est 429/529/parse.
-      // Pas bloquant pour le client : /revision relance (mode retry) et recovery-cron couvre les ratees.
-      await capture(new Error('generate-lyrics: aucune parole en synchrone'), { http: rl.status, detail: dl, token });
-    }
-  } catch (e) { await capture(e, { where: 'soumettre-survey -> generate-lyrics' }); }
-
-  // 4. Nouveau projet -> create Project (toujours) + Generation (si paroles). Sinon -> nouvelle Generation.
+  // 3. Nouveau projet -> create Project. Les PAROLES sont generees en ARRIERE-PLAN (etape 4) pour ne
+  //    PAS bloquer la soumission ~20s ni risquer un timeout de fonction.
   if (!projet) {
     const pf = {};
     pf[P.token] = token; if (clientId) pf[P.Client] = [clientId];
@@ -125,14 +95,23 @@ async function traiterDirect(propre, headers) {
     const rp = await fetch(`${API}/${PROJECTS}`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: pf, typecast: true }) });
     if (!rp.ok) { console.error('[soumettre-survey direct] create projet:', (await rp.text()).slice(0, 300)); return { ok: false, error: 'projet' }; }
     projet = await rp.json();
-    if (lyr) await creerGeneration(headers, projet.id, 1, 'lyrics', lyr);
     // FIRST-touch : lie le Projet a la Pub du 1er creatif (ad_name = utm_content first-touch).
     // Best-effort : si la Pub n'existe pas encore (Insights pas passe), pub-join-cron rattrapera.
     try { await lierPub(API, headers, projet.id, propre.utm_content, P.Pub); } catch (_) {}
-  } else if (lyr) {
-    const maxNo = await dernierNo(headers, projet.fields.project);
-    await creerGeneration(headers, projet.id, maxNo + 1, 'lyrics_regeneration', lyr);
   }
+
+  // 4. Paroles EN ARRIERE-PLAN : generate-lyrics-background (fonction -background = 15 min, JAMAIS de
+  //    timeout) genere les paroles + ecrit la Generation. La soumission ne bloque PAS (~2s). /revision
+  //    sonde et affiche des que pret ; apres ~2 min sans paroles -> message « probleme » + recovery-cron
+  //    relance et envoie le lien par courriel quand pret (le background continue en parallele).
+  // Canari e2e (propre.canari) : pas de background (il ecrirait dans un projet supprime juste apres
+  // par le canari -> fausse alerte). Le canari teste le pipeline, pas la generation des paroles.
+  if (!propre.canari) try {
+    await fetch(`${SITE}/.netlify/functions/generate-lyrics-background`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, secret: GEN_SECRET })
+    });
+  } catch (e) { try { await capture(e, { where: 'trigger generate-lyrics-background' }); } catch (_) {} }
   return { ok: true };
 }
 

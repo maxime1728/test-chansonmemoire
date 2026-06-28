@@ -471,3 +471,15 @@ ${modifications}`;
 
 // Expose pour les tests CI (verrouille le repli tolerant aux sauts de ligne bruts). N'affecte pas le handler.
 exports.parseModel = parseModel;
+
+// Reutilises par generate-lyrics-background.js (generation en arriere-plan, sans timeout).
+exports.callAnthropic = callAnthropic;
+exports.langOf = langOf;
+exports.systemCreate = systemCreate;
+exports.systemCreateGift = systemCreateGift;
+exports.normSuggestions = normSuggestions;
+exports.findProjectByToken = findProjectByToken;
+exports.findLastGeneration = findLastGeneration;
+exports.createGeneration = createGeneration;
+exports.updateProject = updateProject;
+
