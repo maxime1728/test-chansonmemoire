@@ -402,9 +402,9 @@
       grid.innerHTML='';
       list.forEach(function(url, idx){
         var sel=(selectedUrl===url);
-        var d=document.createElement('div'); d.style.cssText='position:relative;cursor:pointer;';
+        var d=document.createElement('div'); d.style.cssText='position:relative;cursor:pointer;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;';
         var img=document.createElement('img'); img.src=thumb(url); img.loading='lazy'; img.draggable=false;
-        img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;'
+        img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;'
           +(pins[url]?'outline:3px solid #C4963A;outline-offset:-3px;':'')
           +(sel?'box-shadow:0 0 0 3px #fff,0 0 0 6px #5c2d4a;':'');
         d.setAttribute('data-url', url); if(touchDragUrl===url) d.style.opacity='0.3';
