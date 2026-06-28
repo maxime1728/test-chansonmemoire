@@ -10,6 +10,8 @@ const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
 const API      = `https://api.airtable.com/v0/${BASE_ID}`;
 const { lierPub } = require('./_lib/pub-join');
+const { beat } = require('./_lib/heartbeat');
+const { withSentry } = require('./_lib/sentry');
 
 // IDs de champ (Projects).
 const F = {
@@ -55,5 +57,9 @@ exports.handler = async () => {
   }
 
   console.log(`[pub-join-cron] scanned=${scanned} linked=${linked}`);
+  await beat('pub-join-cron');
   return { statusCode: 200, body: JSON.stringify({ scanned, linked }) };
 };
+
+// Toute exception non geree -> Sentry, puis relancee (comportement inchange).
+exports.handler = withSentry(exports.handler);

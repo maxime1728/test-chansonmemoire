@@ -11,6 +11,7 @@ const AT_TOKEN = process.env.AIRTABLE_TOKEN;
 const API      = `https://api.airtable.com/v0/${BASE_ID}`;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const { lierPub } = require('./_lib/pub-join');   // jointure last_pub en code (ex-Make « Jointure Pub »)
+const { withSentry } = require('./_lib/sentry');  // capture des exceptions non gerees
 
 const UUID_V4     = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PRICE_CENTS = 13997;     // 139,97 $ CAD — prix fixé serveur
@@ -218,3 +219,6 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
   }
 };
+
+// Toute exception non geree -> Sentry, puis relancee (comportement inchange).
+exports.handler = withSentry(exports.handler);

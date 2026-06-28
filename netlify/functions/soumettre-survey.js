@@ -31,6 +31,7 @@ const P  = { token:'fldqBcPOplqI7pmTh', Client:'fldAGBhUTrR92bj9a', deceased_nam
   Pub:'flds2b9ClA5MZkeTv', last_pub:'fld3BBWOYqlkMYec9' };
 const G  = { project:'fldzXsnRLrkvPbO6p', generation_no:'fldYQz30pRWwQfnYd', type:'fld0ElSpJMdrMkAJy', lyrics:'fld9q1iqsYSx6iGaI', song_title:'fldlcfIdzfDFaG9EG', suggestions:'fldmxQuzUg8iALDGF', generation_status:'fldUnmeYy9Uk4zBDq' };
 const { lierPub } = require('./_lib/pub-join');   // jointure Projet<->Pub en code (ex-Make « Jointure Pub »)
+const { withSentry } = require('./_lib/sentry');  // capture des exceptions non gerees
 function formulaLiteral(v) { const s = String(v); if (!s.includes('"')) return `"${s}"`; if (!s.includes("'")) return `'${s}'`; return null; }
 
 function nettoyer(v) {
@@ -185,3 +186,6 @@ exports.handler = async (event) => {
     return { statusCode: 502, body: JSON.stringify({ error: 'Soumission échouée' }) };
   }
 };
+
+// Toute exception non geree -> Sentry, puis relancee (comportement inchange).
+exports.handler = withSentry(exports.handler);

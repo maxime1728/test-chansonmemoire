@@ -4,6 +4,7 @@
   "private": true,
   "description": "Dépendances des Netlify Functions de Chanson Mémoire. (Le reste du site = HTML/JS statique sans build.)",
   "dependencies": {
+    "@sentry/node": "^8.47.0",
     "pdfkit": "^0.15.0",
     "qrcode": "^1.5.4"
   }

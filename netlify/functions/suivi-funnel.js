@@ -39,6 +39,7 @@ async function patchProject(id, fields, headers) {
    ⚠️ TOKEN-SAFE (Loi 25) : on n'envoie JAMAIS le token client à Meta — ni dans l'URL
    source, ni dans event_id (haché). Secrets en env (jamais en dur) ; no-op si absents. */
 const crypto       = require('crypto');
+const { withSentry } = require('./_lib/sentry');  // capture des exceptions non gerees
 const CAPI_TOKEN   = process.env.META_CAPI_TOKEN;     // secret — var d'env Netlify, JAMAIS en dur
 const CAPI_DATASET = process.env.META_DATASET_ID;     // ex. 909919758755200 — var d'env Netlify
 const CAPI_EVENT   = { preview_played: 'PreviewPlayed', checkout_started: 'InitiateCheckout', purchase: 'Purchase', lead: 'Lead' };
@@ -167,3 +168,6 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: '{}' };
   }
 };
+
+// Toute exception non geree -> Sentry, puis relancee (comportement inchange).
+exports.handler = withSentry(exports.handler);

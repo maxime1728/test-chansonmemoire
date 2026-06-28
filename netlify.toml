@@ -73,6 +73,11 @@
 [functions."insights-cron"]
   schedule = "@hourly"
 
+# Canari (synthetic monitoring) : rejoue les points critiques (CAPI Meta, Airtable, Insights) et alerte
+# (courriel + Sentry) au moindre echec, avant que des vrais clients tombent dessus. Toutes les 15 min.
+[functions."canari-cron"]
+  schedule = "*/15 * * * *"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"

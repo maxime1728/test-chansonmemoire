@@ -14,6 +14,7 @@
 
 const { rehost } = require('./_lib/cloudinary-rehost');
 const { recomputerProjet } = require('./_lib/comptage');
+const { withSentry } = require('./_lib/sentry');   // capture des exceptions non gerees
 
 const BASE_ID  = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN = process.env.AIRTABLE_TOKEN;
@@ -78,3 +79,6 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: '{}' };
   }
 };
+
+// Toute exception non geree -> Sentry, puis relancee (comportement inchange).
+exports.handler = withSentry(exports.handler);

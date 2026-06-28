@@ -19,6 +19,9 @@
 const BASE_ID   = process.env.AIRTABLE_BASE_ID;
 const AT_TOKEN  = process.env.AIRTABLE_TOKEN;
 const API       = `https://api.airtable.com/v0/${BASE_ID}`;
+const { alerte } = require('./_lib/alerte');
+const { beat } = require('./_lib/heartbeat');
+const { withSentry } = require('./_lib/sentry');
 
 // PLACEHOLDERS Meta (a poser en env Netlify) :
 // Robuste : l'endpoint Meta exige le prefixe « act_ ». Si tu as saisi juste l'ID numerique, on l'ajoute.
@@ -61,7 +64,7 @@ async function upsert(tableId, mergeFieldId, records, headers) {
   return out;
 }
 
-exports.handler = async () => {
+exports.handler = withSentry(async () => {
   if (!BASE_ID || !AT_TOKEN) return { statusCode: 200, body: 'no-airtable-config' };
   if (!AD_ACCOUNT || !MKT_TOKEN) {
     console.log('[insights-cron] inerte : META_AD_ACCOUNT_ID / META_MARKETING_TOKEN non posees.');
@@ -95,8 +98,17 @@ exports.handler = async () => {
 
   // Auto-diagnostic : on remonte l'erreur Meta exacte (scope token, act_ invalide…) dans la reponse,
   // au lieu d'un {rows:0} ambigu. account = AD_ACCOUNT normalise (avec act_) pour verifier d'un coup d'oeil.
-  if (metaError) return { statusCode: 200, body: JSON.stringify({ ok: false, rows: 0, account: AD_ACCOUNT, metaError }) };
-  if (!rows.length) { console.log('[insights-cron] aucune depense Meta dans la fenetre.'); return { statusCode: 200, body: JSON.stringify({ ok: true, rows: 0, account: AD_ACCOUNT, note: 'aucune depense dans la fenetre last_3d' }) }; }
+  if (metaError) {
+    // Vraie erreur API Meta (scope token, compte invalide, champ deprecie...) -> on ALERTE (plus silencieux).
+    await alerte('insights-cron', 'Erreur API Meta sur le pull de depense', { account: AD_ACCOUNT, metaError });
+    await beat('insights-cron', true);
+    return { statusCode: 200, body: JSON.stringify({ ok: false, rows: 0, account: AD_ACCOUNT, metaError }) };
+  }
+  if (!rows.length) {
+    console.log('[insights-cron] aucune depense Meta dans la fenetre.');
+    await beat('insights-cron');   // run OK, juste pas de depense -> heartbeat vert
+    return { statusCode: 200, body: JSON.stringify({ ok: true, rows: 0, account: AD_ACCOUNT, note: 'aucune depense dans la fenetre last_3d' }) };
+  }
 
   // 2. Upsert Pubs (par ad_id) -> recupere les record IDs pour lier la perf.
   const pubsById = {};
@@ -139,5 +151,6 @@ exports.handler = async () => {
   const perfUpserted = await upsert(PERF, PF.perf_key, perfRecords, headers);
 
   console.log(`[insights-cron] rows=${rows.length} pubs=${pubsUpserted.length} perf=${perfUpserted.length}`);
+  await beat('insights-cron');
   return { statusCode: 200, body: JSON.stringify({ rows: rows.length, pubs: pubsUpserted.length, perf: perfUpserted.length }) };
-};
+});
