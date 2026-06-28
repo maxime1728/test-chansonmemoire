@@ -72,8 +72,10 @@ exports.handler = async () => {
   // 1. Pull Meta insights (niveau ad, par jour). PLACEHOLDER : ajuste `fields` si ta taxonomie Make differe.
   const fields = [
     'ad_id', 'ad_name', 'campaign_name', 'adset_name', 'spend', 'impressions', 'reach', 'frequency',
-    'inline_link_clicks', 'outbound_clicks', 'video_3_sec_watched_actions', 'video_thruplay_watched_actions',
-    'video_avg_time_watched_actions', 'actions'   // actions -> landing_page_view (lpv)
+    'inline_link_clicks', 'outbound_clicks', 'video_thruplay_watched_actions',
+    'video_avg_time_watched_actions',
+    'actions'   // tableau : video_3s (video_view) + landing_page_view (lpv). video_3_sec_watched_actions
+                // a ete DEPRECIE dans l'API v21 -> on prend les vues 3s depuis actions (action_type video_view).
   ].join(',');
   const url = `https://graph.facebook.com/v21.0/${AD_ACCOUNT}/insights`
     + `?level=ad&time_increment=1&date_preset=${encodeURIComponent(DATE_PRESET)}`
@@ -126,7 +128,7 @@ exports.handler = async () => {
     f[PF.frequency]       = Number(row.frequency) || 0;
     f[PF.link_clicks]     = Number(row.inline_link_clicks) || 0;
     f[PF.outbound_clicks] = actionValue(row.outbound_clicks, 'outbound_click');
-    f[PF.video_3s]        = actionValue(row.video_3_sec_watched_actions, 'video_view');
+    f[PF.video_3s]        = actionValue(row.actions, 'video_view');   // vues 3s = actions[video_view] (v21)
     f[PF.thruplays]       = actionValue(row.video_thruplay_watched_actions, 'video_view');
     f[PF.avg_watch_sec]   = actionValue(row.video_avg_time_watched_actions, 'video_view');
     f[PF.lpv]             = actionValue(row.actions, 'landing_page_view');
