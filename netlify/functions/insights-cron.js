@@ -21,7 +21,9 @@ const AT_TOKEN  = process.env.AIRTABLE_TOKEN;
 const API       = `https://api.airtable.com/v0/${BASE_ID}`;
 
 // PLACEHOLDERS Meta (a poser en env Netlify) :
-const AD_ACCOUNT = process.env.META_AD_ACCOUNT_ID || '';                 // « act_XXXXXXXXXX »
+// Robuste : l'endpoint Meta exige le prefixe « act_ ». Si tu as saisi juste l'ID numerique, on l'ajoute.
+let AD_ACCOUNT = (process.env.META_AD_ACCOUNT_ID || '').trim();
+if (AD_ACCOUNT && !/^act_/i.test(AD_ACCOUNT)) AD_ACCOUNT = 'act_' + AD_ACCOUNT;
 const MKT_TOKEN  = process.env.META_MARKETING_TOKEN || process.env.META_CAPI_TOKEN || '';
 // last_3d = aujourd'hui + 2 jours -> chaque run (horaire) rafraichit la depense du jour en cours
 // et rattrape les conversions tardives. Idempotent (upsert par perf_key = ad_id_jour).
@@ -77,19 +79,22 @@ exports.handler = async () => {
     + `?level=ad&time_increment=1&date_preset=${encodeURIComponent(DATE_PRESET)}`
     + `&fields=${encodeURIComponent(fields)}&limit=500&access_token=${encodeURIComponent(MKT_TOKEN)}`;
 
-  let rows = [];
+  let rows = [], metaError = null;
   try {
     let next = url, guard = 0;
     do {
       const r = await fetch(next);
       const d = await r.json();
-      if (!r.ok) { console.error('[insights-cron] Meta:', JSON.stringify(d).slice(0, 300)); break; }
+      if (!r.ok) { metaError = (d && d.error && d.error.message) || `HTTP ${r.status}`; console.error('[insights-cron] Meta:', JSON.stringify(d).slice(0, 300)); break; }
       rows = rows.concat(d.data || []);
       next = (d.paging && d.paging.next) || null;
     } while (next && ++guard < 50);
-  } catch (e) { console.error('[insights-cron] fetch Meta:', e && e.message); return { statusCode: 200, body: 'meta-fetch-error' }; }
+  } catch (e) { metaError = 'fetch-error ' + (e && e.message); console.error('[insights-cron] fetch Meta:', e && e.message); }
 
-  if (!rows.length) { console.log('[insights-cron] aucune ligne Meta.'); return { statusCode: 200, body: JSON.stringify({ rows: 0 }) }; }
+  // Auto-diagnostic : on remonte l'erreur Meta exacte (scope token, act_ invalide…) dans la reponse,
+  // au lieu d'un {rows:0} ambigu. account = AD_ACCOUNT normalise (avec act_) pour verifier d'un coup d'oeil.
+  if (metaError) return { statusCode: 200, body: JSON.stringify({ ok: false, rows: 0, account: AD_ACCOUNT, metaError }) };
+  if (!rows.length) { console.log('[insights-cron] aucune depense Meta dans la fenetre.'); return { statusCode: 200, body: JSON.stringify({ ok: true, rows: 0, account: AD_ACCOUNT, note: 'aucune depense dans la fenetre last_3d' }) }; }
 
   // 2. Upsert Pubs (par ad_id) -> recupere les record IDs pour lier la perf.
   const pubsById = {};
