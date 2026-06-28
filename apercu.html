@@ -1510,16 +1510,19 @@ setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet
 
   /* Lance la session Stripe pour une version précise. */
   function cmReadLast(){ try{ return JSON.parse(localStorage.getItem('cm_last_touch') || '{}') || {}; }catch(e){ return {}; } }
+  function cmCookie(n){ var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)'); return m?m.pop():''; }
   function startCheckout(genNo, bumps) {
     if (!genNo) { busy = false; alert("Le paiement n'a pas pu démarrer. Réessayez dans un instant."); return; }
     /* last-touch courant : le creatif qui a (re)amene le client jusqu'a l'achat -> creer-checkout
-       met a jour last_utm_* du Projet avant Stripe. Attribution de la CONVERSION, distincte du first-touch. */
+       met a jour last_utm_* + fbclid/fbc du Projet avant Stripe. Attribution de la CONVERSION
+       (clic le plus recent) -> la CAPI Purchase porte le bon clic meme pour les achats tardifs. */
     var lt = cmReadLast();
     fetch('/api/creer-checkout', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ token: token, generation_no: genNo, bumps: bumps || [], last_touch: {
         utm_source: lt.utm_source||'', utm_medium: lt.utm_medium||'', utm_campaign: lt.utm_campaign||'',
-        utm_content: lt.utm_content||'', utm_term: lt.utm_term||'', landing_page: lt.landing_page||'', at: lt.at||''
+        utm_content: lt.utm_content||'', utm_term: lt.utm_term||'', landing_page: lt.landing_page||'', at: lt.at||'',
+        fbclid: lt.fbclid||'', fbc: cmCookie('_fbc')
       }})
     })
     .then(function(r){ return r.ok ? r.json() : null; })
