@@ -27,7 +27,7 @@ const SUNO_API_KEY       = process.env.SUNO_API_KEY;
 const CREATOMATE_API_KEY = process.env.CREATOMATE_API_KEY;
 const CREATOMATE_VERSION = process.env.CREATOMATE_API_VERSION || 'v1';
 const SITE = process.env.SITE_URL || 'https://chansonmemoire.ca';
-const CAP  = parseInt(process.env.ADDON_MAX_RETRIES, 10) || 5;   // add-ons : rendus coûteux -> plafond plus bas que les chansons
+const CAP  = parseInt(process.env.ADDON_MAX_RETRIES, 10) || 20;   // comme les chansons/covers : 20 x 30 min ≈ 10h avant alerte
 const MAX_PER_RUN = 15;
 
 async function atList(formula) {
@@ -100,11 +100,13 @@ exports.handler = async () => {
         try { await atPatch(rec.id, fields); rescued++; } catch (_) {}
         continue;
       }
-      if (SUNO_EN_COURS.includes(s.status) || !s.status) { waiting++; continue; }   // en cours / statut indéterminé -> on attend (pas d'alerte prématurée)
+      if (SUNO_EN_COURS.includes(s.status)) { waiting++; continue; }   // clairement en cours -> on attend
 
+      // Sinon (échec OU statut indéterminé, ex. endpoint vocal-removal incertain) -> relance plafonnée :
+      // robuste même si Suno ne renvoie pas de statut clair (jamais silencieux). SAUF mot sensible (régé inutile).
       const retries = Number(g.instrumental_retries) || 0;
       const token = await tokenDe(g);
-      if (SUNO_ECHEC.includes(s.status) && s.status !== 'SENSITIVE_WORD_ERROR' && retries < CAP && token) {
+      if (s.status !== 'SENSITIVE_WORD_ERROR' && retries < CAP && token) {
         try { await atPatch(rec.id, { instrumental_task_id: '', instrumental_retries: retries + 1 }); await relancer('lancer-instrumentale', token); relaunched++; } catch (_) {}
         continue;
       }
