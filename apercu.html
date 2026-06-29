@@ -54,7 +54,7 @@ window._cmFunnel = function(evt) {
 };
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Mulish:wght@400;500;600;700;800&family=Sora:wght@400;600&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<!-- Icones : sprite SVG inline (voir #cm-icons en bas de body). Remplace Font Awesome (allégé + non bloquant). -->
 
 <style>
 /* ════════════════════════════════════════════
@@ -78,6 +78,7 @@ window._cmFunnel = function(evt) {
    RESET & BASE
 ════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.cm-ic { width: 1em; height: 1em; vertical-align: -0.125em; flex-shrink: 0; }
 
 html { scroll-behavior: smooth; overflow-x: hidden; }
 
@@ -933,6 +934,16 @@ body {
   <link rel="apple-touch-icon" sizes="180x180" href="https://res.cloudinary.com/dcx1tfm47/image/upload/c_fill,w_180,h_180/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
 </head>
 <body>
+<!-- Sprite d'icones SVG inline (remplace Font Awesome) -->
+<svg id="cm-icons" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z" fill="currentColor"/></symbol>
+  <symbol id="ic-pause" viewBox="0 0 24 24"><path d="M7 4h4v16H7zM13 4h4v16h-4z" fill="currentColor"/></symbol>
+  <symbol id="ic-volume-high" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M19 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="ic-volume-low" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M16 9.5a3 3 0 0 1 0 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="ic-volume-xmark" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9.5l-5 5M17 9.5l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="ic-link-slash" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 7l10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</svg>
 <div id="cm-loader" aria-hidden="true"><div class="cm-spin"></div></div>
 
 <!-- ══ LOGO ══════════════════════════════════════════ -->
@@ -966,7 +977,7 @@ body {
           <span></span><span></span><span></span>
         </div>
         <audio class="cm-audio"><source src="" type="audio/mpeg"></audio>
-        <button class="cm-play-btn"><i class="fa-solid fa-play"></i></button>
+        <button class="cm-play-btn" aria-label="Lire l'aperçu"><svg class="cm-ic" aria-hidden="true"><use href="#ic-play"></use></svg></button>
         <div class="cm-time">
           <span class="cm-current">0:00</span>
           <span class="cm-total">0:00</span>
@@ -976,7 +987,7 @@ body {
           <input class="cm-progress" type="range" min="0" max="60" step="0.01" value="0">
         </div>
         <div class="cm-volume-wrap">
-          <button class="cm-mute-btn"><i class="fa-solid fa-volume-high"></i></button>
+          <button class="cm-mute-btn" aria-label="Couper / activer le son"><svg class="cm-ic" aria-hidden="true"><use href="#ic-volume-high"></use></svg></button>
           <div class="cm-volume-slider-wrap">
             <div class="cm-volume-bar"></div>
             <input class="cm-volume" type="range" min="0" max="1" step="0.01" value="1">
@@ -1126,7 +1137,7 @@ body {
   <div class="cm-faq-item">
     <button class="cm-faq-btn">
       <span class="cm-faq-question">Quand vais-je recevoir la chanson complète ?</span>
-      <i class="fa-solid fa-plus cm-faq-icon"></i>
+      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
     </button>
     <div class="cm-faq-answer">Tout de suite après ton paiement. Tu reçois un courriel avec la version complète (3 à 4 minutes) et ton fichier MP3 à télécharger. Pense à vérifier tes indésirables si tu ne le vois pas dans les minutes qui suivent.</div>
   </div>
@@ -1134,7 +1145,7 @@ body {
   <div class="cm-faq-item">
     <button class="cm-faq-btn">
       <span class="cm-faq-question">Puis-je demander des modifications ?</span>
-      <i class="fa-solid fa-plus cm-faq-icon"></i>
+      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
     </button>
     <div class="cm-faq-answer">Oui, sans limite et sans frais. Si la chanson ne te touche pas comme tu l'espérais (une parole à ajuster, un ton à changer, un souvenir à intégrer autrement), tu nous écris et on la retravaille jusqu'à ce qu'elle soit juste pour toi.</div>
   </div>
@@ -1142,7 +1153,7 @@ body {
   <div class="cm-faq-item">
     <button class="cm-faq-btn">
       <span class="cm-faq-question">La chanson est-elle créée par un humain ou par l'IA ?</span>
-      <i class="fa-solid fa-plus cm-faq-icon"></i>
+      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
     </button>
     <div class="cm-faq-answer">Ta chanson est composée par intelligence artificielle à partir des souvenirs que tu as partagés dans le formulaire. Une personne de notre équipe veille sur la qualité à chaque étape, pour qu'elle honore vraiment la personne que tu aimes.</div>
   </div>
@@ -1150,7 +1161,7 @@ body {
   <div class="cm-faq-item">
     <button class="cm-faq-btn">
       <span class="cm-faq-question">Est-ce que je peux la faire jouer lors de funérailles ou d'une cérémonie ?</span>
-      <i class="fa-solid fa-plus cm-faq-icon"></i>
+      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
     </button>
     <div class="cm-faq-answer">Oui. La chanson t'appartient : tu peux la partager librement avec ta famille, la faire jouer lors d'une cérémonie, ou la garder pour toi. Le fichier MP3 est à toi pour toujours.</div>
   </div>
@@ -1158,7 +1169,7 @@ body {
   <div class="cm-faq-item">
     <button class="cm-faq-btn">
       <span class="cm-faq-question">Le paiement est-il sécurisé ?</span>
-      <i class="fa-solid fa-plus cm-faq-icon"></i>
+      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
     </button>
     <div class="cm-faq-answer">Oui. Le paiement est traité par Stripe, l'un des processeurs les plus sécurisés au monde. Tes informations financières ne nous sont jamais transmises directement.</div>
   </div>
@@ -1166,7 +1177,7 @@ body {
   <div class="cm-faq-item">
     <button class="cm-faq-btn">
       <span class="cm-faq-question">Puis-je obtenir un remboursement ?</span>
-      <i class="fa-solid fa-plus cm-faq-icon"></i>
+      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
     </button>
     <div class="cm-faq-answer">Comme chaque chanson est entièrement personnalisée, on n'offre pas de remboursement une fois la chanson livrée. Par contre, on la révise autant de fois qu'il le faut pour qu'elle te convienne pleinement. Voir nos <a href="/condition-de-vente">conditions de vente</a>.</div>
   </div>
@@ -1174,7 +1185,7 @@ body {
   <div class="cm-faq-item">
     <button class="cm-faq-btn">
       <span class="cm-faq-question">Qu'est-ce qui est inclus pour 139,97 $ ?</span>
-      <i class="fa-solid fa-plus cm-faq-icon"></i>
+      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
     </button>
     <div class="cm-faq-answer">Ta chanson complète (3 à 4 minutes), ton fichier MP3 à garder pour toujours, et les révisions jusqu'à ce qu'elle soit parfaite. Aucuns frais cachés, aucun abonnement.</div>
   </div>
@@ -1182,7 +1193,7 @@ body {
   <div class="cm-faq-item">
     <button class="cm-faq-btn">
       <span class="cm-faq-question">C'est quoi la version instrumentale et la vidéo des paroles ?</span>
-      <i class="fa-solid fa-plus cm-faq-icon"></i>
+      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
     </button>
     <div class="cm-faq-answer">Deux options facultatives. L'instrumentale, c'est la musique sans la voix (parfaite pour une cérémonie ou un fond sonore). La vidéo des paroles, c'est ta chanson avec les paroles à l'écran, idéale à partager. Tu les ajoutes seulement si tu le souhaites.</div>
   </div>
@@ -1190,7 +1201,7 @@ body {
   <div class="cm-faq-item">
     <button class="cm-faq-btn">
       <span class="cm-faq-question">Et si la version complète me touche moins que l'aperçu ?</span>
-      <i class="fa-solid fa-plus cm-faq-icon"></i>
+      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
     </button>
     <div class="cm-faq-answer">L'aperçu, c'est déjà ta chanson : la version complète, c'est la même, du début à la fin. Et si un détail clochait, on la révise sans frais jusqu'à ce qu'elle soit juste.</div>
   </div>
@@ -1343,6 +1354,9 @@ window.cmModal = (function(){
   };
 })();
 
+/* ── Icônes SVG inline (remplace Font Awesome) ── */
+window.cmIcon = function(n){ return '<svg class="cm-ic" aria-hidden="true"><use href="#ic-'+n+'"></use></svg>'; };
+
 /* ── PLAYER ─────────────────────────────────────────── */
 (function() {
   'use strict';
@@ -1376,18 +1390,18 @@ window.cmModal = (function(){
     audio.addEventListener('error', function() { total.innerText='Erreur'; btn.disabled=true; btn.style.opacity='0.5'; });
 
     if (mp3Url) { source.src = mp3Url; audio.load(); }
-    else { wrap.style.opacity='0.5'; btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-link-slash"></i>'; }
+    else { wrap.style.opacity='0.5'; btn.disabled=true; btn.innerHTML=cmIcon('link-slash'); }
 
     btn.addEventListener('click', function() {
       if (!source.src) return;
       if (audio.paused) {
-        audio.play().then(function() { btn.innerHTML='<i class="fa-solid fa-pause"></i>'; eq.classList.add('active'); if(window._cmFunnel && !window._cmPreviewPinged){ window._cmPreviewPinged=true; window._cmFunnel('preview_played'); } }).catch(function(e){console.error(e);});
-      } else { audio.pause(); btn.innerHTML='<i class="fa-solid fa-play"></i>'; eq.classList.remove('active'); }
+        audio.play().then(function() { btn.innerHTML=cmIcon('pause'); eq.classList.add('active'); if(window._cmFunnel && !window._cmPreviewPinged){ window._cmPreviewPinged=true; window._cmFunnel('preview_played'); } }).catch(function(e){console.error(e);});
+      } else { audio.pause(); btn.innerHTML=cmIcon('play'); eq.classList.remove('active'); }
     });
 
     audio.addEventListener('timeupdate', function() {
       var rel = audio.currentTime - START_TIME;
-      if (audio.currentTime >= END_TIME) { audio.pause(); audio.currentTime=START_TIME; btn.innerHTML='<i class="fa-solid fa-play"></i>'; eq.classList.remove('active'); }
+      if (audio.currentTime >= END_TIME) { audio.pause(); audio.currentTime=START_TIME; btn.innerHTML=cmIcon('play'); eq.classList.remove('active'); }
       if (!isDragging) { var pct=(rel/DURATION)*100; progress.value=rel; bar.style.width=pct+'%'; current.innerText=fmt(rel); }
     });
 
@@ -1397,7 +1411,7 @@ window.cmModal = (function(){
     progress.addEventListener('touchend', function(){ isDragging=false; });
     progress.addEventListener('input', function() { var val=parseFloat(progress.value); audio.currentTime=val+START_TIME; bar.style.width=(val/DURATION)*100+'%'; current.innerText=fmt(val); });
 
-    function setVolIcon(v) { muteBtn.innerHTML = v==0 ? '<i class="fa-solid fa-volume-xmark"></i>' : v<0.5 ? '<i class="fa-solid fa-volume-low"></i>' : '<i class="fa-solid fa-volume-high"></i>'; }
+    function setVolIcon(v) { muteBtn.innerHTML = v==0 ? cmIcon('volume-xmark') : v<0.5 ? cmIcon('volume-low') : cmIcon('volume-high'); }
     volInput.addEventListener('input', function() { var v=parseFloat(volInput.value); audio.volume=v; volBar.style.width=(v*100)+'%'; setVolIcon(v); });
     muteBtn.addEventListener('click', function() {
       if (audio.volume>0) { lastVol=audio.volume; audio.volume=0; volInput.value=0; volBar.style.width='0%'; setVolIcon(0); }
@@ -1428,7 +1442,7 @@ window.cmModal = (function(){
     try { if (audio) audio.pause(); } catch (e) {}
     source.src = url; audio.load();
     wrap.style.opacity = '1';
-    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class="fa-solid fa-play"></i>'; }
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = cmIcon('play'); }
   }
 
   function labelOf(ver) {
