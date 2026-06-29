@@ -184,3 +184,7 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: 'server_error' }) };   // -> Mailgun réessaie (pas de perte)
   }
 };
+
+// Observabilite : capture Sentry des exceptions non gerees (inerte sans SENTRY_DSN). Voir _lib/sentry.js.
+const { withSentry } = require('./_lib/sentry');
+exports.handler = withSentry(exports.handler);

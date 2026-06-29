@@ -102,9 +102,9 @@ classDef note fill:#F4F4F5,stroke:#A1A1AA,color:#3f3f46,stroke-dasharray:2 2;
 
 **2. `/souvenirs`** — sondage : hommage **ou** cadeau (les ambiances s'adaptent), langue, style musical, voix, souvenirs. Token UUID généré au chargement. Capte utm / fbc / fbp. À l'envoi → `Lead`.
 
-**3. `/api/soumettre-survey`** (remplace MAKE A) — nettoie le texte, **exige un token UUID** (anti-bot). En mode `SURVEY_DIRECT=1` : crée le **Client** (upsert par courriel), le **Projet** (toutes les réponses + utm + `commercial_status=preview_only` + `funnel_step=lyrics_generated`), appelle `generate-lyrics`, crée la **Génération** (paroles). `typecast:true` → aucune option select manquante ne bloque.
+**3. `/api/soumettre-survey`** (remplace MAKE A) — nettoie le texte, **exige un token UUID** (anti-bot). En mode `SURVEY_DIRECT=1` : crée le **Client** (upsert par courriel, email normalisé minuscules), le **Projet** (réponses + attribution **first-touch** `utm_*` + **last-touch** `last_utm_*` + `commercial_status=preview_only`), puis **déclenche `generate-lyrics-background`** (génération en arrière-plan) et **répond en ~2 s** (ne bloque plus). `typecast:true`. Lance aussi le **Lead CAPI** serveur.
 
-**4. `/api/generate-lyrics`** — Anthropic écrit titre + paroles + suggestions (hommage / cadeau / régénération selon le cas).
+**4. `/api/generate-lyrics-background`** (fonction *background*, 15 min, **jamais de timeout**) — Anthropic écrit titre + paroles + suggestions et **crée la Génération** (~15-20 s). `/api/generate-lyrics` (synchrone) reste pour la **régénération** et le **retry** depuis `/revision`. Parsing tolérant aux sauts de ligne bruts.
 
 **5. `/revision`** — paroles affichées (propres, sans balises). Le client peut **régénérer autant de fois** qu'il veut (décrit ses changements).
    - **Fallback paroles ratées :** si la génération échoue, bouton **« Réessayer »**. Après **2 échecs**, le bouton disparaît et un message annonce un **courriel d'ici 24-48 h** → `recovery-cron` relance et envoie le lien dès que prêt.
@@ -163,8 +163,16 @@ Une demande de modification (page-chanson / page-memoire) passe par **`/api/deco
 | `cover-cron` | 1 min | déclenche les covers approuvés (auto ou par toi) |
 | `recovery-cron` | 5 min | envoie les courriels de récupération |
 | `nurture-cron` / `sequences-cron` | 1 h | séquences marketing |
+| `modif-cron` / `appliquer-cron` | 1 min | pré-génération + application des corrections |
 | `purge-cron` | quotidien | purge Loi 25 (voir §6) |
 | `brouillon-cron` / `envoyer-cron` | 1 min | support (brouillons IA + envoi) |
+| `insights-cron` | 1 h | tire la dépense Meta → Pubs / Pubs_Performance (ex-Make Insights) |
+| `pub-join-cron` | 1 h | rattrape la jointure Projet↔Pub (first/last) |
+| `canari-cron` | 15 min | monitoring synthétique (CAPI, Airtable, Insights) |
+| `canari-data-cron` | 1 h | data-quality (Lead CAPI manquant…) |
+| `e2e-canari-cron` | quotidien | parcours e2e auto-nettoyant |
+
+> **Tous les crons** sont enveloppés par `withCron` → **heartbeat Healthchecks** (alerte si un cron s'arrête) + capture Sentry.
 
 ---
 
@@ -182,12 +190,24 @@ Une demande de modification (page-chanson / page-memoire) passe par **`/api/deco
 
 - **`cm-pixel.js`** sur toutes les pages, **gated consentement** : PageView · Lead · CheckoutStarted · PreviewPlay · Purchase (eventID = hash `token.event` pour la dédup).
 - **CAPI** → Meta côté serveur.
-- **MAKE Insights** : tire la dépense Meta → tables `Pubs` / `Pubs_Performance` → **ROAS réel** (jointure utm_content ↔ pub).
+- **Attribution first/last-touch** : `cm-attrib.js` capte le 1er et le dernier créatif (localStorage) → `utm_*` (first) + `last_utm_*` (last) sur le Projet ; jointure Pub **en code** (`pub-join`).
+- **Insights EN CODE** (`insights-cron`) : tire la dépense Meta → `Pubs` / `Pubs_Performance` → **ROAS réel** (remplace Make Insights).
 
 ---
 
 ## 8. Code vs Make
 
-- **100 % Netlify (code) :** sondage, génération, callback, corrections, livraison, comptage, courriels, purge.
-- **Make ne garde que :** MAKE D (Stripe), MAKE Insights (Meta), jointures Pub/Hook.
-- **Services externes :** Suno (audio), Cloudinary (hébergement signé), Anthropic (paroles/analyse), Stripe, Mailgun, Meta. **Airtable** = base de données (Clients · Projets · Generations).
+- **100 % Netlify (code) :** sondage, génération (background), callbacks, corrections, livraison, comptage, courriels, purge, **attribution + jointure Pub + Insights**.
+- **Make ne garde que : MAKE D (Stripe achat).** (Jointure Pub/Hook + Insights migrés en code → scénarios Make à éteindre.)
+- **Services externes :** Suno, Cloudinary (signé), Anthropic, Stripe, Mailgun, Meta. **Airtable** = base de données.
+
+---
+
+## 9. Observabilité (anti-bug-silencieux)
+
+- **Sentry** front (`cm-sentry.js`, toutes les pages, token/PII scrubbés) + back (les 69 fonctions via `withSentry`/`withCron`).
+- **Alertes courriel** (`_lib/alerte.js`, Mailgun + `TEAM_NOTIFY_EMAIL`) sur les échecs critiques.
+- **Heartbeats Healthchecks** sur les 16 crons (dead man's switch).
+- **Canaris** : synthétique (15 min), data-quality (1 h), e2e auto-nettoyant (quotidien).
+- **CI GitHub Actions** : `node --check` + tests (`node --test`) sur chaque PR.
+- Env requis : `SENTRY_DSN`, `HC_PING_KEY` (sinon tout est inerte).

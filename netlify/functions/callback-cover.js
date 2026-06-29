@@ -154,3 +154,7 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: '{}' };   // un callback ne renvoie jamais d'erreur à Suno
   }
 };
+
+// Observabilite : capture Sentry des exceptions non gerees (inerte sans SENTRY_DSN). Voir _lib/sentry.js.
+const { withSentry } = require('./_lib/sentry');
+exports.handler = withSentry(exports.handler);

@@ -55,3 +55,7 @@ exports.handler = async (event) => {
 
   return { statusCode: 302, headers: { Location: dest, 'Cache-Control': 'no-store' }, body: '' };
 };
+
+// Observabilite : capture Sentry des exceptions non gerees (inerte sans SENTRY_DSN). Voir _lib/sentry.js.
+const { withSentry } = require('./_lib/sentry');
+exports.handler = withSentry(exports.handler);
