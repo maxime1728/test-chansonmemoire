@@ -6,26 +6,30 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <title>Création en cours · Chanson Mémoire</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400;1,600&family=Mulish:wght@400;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=Mulish:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{overflow-x:hidden;}
-body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;text-align:center;}
+body{font-family:"Mulish",system-ui,sans-serif;color:#2e1a28;background:#f8f4f0;text-align:center;}
+
+/* ── Bandeau fixe : composition en cours (rassure + rappelle la redirection auto) ── */
+.cm-compo-bar{position:sticky;top:0;z-index:60;background:#fff;border-bottom:1px solid var(--line);color:var(--plum-deep);font-size:12.5px;font-weight:700;line-height:1.4;text-align:center;padding:9px 16px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.cm-compo-bar .compo-dot{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:var(--candle);animation:breathe 2.6s ease-in-out infinite;}
 
 /* ── VARIABLES ── */
 :root{
-  --plum:#4a3b57;
-  --plum-deep:#2e2238;
-  --ink:#2a2330;
-  --muted:#6b6175;
-  --candle:#c39a52;
-  --candle-soft:#ecdcbd;
-  --line:#e3dceb;
+  --plum:#8b4a6e;
+  --plum-deep:#5c2d4a;
+  --ink:#2e1a28;
+  --muted:#7a6070;
+  --candle:#c4963a;
+  --candle-soft:#e8c97a;
+  --line:#e6d6df;
 }
 
 .in{max-width:560px;margin:0 auto;padding:0 20px;}
 .eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.72rem;font-weight:800;color:var(--candle);display:block;margin-bottom:12px;}
-.serif{font-family:"Fraunces",Georgia,serif;}
+.serif{font-family:"Newsreader",Georgia,serif;}
 
 /* ── FLAMME ── */
 .flame{width:36px;height:52px;margin:0 auto 28px;position:relative;}
@@ -51,14 +55,14 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
 /* ── SECTION 1 : ATTENTE ── */
 .s-wait{padding:54px 20px 40px;}
 .s-wait h1{
-  font-family:"Fraunces",serif;font-weight:600;
+  font-family:"Newsreader",serif;font-weight:600;
   color:var(--plum-deep);
   font-size:clamp(1.9rem,6vw,2.6rem);
   line-height:1.15;letter-spacing:-.01em;
   margin-bottom:.35em;
 }
 .s-wait .lede{font-size:1.05rem;color:var(--muted);line-height:1.6;margin-bottom:28px;}
-.s-wait .lede .defunt-name{font-family:"Fraunces",serif;font-style:italic;color:var(--plum);}
+.s-wait .lede .defunt-name{font-family:"Newsreader",serif;font-style:italic;color:var(--plum);}
 
 .steps{display:flex;flex-direction:column;gap:10px;max-width:400px;margin:0 auto 24px;text-align:left;}
 .wstep{
@@ -100,7 +104,7 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
 /* ── SECTION 2 : PLAYERS ── */
 .s-players{padding:30px 20px 40px;}
 .s-players h2{
-  font-family:"Fraunces",serif;font-weight:600;
+  font-family:"Newsreader",serif;font-weight:600;
   color:var(--plum-deep);
   font-size:clamp(1.35rem,5vw,1.9rem);
   margin-bottom:6px;
@@ -132,7 +136,7 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
 .cm-player.is-playing .cm-bars span:nth-child(8){animation-duration:2.1s;animation-delay:.34s}
 .cm-player.is-playing .cm-bars span:nth-child(9){animation-duration:1.8s;animation-delay:.19s}
 
-.cm-pl-title{font-family:"Fraunces",serif;font-weight:600;color:var(--plum-deep);font-size:1.05rem;margin-bottom:2px;}
+.cm-pl-title{font-family:"Newsreader",serif;font-weight:600;color:var(--plum-deep);font-size:1.05rem;margin-bottom:2px;}
 .cm-pl-sub{font-size:.85rem;color:var(--muted);margin-bottom:12px;}
 .cm-pl-controls{display:flex;align-items:center;justify-content:center;gap:10px;max-width:400px;margin:0 auto;}
 .cm-play{
@@ -151,7 +155,7 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
 /* ── SECTION 3 : TÉMOIGNAGES ── */
 .s-temoignages{padding:30px 20px 40px;}
 .s-temoignages h2{
-  font-family:"Fraunces",serif;font-weight:600;
+  font-family:"Newsreader",serif;font-weight:600;
   color:var(--plum-deep);
   font-size:clamp(1.35rem,5vw,1.9rem);
   margin-bottom:24px;
@@ -183,14 +187,14 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
   background:linear-gradient(180deg,var(--candle-soft),var(--candle));
   animation:breathe 2.6s ease-in-out infinite;
 }
-.s-foot .em{font-family:"Fraunces",serif;font-style:italic;color:var(--plum);font-size:1.08rem;display:block;margin-bottom:8px;}
+.s-foot .em{font-family:"Newsreader",serif;font-style:italic;color:var(--plum);font-size:1.08rem;display:block;margin-bottom:8px;}
 .s-foot p{font-size:.92rem;color:var(--muted);line-height:1.58;}
 
 /* ── POPUP : délai / pépin technique ── */
-.cm-delay-overlay{position:fixed;inset:0;background:rgba(46,34,56,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:50;}
+.cm-delay-overlay{position:fixed;inset:0;background:rgba(92,45,74,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:50;}
 .cm-delay-overlay.show{display:flex;}
-.cm-delay-box{background:#fff;border:1px solid var(--line);border-radius:18px;padding:30px 26px;max-width:420px;text-align:center;box-shadow:0 14px 50px rgba(46,34,56,.25);}
-.cm-delay-box h2{font-family:"Fraunces",serif;font-weight:600;color:var(--plum-deep);font-size:1.5rem;margin-bottom:12px;}
+.cm-delay-box{background:#fff;border:1px solid var(--line);border-radius:18px;padding:30px 26px;max-width:420px;text-align:center;box-shadow:0 14px 50px rgba(92,45,74,.25);}
+.cm-delay-box h2{font-family:"Newsreader",serif;font-weight:600;color:var(--plum-deep);font-size:1.5rem;margin-bottom:12px;}
 .cm-delay-box p{font-size:.97rem;color:var(--muted);line-height:1.6;}
 .cm-delay-box .cm-delay-sub{font-size:.85rem;margin-top:12px;}
 
@@ -206,27 +210,28 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2a2330;background:#faf8f5;
 .steps.live .wstep.active{opacity:1;}
 .steps.live .wstep.done{opacity:.85;}
 .steps.live .wstep.done .dot{background:var(--candle);border-color:var(--candle);}
-.steps.live .wstep.active .dot{border-color:var(--candle);box-shadow:0 0 0 4px rgba(195,154,82,.18);}
+.steps.live .wstep.active .dot{border-color:var(--candle);box-shadow:0 0 0 4px rgba(196,150,58,.18);}
 
 /* ── Loader anti-flash hommage/cadeau ── */
-#cm-loader{position:fixed;inset:0;z-index:9999;background:#faf8f5;display:flex;align-items:center;justify-content:center;transition:opacity .4s ease;}
+#cm-loader{position:fixed;inset:0;z-index:9999;background:#f8f4f0;display:flex;align-items:center;justify-content:center;transition:opacity .4s ease;}
 #cm-loader.cm-hide{opacity:0;pointer-events:none;}
 #cm-loader .cm-spin{width:44px;height:44px;border-radius:50%;border:3px solid var(--candle-soft);border-top-color:var(--candle);animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
 /* ── Section « Ce que tu vas recevoir » ── */
 .s-receive{padding:30px 20px 40px;}
-.s-receive h2{font-family:"Fraunces",serif;font-weight:600;color:var(--plum-deep);font-size:clamp(1.35rem,5vw,1.9rem);margin-bottom:6px;}
+.s-receive h2{font-family:"Newsreader",serif;font-weight:600;color:var(--plum-deep);font-size:clamp(1.35rem,5vw,1.9rem);margin-bottom:6px;}
 .s-receive .sub{font-size:.96rem;color:var(--muted);margin-bottom:26px;}
 .receive-grid{display:flex;flex-direction:column;gap:14px;max-width:520px;margin:0 auto;}
+.r-divider{font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--candle);text-align:center;margin:6px 0 0;}
 .r-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;text-align:left;display:flex;gap:16px;align-items:center;text-decoration:none;color:inherit;transition:border-color .18s,box-shadow .18s,transform .18s;}
-a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(46,34,56,.10);transform:translateY(-1px);}
+a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(92,45,74,.10);transform:translateY(-1px);}
 .r-cta{display:inline-block;margin-top:6px;font-size:.8rem;font-weight:800;letter-spacing:.02em;color:var(--candle);}
 .r-thumb{flex:0 0 auto;width:84px;height:84px;border-radius:12px;background:linear-gradient(135deg,var(--candle-soft),#f3e8d2);display:flex;align-items:center;justify-content:center;font-size:1.9rem;overflow:hidden;}
 .r-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .r-body{flex:1;}
 .r-tag{font-size:.68rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--candle);display:block;margin-bottom:4px;}
-.r-title{font-family:"Fraunces",serif;font-weight:600;color:var(--plum-deep);font-size:1.05rem;margin-bottom:3px;}
+.r-title{font-family:"Newsreader",serif;font-weight:600;color:var(--plum-deep);font-size:1.05rem;margin-bottom:3px;}
 .r-desc{font-size:.88rem;color:var(--muted);line-height:1.5;}
 .r-ph{font-size:.72rem;color:var(--muted);opacity:.65;font-style:italic;}
 </style>
@@ -239,6 +244,11 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(46,34,56,.1
 </head>
 <body>
 <div id="cm-loader" aria-hidden="true"><div class="cm-spin"></div></div>
+
+<div class="cm-compo-bar" id="cmCompoBar" role="status">
+  <span class="compo-dot" aria-hidden="true"></span>
+  <span>On compose <strong id="cmCompoName">sa chanson</strong>. On t'amène à sa page dès qu'elle est prête.</span>
+</div>
 
 <!-- ══════════════════════════════════════
      SECTION 1 : ATTENTE
@@ -254,9 +264,9 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(46,34,56,.1
     </p>
 
     <div class="steps" role="list">
-      <div class="wstep" role="listitem"><span class="dot" aria-hidden="true"></span><span class="txt">On relit tes souvenirs</span></div>
-      <div class="wstep" role="listitem"><span class="dot" aria-hidden="true"></span><span class="txt">On écrit ses paroles</span></div>
-      <div class="wstep" role="listitem"><span class="dot" aria-hidden="true"></span><span class="txt">On compose sa mélodie</span></div>
+      <div class="wstep" role="listitem"><span class="dot" aria-hidden="true"></span><span class="txt">On prépare sa chanson</span></div>
+      <div class="wstep" role="listitem"><span class="dot" aria-hidden="true"></span><span class="txt">On compose la mélodie</span></div>
+      <div class="wstep" role="listitem"><span class="dot" aria-hidden="true"></span><span class="txt">On met la touche finale</span></div>
     </div>
 
     <div class="wait-status">
@@ -276,22 +286,23 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(46,34,56,.1
 <section class="s-receive">
   <div class="in">
     <span class="eyebrow">Pendant que sa chanson se termine</span>
-    <h2 class="serif">Voici tout ce que tu vas recevoir</h2>
-    <p class="sub">Bien plus qu'un fichier audio : un petit univers autour de sa chanson.</p>
+    <h2 class="serif">Sa chanson, et tout ce qui peut l'accompagner</h2>
+    <p class="sub">Sa chanson sur sa page privée est incluse. Le reste, c'est en option, si tu veux aller plus loin.</p>
     <div class="receive-grid">
       <a class="r-card" href="exemple-page-memoire.html">
         <div class="r-thumb" aria-hidden="true">🎵</div>
         <div class="r-body">
-          <span class="r-tag">Ta page privée</span>
+          <span class="r-tag">Inclus</span>
           <div class="r-title">Une page-mémoire à partager</div>
           <div class="r-desc">Sa chanson, ses paroles et ses souvenirs réunis sur une page privée, à partager avec ceux qui comptent.</div>
           <span class="r-cta">Voir un exemple →</span>
         </div>
       </a>
+      <p class="r-divider">En option, pour aller plus loin</p>
       <a class="r-card" href="exemple-page-memoire.html#paroles">
         <div class="r-thumb" aria-hidden="true">📄</div>
         <div class="r-body">
-          <span class="r-tag">En souvenir</span>
+          <span class="r-tag">En option</span>
           <div class="r-title">Les paroles en PDF</div>
           <div class="r-desc">Une belle mise en page des paroles, à garder précieusement ou à offrir.</div>
           <span class="r-cta">Voir un exemple →</span>
@@ -300,7 +311,7 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(46,34,56,.1
       <a class="r-card" href="exemple-page-memoire.html#video">
         <div class="r-thumb" aria-hidden="true">🎬</div>
         <div class="r-body">
-          <span class="r-tag">Option</span>
+          <span class="r-tag">En option</span>
           <div class="r-title">Une vidéo des paroles</div>
           <div class="r-desc">Les paroles qui défilent en musique, prêtes à projeter ou à partager.</div>
           <span class="r-cta">Voir un exemple →</span>
@@ -491,6 +502,8 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(46,34,56,.1
     if(name){
       var el = document.getElementById("defuntName");
       if(el) el.textContent = name;
+      var cb = document.getElementById("cmCompoName");
+      if(cb) cb.textContent = "la chanson de " + name;
     }
   }catch(e){}
 })();
