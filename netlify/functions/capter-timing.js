@@ -96,3 +96,7 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: JSON.stringify({ ok: true, captured: false, reason: 'error' }) };  // ne casse jamais l'achat
   }
 };
+
+// Observabilite : capture Sentry des exceptions non gerees (inerte sans SENTRY_DSN). Voir _lib/sentry.js.
+const { withSentry } = require('./_lib/sentry');
+exports.handler = withSentry(exports.handler);

@@ -66,3 +66,7 @@ exports.handler = async (event) => {
     return html('Une erreur est survenue. Écrivez-nous et on vous retire de la liste manuellement.');
   }
 };
+
+// Observabilite : capture Sentry des exceptions non gerees (inerte sans SENTRY_DSN). Voir _lib/sentry.js.
+const { withSentry } = require('./_lib/sentry');
+exports.handler = withSentry(exports.handler);

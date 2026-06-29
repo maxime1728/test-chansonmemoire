@@ -483,3 +483,6 @@ exports.findLastGeneration = findLastGeneration;
 exports.createGeneration = createGeneration;
 exports.updateProject = updateProject;
 
+// Observabilite : capture Sentry des exceptions non gerees (inerte sans SENTRY_DSN). Voir _lib/sentry.js.
+const { withSentry } = require('./_lib/sentry');
+exports.handler = withSentry(exports.handler);

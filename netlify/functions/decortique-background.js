@@ -122,3 +122,7 @@ ${piedAuto()}`;
     return { statusCode: 200, body: '{}' };   // best-effort : la demande brute est deja enregistree par decortique
   }
 };
+
+// Observabilite : capture Sentry des exceptions non gerees (inerte sans SENTRY_DSN). Voir _lib/sentry.js.
+const { withSentry } = require('./_lib/sentry');
+exports.handler = withSentry(exports.handler);
