@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr-CA">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <title>Création en cours · Chanson Mémoire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=Mulish:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -146,9 +148,10 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2e1a28;background:#f8f4f0;
   display:flex;align-items:center;justify-content:center;
   transition:background .15s;
 }
-.cm-play:hover{background:var(--plum-deep);}
+@media(hover:hover){.cm-play:hover{background:var(--plum-deep);}}
 .cm-time{font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;min-width:32px;}
 .cm-track{flex:1;height:5px;border-radius:999px;background:var(--line);cursor:pointer;position:relative;}
+.cm-track:focus-visible{outline:2px solid var(--candle);outline-offset:4px;border-radius:6px;}
 .cm-fill{position:absolute;left:0;top:0;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--candle),var(--plum));pointer-events:none;}
 .cm-player audio{display:none!important;}
 
@@ -197,6 +200,9 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2e1a28;background:#f8f4f0;
 .cm-delay-box h2{font-family:"Newsreader",serif;font-weight:600;color:var(--plum-deep);font-size:1.5rem;margin-bottom:12px;}
 .cm-delay-box p{font-size:.97rem;color:var(--muted);line-height:1.6;}
 .cm-delay-box .cm-delay-sub{font-size:.85rem;margin-top:12px;}
+.cm-delay-close{margin-top:18px;background:var(--plum);color:#fff;border:0;border-radius:999px;padding:11px 26px;font:700 .95rem "Mulish",system-ui,sans-serif;cursor:pointer;}
+@media(hover:hover){.cm-delay-close:hover{background:var(--plum-deep);}}
+.cm-delay-close:focus-visible{outline:2px solid var(--candle);outline-offset:3px;}
 
 @media(prefers-reduced-motion:reduce){
   .flame::before,.s-foot .flame-sm::before,
@@ -225,7 +231,7 @@ body{font-family:"Mulish",system-ui,sans-serif;color:#2e1a28;background:#f8f4f0;
 .receive-grid{display:flex;flex-direction:column;gap:14px;max-width:520px;margin:0 auto;}
 .r-divider{font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--candle);text-align:center;margin:6px 0 0;}
 .r-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;text-align:left;display:flex;gap:16px;align-items:center;text-decoration:none;color:inherit;transition:border-color .18s,box-shadow .18s,transform .18s;}
-a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(92,45,74,.10);transform:translateY(-1px);}
+@media(hover:hover){a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(92,45,74,.10);transform:translateY(-1px);}}
 .r-cta{display:inline-block;margin-top:6px;font-size:.8rem;font-weight:800;letter-spacing:.02em;color:var(--candle);}
 .r-thumb{flex:0 0 auto;width:84px;height:84px;border-radius:12px;background:linear-gradient(135deg,var(--candle-soft),#f3e8d2);display:flex;align-items:center;justify-content:center;font-size:1.9rem;overflow:hidden;}
 .r-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -340,7 +346,7 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(92,45,74,.1
         <div class="cm-pl-controls">
           <button class="cm-play" type="button" aria-label="Lecture" onclick="togglePlay(this)">&#9654;</button>
           <span class="cm-time cm-cur">0:00</span>
-          <div class="cm-track" onclick="seekTrack(this,event)"><div class="cm-fill"></div></div>
+          <div class="cm-track" role="slider" tabindex="0" aria-label="Position de lecture" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" onclick="seekTrack(this,event)" onkeydown="seekKey(this,event)"><div class="cm-fill"></div></div>
           <span class="cm-time cm-dur">0:00</span>
         </div>
         <audio preload="metadata"
@@ -358,7 +364,7 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(92,45,74,.1
         <div class="cm-pl-controls">
           <button class="cm-play" type="button" aria-label="Lecture" onclick="togglePlay(this)">&#9654;</button>
           <span class="cm-time cm-cur">0:00</span>
-          <div class="cm-track" onclick="seekTrack(this,event)"><div class="cm-fill"></div></div>
+          <div class="cm-track" role="slider" tabindex="0" aria-label="Position de lecture" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" onclick="seekTrack(this,event)" onkeydown="seekKey(this,event)"><div class="cm-fill"></div></div>
           <span class="cm-time cm-dur">0:00</span>
         </div>
         <audio preload="metadata"
@@ -376,7 +382,7 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(92,45,74,.1
         <div class="cm-pl-controls">
           <button class="cm-play" type="button" aria-label="Lecture" onclick="togglePlay(this)">&#9654;</button>
           <span class="cm-time cm-cur">0:00</span>
-          <div class="cm-track" onclick="seekTrack(this,event)"><div class="cm-fill"></div></div>
+          <div class="cm-track" role="slider" tabindex="0" aria-label="Position de lecture" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" onclick="seekTrack(this,event)" onkeydown="seekKey(this,event)"><div class="cm-fill"></div></div>
           <span class="cm-time cm-dur">0:00</span>
         </div>
         <audio preload="metadata"
@@ -394,7 +400,7 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(92,45,74,.1
         <div class="cm-pl-controls">
           <button class="cm-play" type="button" aria-label="Lecture" onclick="togglePlay(this)">&#9654;</button>
           <span class="cm-time cm-cur">0:00</span>
-          <div class="cm-track" onclick="seekTrack(this,event)"><div class="cm-fill"></div></div>
+          <div class="cm-track" role="slider" tabindex="0" aria-label="Position de lecture" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" onclick="seekTrack(this,event)" onkeydown="seekKey(this,event)"><div class="cm-fill"></div></div>
           <span class="cm-time cm-dur">0:00</span>
         </div>
         <audio preload="metadata"
@@ -412,7 +418,7 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(92,45,74,.1
         <div class="cm-pl-controls">
           <button class="cm-play" type="button" aria-label="Lecture" onclick="togglePlay(this)">&#9654;</button>
           <span class="cm-time cm-cur">0:00</span>
-          <div class="cm-track" onclick="seekTrack(this,event)"><div class="cm-fill"></div></div>
+          <div class="cm-track" role="slider" tabindex="0" aria-label="Position de lecture" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" onclick="seekTrack(this,event)" onkeydown="seekKey(this,event)"><div class="cm-fill"></div></div>
           <span class="cm-time cm-dur">0:00</span>
         </div>
         <audio preload="metadata"
@@ -485,11 +491,12 @@ a.r-card:hover{border-color:var(--candle);box-shadow:0 8px 24px rgba(92,45,74,.1
 </section>
 
 <!-- POPUP : délai / pépin technique (déclenché à 8 min sans audio) -->
-<div class="cm-delay-overlay" id="cmDelayOverlay" aria-hidden="true" role="dialog" aria-modal="true">
+<div class="cm-delay-overlay" id="cmDelayOverlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cmDelayTitle">
   <div class="cm-delay-box">
-    <h2 class="serif">Un petit délai technique</h2>
+    <h2 class="serif" id="cmDelayTitle">Un petit délai technique</h2>
     <p>Sa chanson met un peu plus de temps que d'habitude, rien d'inquiétant. On la finalise et <strong>on te l'envoie par courriel d'ici 24-48 h dès qu'elle est prête</strong>. Pense à vérifier tes courriels indésirables. Tu peux fermer cette page en toute tranquillité.</p>
     <p class="cm-delay-sub">Tu peux aussi garder la page ouverte : elle s'ouvrira ici automatiquement dès que c'est prêt.</p>
+    <button type="button" class="cm-delay-close" id="cmDelayClose" onclick="closeDelay()">Fermer</button>
   </div>
 </div>
 
@@ -526,6 +533,7 @@ function updateProgress(a){
   if(!p) return;
   p.querySelector(".cm-cur").textContent = fmt(a.currentTime);
   p.querySelector(".cm-fill").style.width = (a.duration ? a.currentTime/a.duration*100 : 0) + "%";
+  var tr = p.querySelector(".cm-track"); if(tr && a.duration) tr.setAttribute("aria-valuenow", Math.round(a.currentTime/a.duration*100));
 }
 function onPlay(a){
   document.querySelectorAll(".cm-player audio").forEach(function(o){
@@ -550,7 +558,7 @@ function onEnded(a){
 }
 function togglePlay(btn){
   var p = btn.closest(".cm-player"), a = p.querySelector("audio");
-  if(a.paused){ a.play(); } else { a.pause(); }
+  if(a.paused){ var pr=a.play(); if(pr&&pr.catch) pr.catch(function(){}); } else { a.pause(); }
 }
 function seekTrack(track, e){
   var a = track.closest(".cm-player").querySelector("audio");
@@ -558,18 +566,24 @@ function seekTrack(track, e){
   var r = track.getBoundingClientRect();
   a.currentTime = ((e.clientX - r.left) / r.width) * a.duration;
 }
+function seekKey(track, e){
+  var a = track.closest(".cm-player").querySelector("audio");
+  if(!a.duration) return;
+  var t = a.currentTime;
+  switch(e.key){
+    case 'ArrowRight': case 'ArrowUp': t = Math.min(a.duration, t+5); break;
+    case 'ArrowLeft': case 'ArrowDown': t = Math.max(0, t-5); break;
+    case 'Home': t = 0; break;
+    case 'End': t = a.duration; break;
+    default: return;
+  }
+  e.preventDefault(); a.currentTime = t;
+}
 
 /* ════════════════════════════════════════
    POLLING — VÉRIFICATION CHANSON PRÊTE
    
-   CONFIGURATION REQUISE :
-   Remplace MAKE_WEBHOOK_URL par l'URL de
-   ton webhook Make (scénario lookup Airtable).
-   
-   Le webhook doit retourner :
-   { "ready": true,  "preview1": "...", "preview2": "...", "name": "...", "email": "..." }
-   ou
-   { "ready": false }
+   100% Netlify : on sonde /api/lire-projet par token (voir le détail juste en dessous).
 ════════════════════════════════════════ */
 /* Polling par TOKEN sur lire-projet.js (Netlify lit). Redirige vers /apercu?id=TOKEN
    quand statut = audio_generated. Domaine .ca / relatif — JAMAIS .com (garde-fou). */
@@ -590,9 +604,21 @@ function getToken(){
 
 /* Popup digne au bout de 8 min sans audio. On CONTINUE de sonder en arrière-plan : si la chanson
    arrive plus tard (ex. relancée par la sentinelle), on redirige quand même. */
+/* Ferme la popup de délai (le sondage continue en arrière-plan). */
+function closeDelay(){
+  var o = document.getElementById("cmDelayOverlay");
+  if(!o) return;
+  o.classList.remove("show"); o.setAttribute("aria-hidden","true");
+  if(o._key){ document.removeEventListener("keydown", o._key); o._key = null; }
+}
 function showDelayPopup(){
   var o = document.getElementById("cmDelayOverlay");
-  if(o){ o.classList.add("show"); o.setAttribute("aria-hidden","false"); }
+  if(o){
+    o.classList.add("show"); o.setAttribute("aria-hidden","false");
+    var cl = document.getElementById("cmDelayClose"); if(cl) cl.focus();   /* focus dans la modale */
+    o._key = function(e){ if(e.key === "Escape") closeDelay(); };          /* Échap ferme */
+    document.addEventListener("keydown", o._key);
+  }
   var msg = document.getElementById("statusMsg");
   if(msg){
     var dots = msg.querySelector(".wait-dots");
