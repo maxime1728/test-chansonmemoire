@@ -443,6 +443,8 @@ html.js .head-l,html.js .head-c,html.js .step,html.js .uc-card,html.js .track,ht
 .btn{position:relative;overflow:hidden;}
 .btn::after{content:"";position:absolute;top:0;left:-130%;width:55%;height:100%;background:linear-gradient(110deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-18deg);transition:left .6s;pointer-events:none;}
 @media(hover:hover){.btn:hover::after{left:140%;}}
+@keyframes fxCta{0%,100%{box-shadow:0 6px 18px rgba(60,46,77,.22);}50%{box-shadow:0 12px 30px rgba(60,46,77,.42);}}
+.hero-cta .btn{animation:fxCta 3.4s ease-in-out infinite;}
 .fx-rip{position:absolute;border-radius:50%;background:rgba(255,255,255,.5);transform:translate(-50%,-50%) scale(0);animation:fxRipple .6s ease-out;pointer-events:none;}
 @keyframes fxRipple{to{transform:translate(-50%,-50%) scale(20);opacity:0;}}
 .uc-card h3{position:relative;display:inline-block;}
