@@ -179,8 +179,8 @@ ${(lyrics || '').slice(0, 2500)}`;
     const to = await emailClient(projet, headers);
 
     // 3d. Ligne Conversations (cockpit) : la demande apparaît dans la file comme le post-achat -> brouillon-cron
-    //     rédige une réponse, tu traites depuis la vue Modifications. (Pré-achat : la régé reste manuelle via
-    //     l'aperçu, le bouton Appliquer ne relance que les projets achetés.)
+    //     rédige une réponse, tu traites depuis la vue Modifications. (Le bouton Appliquer relance AUSSI le
+    //     pré-achat : lancer-cover ne gate plus sur purchased, cf. lancer-cover.js.)
     try {
       const demande = [
         mot         ? `Mot à corriger : ${mot}` : '',
