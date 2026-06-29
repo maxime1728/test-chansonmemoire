@@ -121,6 +121,7 @@
 </style>
 <!-- Sentry navigateur (erreurs JS), token/PII scrubbes avant envoi (cm-sentry.js). -->
 <script src="/js/cm-sentry.js"></script>
+<script src="/js/cm-modif-modal.js"></script>
   <!-- Favicon -->
   <link rel="icon" type="image/png" sizes="48x48" href="https://res.cloudinary.com/dcx1tfm47/image/upload/c_fill,w_48,h_48/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
   <link rel="icon" type="image/png" sizes="96x96" href="https://res.cloudinary.com/dcx1tfm47/image/upload/c_fill,w_96,h_96/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
@@ -183,12 +184,10 @@
     <p class="note">Tu recevras ta chanson et tes paroles en PDF sur ta page.</p>
   </div>
 
-  <!-- DEMANDE DE MODIFICATION (avant ou après acceptation) -->
+  <!-- DEMANDE DE MODIFICATION (avant ou après acceptation) — modale unifiée (js/cm-modif-modal.js) -->
   <div class="modif-zone" id="modifZone" style="display:none;">
     <p class="modif-intro">Quelque chose à ajuster (un prénom, un mot, un détail) ? Demande une modification, on s'en occupe.</p>
-    <textarea id="modifText" class="modif-text" rows="3" placeholder="Ex. : « On prononce Joséphine au complet », « Ajoute un mot sur ses étés au chalet »…"></textarea>
-    <div><button class="btn-modif" id="btnModif" type="button">Envoyer ma demande de modification</button></div>
-    <p class="modif-ok" id="modifMsg"></p>
+    <div><button class="btn-modif" id="btnModif" type="button">Quelque chose à ajuster&nbsp;?</button></div>
   </div>
 </div>
 
@@ -347,39 +346,9 @@
     });
   });
 
-  /* 4. Demander une modification (décortique) — même endpoint que page-memoire, gaté `purchased`. */
-  var btnModif = document.getElementById('btnModif');
-  if(btnModif) btnModif.addEventListener('click', function(){
-    var ta = document.getElementById('modifText'); var txt = (ta.value || '').trim();
-    if(txt.length < 4){ cmToast("Décrivez en quelques mots la modification souhaitée."); return; }
-    var b = this; b.disabled = true; b.textContent = 'Un instant…';
-    fetch('/api/decortique', {
-      method:'POST', headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify({ token: token, demande: txt })
-    })
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(res){
-      if(res && res.ok){
-        var m = document.getElementById('modifMsg');
-        /* #10 : on montre immédiatement les nouvelles paroles proposées (illimité). */
-        if(res.paroles){
-          var box = document.getElementById('modifParoles');
-          if(!box){ box = document.createElement('pre'); box.id='modifParoles'; box.style.cssText='white-space:pre-wrap;text-align:left;background:#fff;border:1px solid rgba(92,45,74,.15);border-radius:12px;padding:14px;margin-top:14px;font-family:inherit;font-size:14px;line-height:1.65;color:#2E1A28;'; ta.parentNode.insertBefore(box, ta.nextSibling); }
-          box.textContent = res.paroles;
-        }
-        m.textContent = res.auto
-          ? 'Voilà tes nouvelles paroles ✓  Ta chanson se régénère ; tu recevras un courriel avec le lien dès qu’elle est prête. Tu peux encore ajuster si tu veux.'
-          : 'Demande reçue ✓  On la valide et tu reçois ta chanson par courriel d’ici 24-48 h (vérifie tes indésirables).';
-        m.style.display = 'block';
-        ta.value = '';
-        b.disabled = false; b.textContent = 'Envoyer ma demande de modification';
-      } else {
-        b.disabled = false; b.textContent = 'Envoyer ma demande de modification';
-        cmToast("Une erreur est survenue. Réessayez.");
-      }
-    })
-    .catch(function(){ b.disabled = false; b.textContent = 'Envoyer ma demande de modification'; cmToast("Une erreur est survenue. Réessayez."); });
-  });
+  /* 4. Demander une modification (décortique) — modale unifiée partagée, gaté `purchased` (le bouton
+     vit dans #modifZone, affiché seulement aux acheteurs). Même endpoint /api/decortique. */
+  if(window.cmModifModal) window.cmModifModal.init({ token: token, trigger: document.getElementById('btnModif') });
   /* Purchase Meta : gere par cm-pixel.js (partage). PageView + CAPI = cm-pixel.js ; le Purchase passe
      par window.cmTrack (eventID = sha256(token.purchase), dedup avec le CAPI serveur suivi-funnel).
      On attend DOMContentLoaded pour que cm-pixel.js (charge en defer) ait defini window.cmTrack.
