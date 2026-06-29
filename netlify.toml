@@ -89,6 +89,12 @@
 [functions."e2e-canari-cron"]
   schedule = "0 8 * * *"
 
+# Watchdog livrables add-on : récupère / relance / alerte les rendus bloqués (instrumentale Suno,
+# vidéo mémoire + paroles vivantes Creatomate) -> plus de bug silencieux sur les add-ons PAYANTS.
+# Interroge les fournisseurs (statut = lecture, 0 crédit). Toutes les 15 min.
+[functions."watchdog-cron"]
+  schedule = "*/15 * * * *"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
