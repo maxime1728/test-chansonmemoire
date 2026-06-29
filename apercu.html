@@ -1500,11 +1500,11 @@ window.cmPersonnaliser = function() {
   function setT(id, txt){ var el = document.getElementById(id); if (el) el.textContent = txt; }
 
   /* Hero */
-  if (cadeau) setH('cm-hero-title', nom ? 'Voici la chanson composée pour ' + strong : 'Voici la chanson composée juste pour elle');
+  if (cadeau) setH('cm-hero-title', nom ? 'Voici la chanson composée pour ' + strong : 'Voici la chanson composée juste pour cette personne');
   else if (nom) setH('cm-hero-title', 'Voici la chanson composée pour honorer la mémoire de ' + strong);
 
   /* Valeur — ligne 1 */
-  if (cadeau) setH('cm-value-nom', nom ? 'Une chanson originale, composée uniquement pour ' + strong : 'Une chanson originale, composée uniquement pour elle');
+  if (cadeau) setH('cm-value-nom', nom ? 'Une chanson originale, composée uniquement pour ' + strong : 'Une chanson originale, composée uniquement pour cette personne');
   else if (nom) setH('cm-value-nom', 'Une chanson originale, composée uniquement pour honorer la mémoire de ' + strong);
 
   /* Valeur — page à partager */
@@ -1523,7 +1523,7 @@ window.cmPersonnaliser = function() {
   if (nom) setH('cm-guarantee-title', 'Révisée jusqu\'à ce qu\'elle ressemble vraiment à ' + strong);
 
   /* CTA bas */
-  if (cadeau) setH('cm-cta-pre', nom ? strong + ' mérite une chanson qui lui ressemble.' : 'Elle mérite une chanson qui lui ressemble.');
+  if (cadeau) setH('cm-cta-pre', nom ? strong + ' mérite une chanson qui lui ressemble.' : 'Cette personne mérite une chanson qui lui ressemble.');
   else if (nom) setH('cm-cta-pre', 'La mémoire de ' + strong + ' mérite une chanson qui lui ressemble.');
 
   /* Sticky (identique) */
