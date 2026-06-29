@@ -533,7 +533,9 @@
       if(oui){ oui.disabled=true; oui.textContent='Un instant…'; }
       try{
         var res=await fetch('/api/demander-modif-client',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,action:'lancer'})});
+        var dL={}; try{ dL=await res.json(); }catch(_){}
         if(!res.ok) throw new Error('lancer');
+        if(dL && dL.route==='busy'){ restaurerOui(); fermerPopup(); montrer('contenu'); setErreurInline('confirm-erreur',"Ta version précédente se prépare encore, laisse-lui un petit instant puis réessaie."); return; }
       }catch(e){ restaurerOui(); fermerPopup(); montrer('contenu'); setErreurInline('confirm-erreur',"La régénération n'a pas pu démarrer. Réessaie dans un instant."); return; }
       try{ sessionStorage.removeItem('cm_cover_'+token); }catch(_){}
       fermerPopup(); montrer('etat-soumission');

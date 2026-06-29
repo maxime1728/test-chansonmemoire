@@ -1964,6 +1964,10 @@ setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(res){
         if (!res || !res.ok) throw new Error('ko');
+        if (res.route === 'busy'){
+          if (statusEl) statusEl.textContent = 'Ta version précédente se prépare encore, laisse-lui un petit instant puis réessaie.';
+          send.disabled = false; return;
+        }
         if (res.route === 'cover'){
           try { sessionStorage.setItem('cm_cover_' + token, JSON.stringify({ lyrics: res.lyrics || '', titre: res.titre || '' })); } catch (_) {}
           window.location.href = '/revision?id=' + encodeURIComponent(token) + '&mode=cover';

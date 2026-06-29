@@ -130,4 +130,19 @@ async function livrerCover({ api, headers, projet, coverGen, audioUrl, songId })
   return { ok: true, generation_no: newNo };
 }
 
-module.exports = { parseCloudinary, fullAudioUrl, coverGenEnAttente, prochainNo, livrerCover };
+// Un cover est-il DÉJÀ en vol pour ce projet ? (Generation cover en audio_pending, récente.) Sert de
+// garde-fou anti-collision : si oui, on bloque une nouvelle demande au lieu d'écraser la première
+// (le slot adjusted_lyrics/cover_task_id du Projet est unique). Borné dans le temps (maxAgeMin) pour
+// ne pas verrouiller le client des heures si un cover reste bloqué (la sentinelle/alerte gère ce cas).
+async function coverEnVol(api, headers, projectPrimary, maxAgeMin = 15) {
+  const lit = formulaLiteral(projectPrimary);
+  if (lit === null) return false;
+  const f = encodeURIComponent(`AND({project}=${lit}, {type}="cover", {generation_status}="audio_pending", IS_AFTER({created_date}, DATEADD(NOW(),-${maxAgeMin},'minutes')))`);
+  try {
+    const r = await fetch(`${api}/${GENERATIONS}?filterByFormula=${f}&maxRecords=1`, { headers });
+    const d = await r.json().catch(() => ({}));
+    return !!(d.records && d.records.length);
+  } catch (_) { return false; }   // en cas de doute, on ne bloque pas
+}
+
+module.exports = { parseCloudinary, fullAudioUrl, coverGenEnAttente, prochainNo, livrerCover, coverEnVol };

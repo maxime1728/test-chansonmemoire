@@ -23,6 +23,7 @@
 
 const { analyserModif } = require('./_lib/analyse-modif');
 const { styleFor, cataloguePourAmbiance } = require('./_lib/style');
+const { coverEnVol } = require('./_lib/cover');
 
 const BASE_ID = process.env.AIRTABLE_BASE_ID;
 const TOKEN   = process.env.AIRTABLE_TOKEN;
@@ -81,11 +82,19 @@ exports.handler = async (event) => {
     const projet = dP.records[0];
     const p = projet.fields;
 
+    // GARDE-FOU anti-collision : une seule correction cover EN VOL par projet. Si une version se prépare
+    // déjà, on bloque la nouvelle demande (route 'busy') au lieu d'écraser la première (le Projet n'a qu'un
+    // slot adjusted_lyrics/cover_task_id). On ne bloque PAS 'reproposer' (mid-flow /revision, pas de lancement).
+    const busy = { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, route: 'busy' }) };
+
     // ── Action 'lancer' : le client a accepté les paroles proposées -> on arme le cover (cover-cron prend le relais).
     if (action === 'lancer') {
+      if (await coverEnVol(API, headers, p.project)) return busy;
       await patchProjet(projet.id, { approval_status: 'approved', refaire: 'Refaire le cover', mode_correction: 'cover' }, headers);
       return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, lancement: true }) };
     }
+
+    if (action === 'analyser' && await coverEnVol(API, headers, p.project)) return busy;
 
     // 2. Dernière Generation : contexte pour l'analyse + style de référence.
     let gen = {}, genRec = null, lyrics = '';
