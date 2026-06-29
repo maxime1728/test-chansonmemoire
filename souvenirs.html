@@ -42,7 +42,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
 /* font-size 16px = empeche le zoom automatique d'iOS Safari au focus (sous 16px, iOS zoome et la page deborde / se decentre lateralement). */
 .cm-input{width:100%;font-family:'Mulish',sans-serif;font-size:16px;color:var(--cm-text);background:var(--cm-bg);border:1.5px solid rgba(92,45,74,.18);border-radius:12px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s;resize:none;}
 .cm-input:focus{border-color:var(--cm-mauve);box-shadow:0 0 0 3px rgba(201,139,176,.15);}
-.cm-input::placeholder{color:rgba(122,96,112,.5);}
+.cm-input::placeholder{color:rgba(122,96,112,.8);}
 .cm-choices{display:flex;flex-direction:column;gap:10px;}
 .cm-choices.cm-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .cm-choice{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;border:1.5px solid rgba(92,45,74,.15);background:var(--cm-bg);cursor:pointer;font-family:'Mulish',sans-serif;font-size:14px;font-weight:600;color:var(--cm-text);transition:all .18s;text-align:left;width:100%;user-select:none;}
@@ -77,10 +77,10 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
 .cm-submit-btn{font-family:'Mulish',sans-serif;font-size:16px;font-weight:800;color:#fff;background:var(--cm-plum-dark);border:none;border-radius:999px;padding:17px 36px;cursor:pointer;width:100%;display:block;transition:background .2s;}
 @media(hover:hover){.cm-submit-btn:hover{background:var(--cm-plum-mid);}}
 .cm-submit-btn:disabled{opacity:.5;cursor:not-allowed;}
-.cm-submit-note{font-size:11px;color:var(--cm-text-sub);text-align:center;margin-top:10px;opacity:.7;}
+.cm-submit-note{font-size:11px;color:var(--cm-text-sub);text-align:center;margin-top:10px;}
 .cm-error{font-size:12px;color:#c0392b;margin-top:6px;display:none;}
 .cm-error.show{display:block;}
-.cm-footer{text-align:center;padding:16px 20px 24px;font-size:11px;color:var(--cm-text-sub);opacity:.6;}
+.cm-footer{text-align:center;padding:16px 20px 24px;font-size:11px;color:var(--cm-text-sub);}
 .cm-footer a{color:var(--cm-text-sub);}
 @media (max-width:480px){.cm-step-card{padding:28px 20px;border-radius:18px;}}
 </style>
@@ -126,7 +126,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
 <div class="cm-progress-header">
   <div class="cm-progress-meta">
     <span class="cm-progress-label">Tes souvenirs</span>
-    <span class="cm-progress-count" id="cm-progress-count">Étape 1 sur 10</span>
+    <span class="cm-progress-count" id="cm-progress-count">Étape 1</span>
   </div>
   <div class="cm-progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1" aria-label="Progression du formulaire"><div class="cm-progress-fill" id="cm-progress-fill"></div></div>
 </div>
@@ -316,6 +316,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
 
   /* ── CONFIG ── */
   const TOTAL_STEPS  = 10;
+  const SHOW_TOTAL_FROM = 4;   /* on cache « sur 10 » au début (moins intimidant) et on le révèle une fois la personne nommée */
   const REVISION_URL = '/revision';
   const SURVEY_ENDPOINT = '/api/soumettre-survey';   // proxy Netlify : cache l'URL du webhook Make (anti-bot) + nettoie côté serveur
   const MIN_CHARS = 3; /* minimum léger anti-vide / anti-1-lettre */
@@ -388,7 +389,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
 
   function updateProgress(step){
     document.getElementById('cm-progress-fill').style.width = Math.round(((step-1)/(TOTAL_STEPS-1))*100)+'%';
-    document.getElementById('cm-progress-count').textContent = 'Étape '+step+' sur '+TOTAL_STEPS;
+    document.getElementById('cm-progress-count').textContent = (step < SHOW_TOTAL_FROM) ? ('Étape '+step) : ('Étape '+step+' sur '+TOTAL_STEPS);
     var pb=document.querySelector('.cm-progress-track'); if(pb) pb.setAttribute('aria-valuenow', step);
   }
 
