@@ -236,6 +236,24 @@
       '</div>';
   }
 
+  // Mode MESSAGE SIMPLE (categorie_ia != modification) : pas d'avant/apres, juste le message recu + la reponse IA a valider et envoyer.
+  function rendreMessage(x){
+    var courrielDefaut = x.reponse || x.brouillon_ia || '';
+    document.getElementById('detail').innerHTML =
+      '<div class="meta">' + esc(x.expediteur) + ' &middot; ' + esc(x.sujet) +
+        (x.categorie_ia ? ' &middot; <b>' + esc(x.categorie_ia) + '</b>' : '') + '</div>' +
+      (x.message ? '<div class="demande"><div class="label">Message du client</div>' + esc(x.message) + '</div>' : '') +
+      '<div class="sectlabel">Reponse au client</div>' +
+      '<div class="hint" style="margin-bottom:8px">Aucune modification de chanson ici : relis le brouillon de l\'IA et envoie.</div>' +
+      '<div class="send">' +
+        '<textarea class="edit short" id="ta_reponse">' + esc(courrielDefaut) + '</textarea>' +
+        '<div class="actions" style="margin-top:10px">' +
+          '<button class="mbtn solid" id="sendBtn" onclick="envoyer()">Envoyer au client</button>' +
+          '<button class="ghost" onclick="enregistrer()">Enregistrer le brouillon</button>' +
+        '</div>' +
+      '</div>';
+  }
+
   async function ouvrir(id, node){
     var items = document.querySelectorAll('.item');
     for (var i = 0; i < items.length; i++) items[i].classList.remove('sel');
@@ -244,6 +262,8 @@
     var d = await api('?id=' + encodeURIComponent(id));
     var x = (d && d.detail) || {};
     CUR = x;
+
+    if (x.mode === 'message') { rendreMessage(x); return; }
 
     var enRege = !!(x.regen && x.regen.statut === 'en_production');
     var courrielDefaut = x.reponse || x.brouillon_ia || '';
@@ -296,11 +316,9 @@
   }
 
   function editions(){
-    return {
-      paroles_corrigees: document.getElementById('ta_paroles').value,
-      prompt_style:      document.getElementById('ta_style').value,
-      reponse:           document.getElementById('ta_reponse').value
-    };
+    function g(id){ var el = document.getElementById(id); return el ? el.value : undefined; }
+    // En mode message simple, ta_paroles/ta_style n'existent pas -> undefined (JSON.stringify les omet).
+    return { paroles_corrigees: g('ta_paroles'), prompt_style: g('ta_style'), reponse: g('ta_reponse') };
   }
 
   async function enregistrer(){

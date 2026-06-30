@@ -210,6 +210,8 @@ exports.handler = async (event) => {
       reponse:             str(f.reponse),
       action_modif:        str(f.action_modif),
       envoi_reponse:       str(f.envoi_reponse),
+      // mode 'modification' = avant/apres (cover/rege/prononciation) ; 'message' = juste valider+envoyer la reponse IA.
+      mode: (str(f.categorie_ia) === 'modification') ? 'modification' : 'message',
       regen   // null, ou { statut, titre, no, audio_url }
     };
     return ok({ ok: true, detail });
