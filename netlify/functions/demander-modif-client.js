@@ -188,7 +188,10 @@ exports.handler = async (event) => {
     }
     await patchProjet(projet.id, { adjusted_lyrics: adjLyrics, mode_correction: 'cover', approval_status: 'pending' }, headers);
 
-    // 6. Ligne Conversations (file de Maxime), pré-remplie pour ne pas être re-traitée par modif-cron. Best-effort.
+    // 6. Ligne Conversations : TRACE du self-serve. Le client valide lui-même ses paroles sur /revision et le
+    //    cover part seul -> l'équipe n'a RIEN à faire. On la garde pour l'historique par projet, mais HORS de la
+    //    file « à traiter » du cockpit via statut 'auto' (cockpit-data exclut 'auto' ; brouillon-cron ne cible que
+    //    'a_verifier' -> aucun brouillon inutile). Pré-remplie aussi pour ne pas être re-traitée par modif-cron. Best-effort.
     if (action === 'analyser') {
       try {
         const to = await emailClient(projet, headers);
@@ -199,7 +202,7 @@ exports.handler = async (event) => {
             sujet:            `Modification aperçu${p.deceased_name ? ' : ' + p.deceased_name : ''}`,
             message:          texte,
             recu_le:          new Date().toISOString(),
-            statut:           'a_verifier',
+            statut:           'auto',   // self-serve auto-traité : hors de la file « à traiter »
             categorie_ia:     'modification',
             paroles_corrigees: adjLyrics,
             type_correction:  typeCorrection({ mode: res.mode, categories: res.categories }),

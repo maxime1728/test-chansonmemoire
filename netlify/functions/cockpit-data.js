@@ -215,7 +215,9 @@ exports.handler = async (event) => {
   try {
     // ── FILE : conversations à traiter (les plus récentes d'abord). ────────────────────────────────
     if (!id) {
-      const f = encodeURIComponent(`AND({statut}!="repondu", {statut}!="archive")`);
+      // Hors file « à traiter » : répondu, archivé, ET 'auto' (traces self-serve auto-traitées -> le client
+      // confirme ses paroles lui-même, l'équipe n'agit pas ; gardées pour l'historique, jamais affichées ici).
+      const f = encodeURIComponent(`AND({statut}!="repondu", {statut}!="archive", {statut}!="auto")`);
       const r = await fetch(`${API}/${CONVOS}?filterByFormula=${f}&sort%5B0%5D%5Bfield%5D=recu_le&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=50`, { headers });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
