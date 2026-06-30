@@ -72,10 +72,20 @@
       sessionStorage.setItem(KEY_STORE, KEY);
       document.getElementById('gate').style.display = 'none';
       document.getElementById('app').style.display = 'grid';
-      rendreListe((d && d.liste) || []);
+      afficher(d);
     } catch (e) {
       document.getElementById('gateErr').textContent = 'Mot de passe invalide.';
     }
+  }
+
+  function afficher(d) {
+    if (d && d.ok === false) {
+      document.getElementById('liste').innerHTML =
+        '<div class="empty">Erreur Airtable (' + esc(d.status) + ' ' + esc(d.detail) + ').<br><br>' +
+        'Verifie dans Netlify que <b>AIRTABLE_TOKEN</b> et <b>AIRTABLE_BASE_ID</b> sont actifs pour les Deploy Previews (ou teste sur la prod apres merge).</div>';
+      return;
+    }
+    rendreListe((d && d.liste) || []);
   }
 
   function rendreListe(liste) {
@@ -125,7 +135,7 @@
     api('').then(function (d) {
       document.getElementById('gate').style.display = 'none';
       document.getElementById('app').style.display = 'grid';
-      rendreListe((d && d.liste) || []);
+      afficher(d);
     }).catch(function () { /* clef invalide -> on laisse l'ecran mot de passe */ });
   }
 </script>

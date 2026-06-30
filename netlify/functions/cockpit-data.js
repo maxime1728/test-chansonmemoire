@@ -29,9 +29,13 @@ exports.handler = async (event) => {
   try {
     // FILE : conversations a traiter (statut=a_verifier), les plus recentes d'abord.
     if (!id) {
-      const f = encodeURIComponent(`{statut}="a_verifier"`);
+      const f = encodeURIComponent(`AND({statut}!="repondu", {statut}!="archive")`);
       const r = await fetch(`${API}/${CONVOS}?filterByFormula=${f}&sort%5B0%5D%5Bfield%5D=recu_le&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=50`, { headers });
-      const d = await r.json();
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        console.error('[cockpit-data] Airtable list', r.status, JSON.stringify(d).slice(0, 300));
+        return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: false, error: 'airtable', status: r.status, detail: (d.error && (d.error.type || d.error.message)) || '' }) };
+      }
       const liste = (d.records || []).map((rec) => ({
         id: rec.id,
         expediteur: str(rec.fields.expediteur),
