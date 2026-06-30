@@ -61,7 +61,8 @@
   .mbtn { border:1px solid var(--plum); background:#fff; color:var(--plum); padding:10px 16px; border-radius:9px; font-size:14px; font-weight:600; cursor:pointer; }
   @media (hover:hover) { .mbtn:hover { background:#F3E8EF; } }
   .mbtn.solid { background:var(--plum); color:#fff; }
-  .ghost { background:transparent; border:1px solid var(--line); color:var(--muted); padding:10px 14px; border-radius:9px; font-size:13px; cursor:pointer; }
+  .ghost { background:#fff; border:1px solid var(--muted); color:var(--ink); padding:10px 14px; border-radius:9px; font-size:13px; cursor:pointer; }
+  @media (hover:hover) { .ghost:hover { background:#F3E8EF; border-color:var(--plum); color:var(--plum); } }
   .hint { font-size:12px; color:var(--muted); }
 
   .regen { border:1px solid var(--propline); border-radius:10px; padding:12px 14px; background:#fff; margin:6px 0 4px; }
@@ -246,6 +247,13 @@
 
     var enRege = !!(x.regen && x.regen.statut === 'en_production');
     var courrielDefaut = x.reponse || x.brouillon_ia || '';
+    // Aucune proposition IA encore ? On part des valeurs ACTUELLES (editables) au lieu d'afficher tout
+    // l'actuel barre en rouge contre un propose vide. Le diff reste vide tant que rien n'est edite.
+    var parProp = x.paroles_corrigees || x.paroles_actuelles;
+    var styProp = x.prompt_style       || x.prompt_style_actuel;
+    var parSeed = !x.paroles_corrigees && !!x.paroles_actuelles;
+    var stySeed = !x.prompt_style       && !!x.prompt_style_actuel;
+    var noteSeed = '<div class="hint" style="margin:-2px 0 8px">Aucune proposition : depart = version actuelle, edite directement ci-dessous.</div>';
 
     document.getElementById('detail').innerHTML =
       '<div class="meta">' + esc(x.expediteur) + ' &middot; ' + esc(x.sujet) +
@@ -253,10 +261,12 @@
       (x.message ? '<div class="demande"><div class="label">Demande du client</div>' + esc(x.message) + '</div>' : '') +
 
       '<div class="sectlabel">Paroles &mdash; actuel vs propose</div>' +
-      champEditable('Actuel (en ligne)', x.paroles_actuelles, 'Propose (editable)', 'ta_paroles', x.paroles_corrigees, 'dp') +
+      (parSeed ? noteSeed : '') +
+      champEditable('Actuel (en ligne)', x.paroles_actuelles, 'Propose (editable)', 'ta_paroles', parProp, 'dp') +
 
       '<div class="sectlabel">Style &mdash; actuel vs propose</div>' +
-      champEditable('Actuel (en ligne)', x.prompt_style_actuel, 'Propose (editable)', 'ta_style', x.prompt_style, 'ds') +
+      (stySeed ? noteSeed : '') +
+      champEditable('Actuel (en ligne)', x.prompt_style_actuel, 'Propose (editable)', 'ta_style', styProp, 'ds') +
 
       (x.voix ? '<div class="fieldcard" style="max-width:520px"><div class="label">Voix</div><div class="val">' + esc(x.voix) + '</div></div>' : '') +
 
