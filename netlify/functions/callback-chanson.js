@@ -14,6 +14,7 @@
 
 const { rehost } = require('./_lib/cloudinary-rehost');
 const { recomputerProjet } = require('./_lib/comptage');
+const { envoyerApercuPret } = require('./_lib/courriel-apercu');   // courriel transactionnel « aperçu prêt »
 const { withSentry } = require('./_lib/sentry');   // capture des exceptions non gerees
 
 const BASE_ID  = process.env.AIRTABLE_BASE_ID;
@@ -65,12 +66,24 @@ exports.handler = async (event) => {
     // 3. Project -> preview_ready + recalcul du compteur (remplace le module recompte de C-cb).
     const pid = Array.isArray(gen.fields.project) ? gen.fields.project[0] : null;
     if (pid) {
+      let pf = {};
       try {
         const rp = await fetch(`${API}/${PROJECTS}/${pid}`, { headers });
-        const pf = rp.ok ? ((await rp.json()).fields || {}) : {};
+        pf = rp.ok ? ((await rp.json()).fields || {}) : {};
         await fetch(`${API}/${PROJECTS}/${pid}`, { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { funnel_step: 'preview_ready' } }) });
         await recomputerProjet(API, headers, pid, pf.project);
       } catch (_) {}
+
+      // Courriel transactionnel « aperçu prêt » UNE SEULE FOIS : 1re bascule en preview (funnel_step pas
+      // encore preview_ready), PRÉ-achat, et HORS récupération (le chemin lent passe par recovery-cron,
+      // anti-doublon). Flag OFF par défaut (COURRIEL_APERCU_PRET) : Maxime active après revue. Best-effort.
+      if (process.env.COURRIEL_APERCU_PRET === '1'
+          && pf.funnel_step !== 'preview_ready'
+          && pf.commercial_status !== 'purchased'
+          && !pf.recovery_pending
+          && !pf.recovery_email_sent_at) {
+        try { await envoyerApercuPret({ API, headers, projetId: pid, projetFields: pf, songTitle: gen.fields.song_title }); } catch (_) {}
+      }
     }
 
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };
