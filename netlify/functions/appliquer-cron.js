@@ -20,8 +20,9 @@ exports.handler = async () => {
   if (!SECRET) return { statusCode: 200, body: JSON.stringify({ ok: false, reason: 'no_secret' }) };
   let appliques = 0, echecs = 0;
   try {
-    // Conversations a appliquer (case cochee). appliquer-modification decoche apres succes.
-    const formula = encodeURIComponent('{appliquer}');
+    // Conversations a appliquer : le menu `action_modif` porte une valeur d'action (cover ou rege).
+    // appliquer-modification execute puis pose « Appliquée ✓ » (idempotence : ne re-declenche pas).
+    const formula = encodeURIComponent('OR({action_modif}="Refaire le cover (même mélodie)", {action_modif}="Régénérer (nouvelle mélodie)")');
     const r = await fetch(`${API}/${CONVOS}?filterByFormula=${formula}&maxRecords=${MAX_PER_RUN}`, {
       headers: { Authorization: `Bearer ${AT_TOKEN}` }
     });

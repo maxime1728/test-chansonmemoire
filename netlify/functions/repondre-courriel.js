@@ -134,7 +134,7 @@ exports.handler = async (event) => {
     const histoEntry = `↑ ${horodatage} — envoyé à ${to}\n${corps}`;
     const historique = ((f.historique || '') + '\n\n' + histoEntry).slice(-90000);
     const champs = {
-      statut: 'repondu', repondu_le: new Date().toISOString(), reponse: corps, envoyer: false,
+      statut: 'repondu', repondu_le: new Date().toISOString(), reponse: corps, envoi_reponse: 'Envoyé ✓',
       historique, dernier_envoi_statut: 'envoyé'
     };
     if (courrielId) champs.Courriels = [...(Array.isArray(f.Courriels) ? f.Courriels : []), courrielId];

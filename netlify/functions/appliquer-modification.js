@@ -63,10 +63,10 @@ exports.handler = async (event) => {
     if (!rP.ok) return { statusCode: 404, body: JSON.stringify({ error: 'Projet introuvable' }) };
     const pf = (await rP.json()).fields || {};
 
-    // Action : ton choix explicite (action_chanson) l'emporte ; sinon déduit du mode_correction de decortique.
+    // Action : le menu `action_modif` (cockpit) l'emporte ; sinon déduit du mode_correction de decortique.
     let refaire;
-    if (f.action_chanson === 'Nouvelle chanson (nouvelle mélodie)') refaire = 'Régénérer';
-    else if (f.action_chanson === 'Cover (même mélodie)')           refaire = 'Refaire le cover';
+    if (f.action_modif === 'Régénérer (nouvelle mélodie)')          refaire = 'Régénérer';
+    else if (f.action_modif === 'Refaire le cover (même mélodie)')  refaire = 'Refaire le cover';
     else refaire = (pf.mode_correction === 'regeneration') ? 'Régénérer' : 'Refaire le cover';
 
     // 3. Pousse les versions éditées + la version source + arme la relance (cover-cron prend le relais). On
@@ -84,10 +84,10 @@ exports.handler = async (event) => {
       return { statusCode: 502, body: JSON.stringify({ error: 'Mise à jour du projet échouée', detail }) };
     }
 
-    // 4. Décoche `appliquer` (idempotence : pas de relance en boucle).
+    // 4. Pose « Appliquée ✓ » sur le menu (idempotence : ne re-déclenche pas ; état visible dans le cockpit).
     await fetch(`${API}/${CONVOS}/${id}`, {
       method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { appliquer: false } })
+      body: JSON.stringify({ typecast: true, fields: { action_modif: 'Appliquée ✓' } })
     });
 
     return { statusCode: 200, body: JSON.stringify({ ok: true, projet: projetId, refaire, paroles: !!paroles, style: !!style }) };

@@ -22,8 +22,9 @@ exports.handler = async () => {
   if (!SECRET) return { statusCode: 200, body: JSON.stringify({ ok: false, reason: 'no_secret' }) };
   let envoyes = 0, echecs = 0;
   try {
-    // Conversations à envoyer (case cochée). repondre-courriel décoche après un envoi réussi.
-    const formula = encodeURIComponent('{envoyer}');
+    // Conversations à envoyer : le menu `envoi_reponse` = « Envoyer la réponse ». repondre-courriel
+    // pose « Envoyé ✓ » après un envoi réussi (idempotence : ne re-déclenche pas).
+    const formula = encodeURIComponent('{envoi_reponse}="Envoyer la réponse"');
     const r = await fetch(`${API}/${CONVOS}?filterByFormula=${formula}&maxRecords=${MAX_PER_RUN}`, {
       headers: { Authorization: `Bearer ${AT_TOKEN}` }
     });
