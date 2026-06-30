@@ -71,6 +71,11 @@
   .badge.prete { background:var(--insbg); color:var(--ins); }
   .regen audio { width:100%; margin-top:10px; }
 
+  .analyse { background:#fff; border:1px solid var(--line); border-radius:10px; padding:0 14px; margin:0 0 16px; }
+  .analyse summary { cursor:pointer; padding:11px 0; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700; }
+  .analyse .val { padding:0 0 12px; font-size:13.5px; }
+  .note { background:var(--propbg); border:1px solid var(--propline); border-radius:10px; padding:10px 14px; margin:8px 0 16px; font-size:13px; line-height:1.55; }
+
   .send button[disabled] { opacity:.45; cursor:not-allowed; }
   .empty { color:var(--muted); padding:48px 24px; text-align:center; }
   .err { color:#b00020; font-size:13px; margin-top:8px; }
@@ -226,6 +231,50 @@
     el.addEventListener('input', function(){ if(extra) extra(); autoGrow(el); });
   }
 
+  // Panneau « raisonnement IA » (analyse de la demande, surtout utile en prononciation). Repliable.
+  function panneauAnalyse(analyse){
+    if (!analyse) return '';
+    return '<details class="analyse" open><summary>Raisonnement IA</summary><div class="val">' + esc(analyse) + '</div></details>';
+  }
+
+  // Recalcul live du diff phonetique (vue prononciation).
+  function recalcPhon(){
+    if (!CUR) return;
+    var ph = document.getElementById('ta_phon').value;
+    document.getElementById('ph_act').innerHTML  = renderDiff(CUR.paroles_actuelles, ph, 'actuel');
+    document.getElementById('ph_prev').innerHTML = renderDiff(CUR.paroles_actuelles, ph, 'propose');
+  }
+
+  // Vue PRONONCIATION (mode 'prononciation') : raisonnement IA + avant/apres "paroles claires" vs "phonetique".
+  // Appliquer = cover qui envoie le phonetique a Suno ; les paroles AFFICHEES au client restent claires.
+  function rendrePrononciation(x){
+    var phonProp = x.lyrics_phonetique || x.paroles_actuelles;
+    var courrielDefaut = x.reponse || x.brouillon_ia || '';
+    document.getElementById('detail').innerHTML =
+      '<div class="meta">' + esc(x.expediteur) + ' &middot; ' + esc(x.sujet) + ' &middot; <b>prononciation</b></div>' +
+      (x.message ? '<div class="demande"><div class="label">Demande du client</div>' + esc(x.message) + '</div>' : '') +
+      panneauAnalyse(x.analyse_ia) +
+      '<div class="note">Correction de <b>prononciation</b> : seul le son envoye a Suno change. Les paroles AFFICHEES au client restent claires (le phonetique n\'apparait jamais a l\'ecran).</div>' +
+      '<div class="sectlabel">Paroles affichees vs phonetique (envoye a Suno)</div>' +
+      champEditable('Affichees au client (claires)', x.paroles_actuelles, 'Phonetique (envoye a Suno)', 'ta_phon', phonProp, 'ph') +
+      '<div class="sectlabel">Appliquer</div>' +
+      '<div class="hint" style="margin-bottom:8px">Regenere la chanson avec le son corrige (~1 min). Les paroles a l\'ecran ne changent pas.</div>' +
+      '<div class="actions">' +
+        '<button class="mbtn solid" onclick="appliquerPrononciation()">Appliquer la prononciation (regenerer)</button>' +
+        '<span id="applyState" class="hint"></span>' +
+      '</div>' +
+      '<div class="sectlabel">Reponse au client</div>' +
+      '<div class="send">' +
+        '<textarea class="edit short" id="ta_reponse">' + esc(courrielDefaut) + '</textarea>' +
+        '<div class="actions" style="margin-top:10px">' +
+          '<button class="mbtn solid" id="sendBtn" onclick="envoyer()">Envoyer au client</button>' +
+          '<button class="ghost" onclick="enregistrer()">Enregistrer le brouillon</button>' +
+        '</div>' +
+      '</div>';
+    wireGrow('ta_phon', recalcPhon);
+    wireGrow('ta_reponse');
+  }
+
   function blocRegen(regen){
     if (!regen || !regen.statut) return '';
     if (regen.statut === 'en_production') {
@@ -271,6 +320,7 @@
     CUR = x;
 
     if (x.mode === 'message') { rendreMessage(x); return; }
+    if (x.mode === 'prononciation') { rendrePrononciation(x); return; }
 
     var enRege = !!(x.regen && x.regen.statut === 'en_production');
     var courrielDefaut = x.reponse || x.brouillon_ia || '';
@@ -286,6 +336,7 @@
       '<div class="meta">' + esc(x.expediteur) + ' &middot; ' + esc(x.sujet) +
         (x.type_correction ? ' &middot; <b>' + esc(x.type_correction) + '</b>' : '') + '</div>' +
       (x.message ? '<div class="demande"><div class="label">Demande du client</div>' + esc(x.message) + '</div>' : '') +
+      panneauAnalyse(x.analyse_ia) +
 
       '<div class="sectlabel">Paroles &mdash; actuel vs propose</div>' +
       (parSeed ? noteSeed : '') +
@@ -343,6 +394,16 @@
     document.getElementById('applyState').textContent = 'Envoi...';
     var e = editions();
     var r = await post({ id: CUR.id, action: 'appliquer', methode: methode, paroles_corrigees: e.paroles_corrigees, prompt_style: e.prompt_style });
+    if (r.ok) { toast('Regeneration lancee.'); document.getElementById('applyState').textContent = 'Lance (Suno ~1 min).'; }
+    else { toast('Echec.'); document.getElementById('applyState').textContent = 'Echec : ' + esc((r.d && r.d.error) || r.status); }
+  }
+
+  async function appliquerPrononciation(){
+    if (!CUR) return;
+    if (!confirm('Appliquer la correction de prononciation et regenerer ?\nLes paroles affichees au client ne changent pas, seul le son envoye a Suno change.')) return;
+    document.getElementById('applyState').textContent = 'Envoi...';
+    var phon = document.getElementById('ta_phon').value;
+    var r = await post({ id: CUR.id, action: 'appliquer_prononciation', lyrics_phonetique: phon });
     if (r.ok) { toast('Regeneration lancee.'); document.getElementById('applyState').textContent = 'Lance (Suno ~1 min).'; }
     else { toast('Echec.'); document.getElementById('applyState').textContent = 'Echec : ' + esc((r.d && r.d.error) || r.status); }
   }

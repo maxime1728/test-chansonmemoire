@@ -188,18 +188,23 @@ ${(lyrics || '').slice(0, 2500)}`;
         autre       ? `Autre : ${autre}` : '',
         phonetique  ? `Phonétique proposée : ${phonetique}` : ''
       ].filter(Boolean).join('\n');
+      const champsConvo = {
+        expediteur:   to || '',
+        sujet:        `Correction aperçu${p.deceased_name ? ' : ' + p.deceased_name : ''}`,
+        message:      demande || '(voir le projet)',
+        recu_le:      new Date().toISOString(),
+        statut:       'a_verifier',
+        categorie_ia: 'modification',
+        Projet:       [projet.id]
+      };
+      // Lie la version qui porte lyrics_phonetique : le cockpit lit alors le phonétique (avant/après) et
+      // l'« Appliquer la prononciation » cible cette version (cover qui envoie le phonétique à Suno, paroles
+      // affichées au client inchangées). #12 / cockpit étape 2b.
+      if (genId) champsConvo.generation_a_travailler = [genId];
       await fetch(`${API}/${CONVOS}`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ typecast: true, fields: {
-          expediteur:   to || '',
-          sujet:        `Correction aperçu${p.deceased_name ? ' : ' + p.deceased_name : ''}`,
-          message:      demande || '(voir le projet)',
-          recu_le:      new Date().toISOString(),
-          statut:       'a_verifier',
-          categorie_ia: 'modification',
-          Projet:       [projet.id]
-        } })
+        body: JSON.stringify({ typecast: true, fields: champsConvo })
       });
     } catch (_) { /* la ligne cockpit ne bloque jamais l'alerte courriel */ }
 

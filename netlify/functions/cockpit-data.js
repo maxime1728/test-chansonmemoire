@@ -104,6 +104,29 @@ async function patchConvo(headers, id, fields) {
   });
 }
 
+// Étape 2b — sous-cas PRONONCIATION : le raisonnement IA (correction_request du Projet) + la version
+// phonétique envoyée à Suno (lyrics_phonetique de la version liée). Un lyrics_phonetique présent = cas
+// prononciation (les paroles AFFICHÉES restent claires ; Suno reçoit le phonétique). Best-effort.
+async function detailsCorrection(headers, f) {
+  let analyse_ia = '', lyrics_phonetique = '', gen_id = '';
+  const projetId = projetDe(f);
+  if (projetId) {
+    try {
+      const rP = await fetch(`${API}/${PROJECTS}/${projetId}`, { headers });
+      if (rP.ok) analyse_ia = str(((await rP.json()).fields || {}).correction_request);
+    } catch (_) {}
+  }
+  const genLink = (Array.isArray(f.generation_a_travailler) && f.generation_a_travailler[0]) || null;
+  if (genLink) {
+    gen_id = genLink;
+    try {
+      const rG = await fetch(`${API}/Generations/${genLink}`, { headers });
+      if (rG.ok) lyrics_phonetique = str(((await rG.json()).fields || {}).lyrics_phonetique);
+    } catch (_) {}
+  }
+  return { analyse_ia, lyrics_phonetique, gen_id };
+}
+
 exports.handler = async (event) => {
   if (!SECRET) { console.error('[cockpit-data] COCKPIT_SECRET manquant'); return fail(500, { error: 'Configuration manquante' }); }
 
@@ -143,6 +166,26 @@ exports.handler = async (event) => {
         const r = await patchConvo(headers, id, { ...edits, action_modif: valeur });
         if (!r.ok) return fail(502, { error: 'Application échouée', detail: await r.text().catch(() => '') });
         return ok({ ok: true, applied: methode });
+      }
+
+      if (action === 'appliquer_prononciation') {
+        // Prononciation : régénère en COVER mais SANS toucher paroles_corrigees -> appliquer-modification
+        // ne pose pas adjusted_lyrics, et lancer-cover retombe sur lyrics_phonetique de la version source
+        // (Suno reçoit le phonétique, les paroles AFFICHÉES au client restent claires). On enregistre
+        // d'abord le phonétique éventuellement édité sur la version liée.
+        const convo = await lireConvo(headers, id);
+        if (!convo) return fail(404, { error: 'Conversation introuvable' });
+        const genId = (Array.isArray(convo.generation_a_travailler) && convo.generation_a_travailler[0]) || null;
+        if (genId && typeof body.lyrics_phonetique === 'string') {
+          const rG = await fetch(`${API}/Generations/${genId}`, {
+            method: 'PATCH', headers: { ...headers, ...HJSON },
+            body: JSON.stringify({ fields: { lyrics_phonetique: body.lyrics_phonetique } })
+          });
+          if (!rG.ok) return fail(502, { error: 'Phonétique non enregistré', detail: await rG.text().catch(() => '') });
+        }
+        const r = await patchConvo(headers, id, { action_modif: ACTION_MODIF.cover });
+        if (!r.ok) return fail(502, { error: 'Application échouée', detail: await r.text().catch(() => '') });
+        return ok({ ok: true, applied: 'prononciation' });
       }
 
       if (action === 'envoyer') {
@@ -193,6 +236,9 @@ exports.handler = async (event) => {
     if (!f) return fail(404, { error: 'Introuvable' });
 
     const regen = await versionRegen(headers, f).catch(() => null);
+    const corr  = await detailsCorrection(headers, f).catch(() => ({}));
+    const estProno = !!(corr.lyrics_phonetique) || /prononciation/i.test(corr.analyse_ia || '');
+    const estModif = str(f.categorie_ia) === 'modification';
 
     const detail = {
       id,
@@ -210,8 +256,13 @@ exports.handler = async (event) => {
       reponse:             str(f.reponse),
       action_modif:        str(f.action_modif),
       envoi_reponse:       str(f.envoi_reponse),
-      // mode 'modification' = avant/apres (cover/rege/prononciation) ; 'message' = juste valider+envoyer la reponse IA.
-      mode: (str(f.categorie_ia) === 'modification') ? 'modification' : 'message',
+      // Sous-cas prononciation (étape 2b) : raisonnement IA + version phonétique envoyée à Suno.
+      analyse_ia:          corr.analyse_ia || '',
+      lyrics_phonetique:   corr.lyrics_phonetique || '',
+      gen_id:              corr.gen_id || '',
+      est_prononciation:   estModif && estProno,
+      // mode : 'prononciation' (vue dédiée) > 'modification' (avant/après cover/régé) > 'message' (valider+envoyer).
+      mode: !estModif ? 'message' : (estProno ? 'prononciation' : 'modification'),
       regen   // null, ou { statut, titre, no, audio_url }
     };
     return ok({ ok: true, detail });
