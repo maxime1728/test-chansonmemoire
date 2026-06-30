@@ -176,6 +176,7 @@ exports.handler = async (event) => {
             paroles_corrigees: adjLyrics,
             type_correction:  typeCorrection({ mode: res.mode, categories: res.categories }),
             modif_pregeneree: true,
+            phase_achat:      p.commercial_status === 'purchased' ? 'apres_achat' : 'avant_achat',
             Projet:           [projet.id]
           } })
         });

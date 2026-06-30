@@ -102,6 +102,22 @@
   .btn-modif[disabled] { opacity:.6; cursor:default; }
   .modif-ok { display:none; margin-top:14px; font-size:14px; color:var(--cm-plum-mid); font-weight:600; }
 
+  /* ── HISTORIQUE DES MODIFICATIONS POST-ACHAT (menu déroulant) ── */
+  .modif-history { margin:22px auto 0; max-width:420px; text-align:left; }
+  .mh-details { border:1px solid rgba(92,45,74,0.16); border-radius:14px; background:var(--cm-white); overflow:hidden; }
+  .mh-summary { list-style:none; cursor:pointer; padding:14px 16px; font:700 14px/1.3 Mulish,sans-serif; color:var(--cm-plum-dark); display:flex; align-items:center; gap:10px; }
+  .mh-summary::-webkit-details-marker { display:none; }
+  .mh-label { flex:1; }
+  .mh-summary::after { content:'⌄'; font-size:17px; line-height:1; color:var(--cm-plum-mid); transition:transform .2s; }
+  .mh-details[open] .mh-summary::after { transform:rotate(180deg); }
+  .mh-count { font:700 12px/1 Mulish,sans-serif; color:#fff; background:var(--cm-plum-mid); border-radius:999px; padding:3px 9px; }
+  .mh-version { padding:0 16px 6px; font-size:12.5px; color:var(--cm-text-sub); line-height:1.5; }
+  .mh-version em { font-style:italic; color:var(--cm-plum-mid); }
+  .mh-list { list-style:none; margin:0; padding:4px 16px 16px; display:flex; flex-direction:column; gap:8px; }
+  .mh-item { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid rgba(92,45,74,0.10); border-radius:10px; background:var(--cm-bg); }
+  .mh-date { font-size:12.5px; color:var(--cm-text-sub); }
+  .mh-statut { font-size:11px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; color:var(--cm-plum-dark); background:var(--cm-gold-light); border-radius:999px; padding:3px 10px; white-space:nowrap; }
+
   /* ── MODAL CONFIRMATION ── */
   .modal-overlay { position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(46,26,40,0.55); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
   .modal-overlay.show { display:flex; }
@@ -189,6 +205,15 @@
     <p class="modif-intro">Quelque chose à ajuster (un prénom, un mot, un détail) ? Demande une modification, on s'en occupe.</p>
     <div><button class="btn-modif" id="btnModif" type="button">Quelque chose à ajuster&nbsp;?</button></div>
   </div>
+
+  <!-- Historique des modifications POST-achat (menu déroulant) — peuplé par /api/lire-modifications. -->
+  <div class="modif-history" id="modifHistory" style="display:none;">
+    <details class="mh-details">
+      <summary class="mh-summary"><span class="mh-label">Tes modifications depuis l'achat</span><span class="mh-count" id="mhCount"></span></summary>
+      <div class="mh-version" id="mhVersion"></div>
+      <ul class="mh-list" id="mhList"></ul>
+    </details>
+  </div>
 </div>
 
 <!-- MODAL CONFIRMATION -->
@@ -263,9 +288,44 @@
     if(d.audio_url){ source.src = d.audio_url; audio.load(); }
     else { loading.textContent = "Ta chanson se finalise, réessaie dans un instant."; }
     /* Demande de modification : réservée aux acheteurs (gaté serveur aussi). */
-    if(d.commercial_status === 'purchased'){ var mz = document.getElementById('modifZone'); if(mz) mz.style.display = 'block'; }
+    if(d.commercial_status === 'purchased'){ var mz = document.getElementById('modifZone'); if(mz) mz.style.display = 'block'; chargerModifications(); }
   })
   .catch(function(){ loading.textContent = "Une erreur est survenue. Réessayez dans un instant."; });
+
+  /* Historique des modifications POST-achat (menu déroulant). Best-effort : muet si rien/erreur. */
+  function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtDateFr(iso){
+    try { var d = new Date(iso); if(isNaN(d.getTime())) return ''; return d.toLocaleDateString('fr-CA', { day:'numeric', month:'long', year:'numeric' }); }
+    catch(e){ return ''; }
+  }
+  function chargerModifications(){
+    fetch('/api/lire-modifications', { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ token: token }) })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(!d || !d.ok || !d.modifications || !d.modifications.length) return;
+      var box = document.getElementById('modifHistory'); if(!box) return;
+      var v = d.version || {};
+      var ctx = [];
+      if(v.numero) ctx.push('Version ' + v.numero);
+      if(v.titre)  ctx.push('« <em>' + escapeHtml(v.titre) + '</em> »');
+      var sa = [v.style, v.ambiance].filter(Boolean).map(escapeHtml).join(' · ');
+      if(sa) ctx.push(sa);
+      var mv = document.getElementById('mhVersion'); if(mv) mv.innerHTML = ctx.join(' · ');
+      var ul = document.getElementById('mhList');
+      if(ul){
+        ul.innerHTML = '';
+        d.modifications.forEach(function(m){
+          var li = document.createElement('li'); li.className = 'mh-item';
+          var dt = document.createElement('span'); dt.className = 'mh-date'; dt.textContent = fmtDateFr(m.recu_le) || 'Demande';
+          var st = document.createElement('span'); st.className = 'mh-statut'; st.textContent = m.statut || 'En traitement';
+          li.appendChild(dt); li.appendChild(st); ul.appendChild(li);
+        });
+      }
+      var c = document.getElementById('mhCount'); if(c) c.textContent = String(d.modifications.length);
+      box.style.display = 'block';
+    })
+    .catch(function(){});
+  }
 
   /* 2. Lecteur plein format (durée réelle). */
   audio.addEventListener('loadedmetadata', function(){

@@ -101,6 +101,7 @@ exports.handler = async (event) => {
           recu_le:      new Date().toISOString(),
           statut:       'a_verifier',
           categorie_ia: 'modification',
+          phase_achat:  'apres_achat',   // decortique est gaté purchased -> toujours une modif post-achat
           Projet:       [projet.id]
         } })
       });
