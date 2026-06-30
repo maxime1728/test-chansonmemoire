@@ -524,7 +524,11 @@
       try{
         var res=await fetch('/api/demander-modif-client',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,action:'reproposer',texte:modifs})});
         var d=await res.json();
-        if(res.ok && d && d.route==='cover' && d.lyrics){ setErreurInline('regen-erreur',''); afficher({titre:d.titre||'ta chanson',paroles:stripTags(d.lyrics),suggestions:coverSuggestions}); el('modifications').value=''; window.scrollTo({top:0,behavior:'smooth'}); }
+        if(res.ok && d && d.route==='cover' && d.noop){
+          /* Rien de concret appliqué : on garde la demande dans le champ + message actionnable (pas un dead-end). */
+          setErreurInline('regen-erreur', "On n'a pas trouvé de changement concret à appliquer. Décris un changement précis dans les paroles (un mot, une phrase, un détail à retirer ou corriger), plutôt qu'une consigne générale.");
+        }
+        else if(res.ok && d && d.route==='cover' && d.lyrics){ setErreurInline('regen-erreur',''); afficher({titre:d.titre||'ta chanson',paroles:stripTags(d.lyrics),suggestions:coverSuggestions}); el('modifications').value=''; window.scrollTo({top:0,behavior:'smooth'}); }
         else setErreurInline('regen-erreur',"La réécriture n'a pas pu aboutir. Reformule ta demande et réessaie.");
       }catch(e){ setErreurInline('regen-erreur',"Une erreur est survenue. Réessaie dans un instant."); }
       btn.disabled=false; btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> Régénérer mes paroles';

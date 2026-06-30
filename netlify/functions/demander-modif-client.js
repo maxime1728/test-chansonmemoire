@@ -109,12 +109,33 @@ exports.handler = async (event) => {
 
     if (!texte) return { statusCode: 400, body: JSON.stringify({ error: 'Demande vide' }) };
 
+    // En 'reproposer' (raffinement sur /revision en mode cover), on raffine les PAROLES DÉJÀ PROPOSÉES
+    // (adjusted_lyrics affichées au client), pas la version d'origine -> une consigne de raffinement
+    // (« reste sur les faits », « enlève ce détail ») a enfin une base concrète à transformer.
+    const baseLyrics = (action === 'reproposer' && p.adjusted_lyrics && p.adjusted_lyrics.trim())
+      ? p.adjusted_lyrics
+      : (gen.lyrics || '');
+    const genForAnalyse = (baseLyrics === (gen.lyrics || '')) ? gen : { ...gen, lyrics: baseLyrics };
+
     // 3. Analyse partagée (mêmes garde-fous que decortique / modif-cron) : catégories + paroles ajustées + style.
     const apiKey = process.env.ANTHROPIC_API_KEY;
     const styleActuel = (gen.gen_style_prompt && gen.gen_style_prompt.trim())
       || await styleFor({ music_style: gen.gen_music_style || p.music_style, mood: gen.gen_mood || p.mood, cadeau: p.song_type === 'cadeau', language: p.language });
     const catalogue = await cataloguePourAmbiance({ mood: gen.gen_mood || p.mood, cadeau: p.song_type === 'cadeau', language: p.language });
-    const res = await analyserModif({ apiKey, demande: texte, p, gen, styleActuel, catalogue });
+    const res = await analyserModif({ apiKey, demande: texte, p, gen: genForAnalyse, styleActuel, catalogue });
+
+    // 'reproposer' (bouton « Régénérer » de /revision en mode cover) : on RESTE en cover et on raffine
+    // les paroles proposées. Pas de bascule pron/style ici (le client ajuste ses paroles, mélodie gardée).
+    if (action === 'reproposer') {
+      const adj = (res.adjLyrics && res.adjLyrics.trim()) || '';
+      if (adj) {
+        await patchProjet(projet.id, { adjusted_lyrics: adj, mode_correction: 'cover', approval_status: 'pending' }, headers);
+        return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, route: 'cover', lyrics: adj, titre: gen.song_title || '' }) };
+      }
+      // Rien de concret à appliquer (consigne trop vague, ou paroles déjà conformes) : on renvoie les paroles
+      // ACTUELLES inchangées + un signal 'noop' -> la page affiche un message utile, pas un dead-end.
+      return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, route: 'cover', noop: true, lyrics: baseLyrics, titre: gen.song_title || '' }) };
+    }
 
     const cats = (res.categories || '').toLowerCase();
     const hasPron  = /prononc/.test(cats);
