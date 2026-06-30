@@ -100,6 +100,7 @@
 </style>
 <!-- Sentry navigateur (erreurs JS), token/PII scrubbes avant envoi (cm-sentry.js). -->
 <script src="/js/cm-sentry.js"></script>
+<script src="/js/cm-modif-modal.js"></script>
   <!-- Favicon -->
   <link rel="icon" type="image/png" sizes="48x48" href="https://res.cloudinary.com/dcx1tfm47/image/upload/c_fill,w_48,h_48/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
   <link rel="icon" type="image/png" sizes="96x96" href="https://res.cloudinary.com/dcx1tfm47/image/upload/c_fill,w_96,h_96/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
@@ -164,13 +165,11 @@
     <div id="cadeauxReady" style="display:none;"></div>
   </div>
 
-  <!-- DEMANDER UNE MODIFICATION (E/F — correction post-achat) -->
+  <!-- DEMANDER UNE MODIFICATION (E/F — correction post-achat) — modale unifiée (js/cm-modif-modal.js) -->
   <div class="card" id="correctionCard">
     <div class="section-title">Une demande de modification ?</div>
-    <p class="section-sub">Tu aimerais ajuster ta chanson ? Dis-nous en quelques mots : les <strong>paroles</strong>, le <strong>style</strong> ou l'<strong>ambiance</strong>, la <strong>prononciation</strong> d'un mot, un <strong>souvenir</strong> à ajouter, ou le <strong>titre</strong>. Notre équipe la prépare et te revient.</p>
-    <textarea id="correctionText" rows="4" placeholder="Ex. : « J'aimerais qu'on prononce Joséphine au complet », « Ajoute un mot sur ses étés au chalet », « Un style un peu plus doux »…"></textarea>
-    <div style="margin-top:14px;"><button class="btn btn-block" id="btnCorrection" type="button">Envoyer ma demande</button></div>
-    <p class="ok-msg" id="correctionMsg" style="display:none;"></p>
+    <p class="section-sub">Tu aimerais ajuster ta chanson ? Dis-nous en quelques mots : un <strong>mot mal prononcé</strong>, un <strong>souvenir</strong> à ajouter, un <strong>détail dans les paroles</strong>, le <strong>style</strong> ou le <strong>titre</strong>. Notre équipe la prépare et te revient.</p>
+    <div style="margin-top:14px;"><button class="btn btn-block" id="btnCorrection" type="button">Quelque chose à ajuster&nbsp;?</button></div>
   </div>
 
   <!-- UPSELL POST-ACHAT : add-ons payants (affiché aux acheteurs, pic émotionnel) -->
@@ -357,16 +356,9 @@
     }).catch(function(){ b.disabled=false; b.textContent='Obtenir le PDF · 7,99 $'; cmToast("Une erreur est survenue."); });
   });
 
-  /* ── Demande de modification (decortique : Claude analyse + prépare l'approbation) ── */
-  document.getElementById('btnCorrection').addEventListener('click',function(){
-    var ta=document.getElementById('correctionText'); var txt=(ta.value||'').trim();
-    if(txt.length < 4){ cmToast("Décrivez en quelques mots la modification souhaitée."); return; }
-    var b=this; b.disabled=true; b.textContent='Un instant…';
-    post('/api/decortique',{token:token,demande:txt}).then(function(res){
-      if(res && res.ok){ var m=document.getElementById('correctionMsg'); m.textContent='Demande reçue ✓ Notre équipe la prépare et te revient sous peu.'; m.style.display='block'; ta.style.display='none'; b.style.display='none'; }
-      else { b.disabled=false; b.textContent='Envoyer ma demande'; cmToast("Une erreur est survenue. Réessayez."); }
-    }).catch(function(){ b.disabled=false; b.textContent='Envoyer ma demande'; cmToast("Une erreur est survenue. Réessayez."); });
-  });
+  /* ── Demande de modification (decortique : Claude analyse + prépare l'approbation) ──
+     Modale unifiée partagée (même composant que page-chanson / l'aperçu). Endpoint /api/decortique. */
+  if(window.cmModifModal) window.cmModifModal.init({ token: token, trigger: document.getElementById('btnCorrection') });
 
   /* ── Waitlists (mémoire vivante / vidéo) ── */
   function waitlist(btnId, msgId, payload, doneTxt){

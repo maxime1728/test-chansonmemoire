@@ -87,13 +87,15 @@ exports.handler = async (event) => {
     const { categories, mode, compteRendu: crIA, adjStyle, adjLyrics } = await analyserModif({ apiKey, demande, p, gen, styleActuel, catalogue });
     const compteRendu = crIA || '(analyse automatique indisponible, a traiter manuellement)';
 
-    // 3. Enrichit le Projet : paroles/style PROPOSES (editables). approval_status reste 'pending' (approbation
-    //    manuelle de l'equipe -> cover-cron). Aucune regeneration declenchee ici.
+    // 3. Enrichit le Projet : SEULEMENT le compte-rendu lisible (correction_request) + le mode (mode_correction,
+    //    lu comme repli par appliquer-modification). La proposition EDITABLE (paroles/style) ne vit QUE sur la
+    //    Conversation (etape 4) : c'est la seule source de verite du cockpit, et appliquer-modification pousse
+    //    ces champs sur le Projet au moment de l'approbation. On NE duplique plus adjusted_lyrics/adjusted_style_prompt
+    //    ici (double trace pending : la copie Projet n'etait jamais lue avant l'application et desyncait avec les
+    //    editions de l'equipe). approval_status reste 'pending' (pose par decortique). Aucune regeneration ici.
     await patch(PROJECTS, projet.id, {
-      correction_request:    `CATEGORIES : ${categories}\n\nDEMANDE CLIENT :\n${demande}\n\nANALYSE (proposition IA, a ajuster au besoin) :\n${compteRendu}`,
-      adjusted_style_prompt: adjStyle,
-      adjusted_lyrics:       adjLyrics,
-      mode_correction:       mode
+      correction_request: `CATEGORIES : ${categories}\n\nDEMANDE CLIENT :\n${demande}\n\nANALYSE (proposition IA, a ajuster au besoin) :\n${compteRendu}`,
+      mode_correction:    mode
     });
 
     // 4. Brouillon de reponse client dans la Conversation (editable, a envoyer apres approbation). Template
