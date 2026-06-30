@@ -43,14 +43,14 @@
   .col h3 { font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:0 0 8px; }
   .col.prop h3 { color:var(--plum); }
   .fieldcard { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
-  .col.prop .fieldcard { border-color:var(--propline); background:var(--propbg); }
   .label { font-size:11px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.4px; }
   .val { font-size:14px; line-height:1.7; white-space:pre-wrap; word-break:break-word; }
   .dim { color:#bbb; }
-  textarea.edit { width:100%; min-height:150px; font:inherit; font-size:14px; line-height:1.7; color:var(--ink); border:1px solid var(--propline); border-radius:8px; padding:10px 12px; background:#fff; resize:vertical; }
-  textarea.short { min-height:90px; }
-  .preview { margin-top:8px; }
-  .preview .label { display:flex; align-items:center; gap:8px; }
+  /* Le textarea EST la carte du proposé (plus de carte dans une carte) et grandit tout seul a la hauteur du texte. */
+  textarea.edit { display:block; width:100%; min-height:84px; font:inherit; font-size:14px; line-height:1.7; color:var(--ink); border:1px solid var(--propline); border-radius:10px; padding:11px 13px; background:#fff; resize:none; overflow:hidden; }
+  textarea.edit:focus { outline:none; border-color:var(--plum); box-shadow:0 0 0 3px rgba(92,45,74,.10); }
+  .preview { margin-top:10px; padding-top:10px; border-top:1px dashed var(--propline); }
+  .preview .label { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 
   .d-del { color:var(--del); background:var(--delbg); text-decoration:line-through; border-radius:3px; padding:0 1px; }
   .d-ins { color:var(--ins); background:var(--insbg); border-radius:3px; padding:0 1px; }
@@ -200,12 +200,10 @@
       '</div>' +
       '<div class="col prop">' +
         '<h3>' + titreProp + '</h3>' +
-        '<div class="fieldcard">' +
-          '<textarea class="edit" id="' + idTextarea + '">' + esc(valProp) + '</textarea>' +
-          '<div class="preview"><div class="label">Apercu surligne ' +
-            '<span class="legend"><span class="s d-del">retire</span> <span class="s d-ins">ajoute</span></span></div>' +
-            '<div class="val" id="' + idApercu + '_prev">' + renderDiff(valActuelle, valProp, 'propose') + '</div></div>' +
-        '</div>' +
+        '<textarea class="edit" id="' + idTextarea + '">' + esc(valProp) + '</textarea>' +
+        '<div class="preview"><div class="label">Apercu surligne ' +
+          '<span class="legend"><span class="s d-del">retire</span> <span class="s d-ins">ajoute</span></span></div>' +
+          '<div class="val" id="' + idApercu + '_prev">' + renderDiff(valActuelle, valProp, 'propose') + '</div></div>' +
       '</div>' +
     '</div>';
   }
@@ -218,6 +216,14 @@
     document.getElementById('dp_prev').innerHTML = renderDiff(CUR.paroles_actuelles, par, 'propose');
     document.getElementById('ds_act').innerHTML  = renderDiff(CUR.prompt_style_actuel, sty, 'actuel');
     document.getElementById('ds_prev').innerHTML = renderDiff(CUR.prompt_style_actuel, sty, 'propose');
+  }
+
+  // Le textarea grandit a la hauteur de son contenu (lyrics longues lisibles d'un coup, zero scroll interne, zero poignee a tirer).
+  function autoGrow(el){ if(!el) return; el.style.height='auto'; el.style.height=(el.scrollHeight+2)+'px'; }
+  function wireGrow(id, extra){
+    var el=document.getElementById(id); if(!el) return;
+    autoGrow(el);
+    el.addEventListener('input', function(){ if(extra) extra(); autoGrow(el); });
   }
 
   function blocRegen(regen){
@@ -252,6 +258,7 @@
           '<button class="ghost" onclick="enregistrer()">Enregistrer le brouillon</button>' +
         '</div>' +
       '</div>';
+    wireGrow('ta_reponse');
   }
 
   async function ouvrir(id, node){
@@ -311,8 +318,9 @@
         '</div>' +
       '</div>';
 
-    document.getElementById('ta_paroles').addEventListener('input', recalc);
-    document.getElementById('ta_style').addEventListener('input', recalc);
+    wireGrow('ta_paroles', recalc);
+    wireGrow('ta_style', recalc);
+    wireGrow('ta_reponse');
   }
 
   function editions(){
