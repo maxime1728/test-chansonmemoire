@@ -96,6 +96,13 @@
 [functions."watchdog-cron"]
   schedule = "*/30 * * * *"
 
+# Keep-warm (anti cold-start) : ping leger (GET -> 405, 0 effet de bord) sur les fonctions vues par le
+# client au chargement d'une page (lire-projet, lire-versions) -> un lien courriel/redirection tombe sur
+# un conteneur deja chaud (~0,3 s) au lieu d'un demarrage a froid (plusieurs secondes). Cout fixe ~26k
+# invocations/mois, a retirer quand le vrai trafic suffira. Cf. keepwarm-cron.js + lazy-Sentry. Toutes les 5 min.
+[functions."keepwarm-cron"]
+  schedule = "*/5 * * * *"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
