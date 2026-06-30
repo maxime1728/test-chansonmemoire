@@ -119,6 +119,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         versions:          versions,
         commercial_status: projet.fields.commercial_status || 'preview_only',
+        accepted:          projet.fields.funnel_step === 'delivery_accepted',   // étape courante : apercu redirige un acheteur vers page-chanson/page-memoire (anti-rachat)
         song_type:         projet.fields.song_type || 'hommage'   // hommage|cadeau -> adapte le copy de l'aperçu (non-PII)
         // PAS d'email, PAS de stripe_*, PAS d'attribution. Volontaire (§6).
       })

@@ -46,7 +46,9 @@ async function envoyerApercuPret({ API, headers, projetId, projetFields, songTit
     const token = (projetFields.token || '').trim();
     if (!token) return { ok: false, sent: 0 };
 
-    const lien  = `${SITE}/apercu?id=${encodeURIComponent(token)}`;
+    // Lien = ÉTAPE COURANTE (formule page_url basée sur funnel_step), comme courriel-achat/cover/decortique.
+    // Au moment de l'envoi (1re bascule preview) c'est l'aperçu ; le repli couvre un page_url non chargé.
+    const lien  = projetFields.page_url || `${SITE}/apercu?id=${encodeURIComponent(token)}`;
     const titre = (songTitle || '').trim();
     const subject = titre ? `Votre aperçu est prêt : « ${titre} »` : 'Votre aperçu est prêt';
     const html = gabarit({

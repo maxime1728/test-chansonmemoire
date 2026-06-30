@@ -113,7 +113,9 @@ exports.handler = async () => {
 
       const token = p.fields.token || '';
       const unsub = `${SITE}/api/desabonnement?id=${encodeURIComponent(token)}`;
-      const lien  = `${SITE}/apercu?id=${encodeURIComponent(token)}`;
+      // Lien = ÉTAPE COURANTE (formule page_url) : la relance est différée sur plusieurs jours, le client a
+      // pu acheter entre-temps -> on l'envoie à sa page (page-chanson/page-memoire), pas le racheter. Repli aperçu.
+      const lien  = p.fields.page_url || `${SITE}/apercu?id=${encodeURIComponent(token)}`;
       const { subject, html } = build(n, { prenom: p.fields.deceased_name, lien, unsub, postal: POSTAL });
 
       const ok = await envoyer(to, subject, html, unsub, p.id);

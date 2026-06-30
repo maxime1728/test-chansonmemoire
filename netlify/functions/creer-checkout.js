@@ -62,6 +62,16 @@ exports.handler = async (event) => {
       return { statusCode: 404, body: JSON.stringify({ error: 'Introuvable' }) };   // 404 nu
     }
     const projet  = dP.records[0];
+
+    // ANTI-RACHAT (défense en profondeur) : une chanson déjà achetée ne peut pas repasser au checkout
+    // (ancien lien /apercu cliqué après l'achat). L'UI redirige déjà vers l'étape courante ; ici on
+    // bloque aussi l'API pour qu'aucune session Stripe ne soit créée -> impossible de payer 2 fois.
+    if (projet.fields.commercial_status === 'purchased') {
+      const accepted = projet.fields.funnel_step === 'delivery_accepted';
+      return { statusCode: 409, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Déjà acheté', already_purchased: true, accepted }) };
+    }
+
     const projLit = formulaLiteral(projet.fields.project);
     if (projLit === null) return { statusCode: 500, body: JSON.stringify({ error: 'Erreur serveur' }) };
 

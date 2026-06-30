@@ -297,6 +297,9 @@
 
   post('/api/lire-projet',{token:token}).then(function(d){
     if(!d){ loading.textContent='Lien introuvable.'; return; }
+    /* Filet (étape courante) : la page-mémoire = livraison post-acceptation. Si pas encore acheté, on renvoie
+       à l'aperçu (un ancien lien ne doit pas exposer la livraison avant l'achat). */
+    if(d.commercial_status !== 'purchased'){ location.replace('/apercu?id=' + encodeURIComponent(token)); return; }
     adaptMemoireType(d.song_type);
     if(d.titre){ document.getElementById('title').textContent=d.titre; document.getElementById('playerTitle').textContent=d.titre; document.title=d.titre+' · Chanson Mémoire'; }
     var bits=[d.style,d.ambiance].filter(Boolean); if(bits.length) document.getElementById('subtitle').textContent=bits.join(' · ');

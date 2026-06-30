@@ -280,6 +280,10 @@
   .then(function(r){ return r.ok ? r.json() : null; })
   .then(function(d){
     if(!d) { loading.textContent = "Lien introuvable."; return; }
+    /* Lien toujours à jour (étape courante) : page-chanson = acceptation post-achat. Si pas encore acheté,
+       on renvoie à l'aperçu ; si déjà accepté, on renvoie à la page-mémoire (livraison). */
+    if(d.commercial_status !== 'purchased'){ location.replace('/apercu?id=' + encodeURIComponent(token)); return; }
+    if(d.accepted){ location.replace('/page-memoire?id=' + encodeURIComponent(token)); return; }
     if(d.titre){
       document.getElementById('title').textContent = d.titre;
       document.getElementById('playerTitle').textContent = d.titre;

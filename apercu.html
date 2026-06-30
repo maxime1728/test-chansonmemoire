@@ -1496,6 +1496,12 @@ window.cmIcon = function(n){ return '<svg class="cm-ic" aria-hidden="true"><use 
   })
   .then(function(r) { return r.ok ? r.json() : null; })
   .then(function(d) {
+    /* ANTI-RACHAT / lien toujours à jour : si déjà acheté, l'aperçu (et son bouton d'achat) ne doit pas
+       s'afficher -> on renvoie à l'étape courante (page-chanson, ou page-memoire si déjà accepté). */
+    if (d && d.commercial_status === 'purchased') {
+      location.replace('/' + (d.accepted ? 'page-memoire' : 'page-chanson') + '?id=' + encodeURIComponent(token));
+      return;
+    }
     if (d && window._CM) { window._CM.type = d.song_type || 'hommage'; if (window.cmPersonnaliser) window.cmPersonnaliser(); }
     if (window.cmReady) window.cmReady();
     if (!d || !Array.isArray(d.versions) || d.versions.length === 0) return;
@@ -1617,9 +1623,15 @@ setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet
         fbclid: lt.fbclid||'', fbc: cmCookie('_fbc')
       }})
     })
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(d){
-      if (d && d.url) { window.location.href = d.url; return; }   /* → Stripe Checkout */
+    .then(function(r){ return r.json().then(function(d){ return { status: r.status, ok: r.ok, d: d }; }, function(){ return { status: r.status, ok: r.ok, d: null }; }); })
+    .then(function(res){
+      var d = res.d;
+      if (res.ok && d && d.url) { window.location.href = d.url; return; }   /* → Stripe Checkout */
+      /* Déjà acheté (ancien lien) : on n'affiche pas d'erreur, on renvoie à l'étape courante (anti-rachat). */
+      if (res.status === 409 && d && d.already_purchased) {
+        location.replace('/' + (d.accepted ? 'page-memoire' : 'page-chanson') + '?id=' + encodeURIComponent(token));
+        return;
+      }
       buyErr("Le paiement n'a pas pu démarrer. Réessaie dans un instant.");
     })
     .catch(function(){ buyErr("Le paiement n'a pas pu démarrer. Réessaie dans un instant."); });

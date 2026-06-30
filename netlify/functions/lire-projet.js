@@ -136,6 +136,7 @@ exports.handler = async (event) => {
         audio_url:         audioUrl,
         suggestions:       gen.suggestions || '[]',         // bulles dynamiques — exposition INTENTIONNELLE (au-delà des 5 champs §6 ; à refléter dans CLAUDE.md §6)
         commercial_status: projet.fields.commercial_status || 'preview_only',
+        accepted:          projet.fields.funnel_step === 'delivery_accepted',   // étape courante : page-chanson redirige vers page-memoire une fois accepté (lien courriel toujours à jour)
         extras: {                                                  // statut order bumps : achete -> commande -> livre (page-memoire)
           instrumental:     projet.fields.extra_instrumental     || '',
           paroles_vivantes: projet.fields.extra_paroles_vivantes || '',
