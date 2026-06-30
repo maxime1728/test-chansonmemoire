@@ -197,30 +197,27 @@
   }
 
   // ── DÉTAIL ───────────────────────────────────────────────────────────────────────────────────────
-  function champEditable(titreActuel, valActuelle, titreProp, idTextarea, valProp, idApercu){
+  // 2 colonnes : Actuel (mots retires barres en rouge) | Propose (editable). Pas d'apercu empile dessous.
+  function champEditable(titreActuel, valActuelle, titreProp, idTextarea, valProp, idAct){
     return '<div class="cols">' +
       '<div class="col">' +
-        '<h3>' + titreActuel + '</h3>' +
-        '<div class="fieldcard"><div class="val" id="' + idApercu + '_act">' + renderDiff(valActuelle, valProp, 'actuel') + '</div></div>' +
+        '<h3>' + titreActuel + ' <span class="legend"><span class="s d-del">retire</span></span></h3>' +
+        '<div class="fieldcard"><div class="val" id="' + idAct + '">' + renderDiff(valActuelle, valProp, 'actuel') + '</div></div>' +
       '</div>' +
       '<div class="col prop">' +
         '<h3>' + titreProp + '</h3>' +
         '<textarea class="edit" id="' + idTextarea + '">' + esc(valProp) + '</textarea>' +
-        '<div class="preview"><div class="label">Apercu surligne ' +
-          '<span class="legend"><span class="s d-del">retire</span> <span class="s d-ins">ajoute</span></span></div>' +
-          '<div class="val" id="' + idApercu + '_prev">' + renderDiff(valActuelle, valProp, 'propose') + '</div></div>' +
       '</div>' +
     '</div>';
   }
 
+  // Recalcul live de la colonne Actuel (mots retires) + sauvegarde auto.
   function recalc(){
     if (!CUR) return;
-    var par = document.getElementById('ta_paroles').value;
-    var sty = document.getElementById('ta_style').value;
-    document.getElementById('dp_act').innerHTML  = renderDiff(CUR.paroles_actuelles, par, 'actuel');
-    document.getElementById('dp_prev').innerHTML = renderDiff(CUR.paroles_actuelles, par, 'propose');
-    document.getElementById('ds_act').innerHTML  = renderDiff(CUR.prompt_style_actuel, sty, 'actuel');
-    document.getElementById('ds_prev').innerHTML = renderDiff(CUR.prompt_style_actuel, sty, 'propose');
+    var par = document.getElementById('ta_paroles'), sty = document.getElementById('ta_style');
+    if (par) document.getElementById('dp_act').innerHTML = renderDiff(CUR.paroles_actuelles, par.value, 'actuel');
+    if (sty) document.getElementById('ds_act').innerHTML = renderDiff(CUR.prompt_style_actuel, sty.value, 'actuel');
+    autoSave();
   }
 
   // Le textarea grandit a la hauteur de son contenu (lyrics longues lisibles d'un coup, zero scroll interne, zero poignee a tirer).
@@ -237,42 +234,51 @@
     return '<details class="analyse" open><summary>Raisonnement IA</summary><div class="val">' + esc(analyse) + '</div></details>';
   }
 
-  // Recalcul live du diff phonetique (vue prononciation).
+  // Recalcul live du diff phonetique (colonne Actuel).
   function recalcPhon(){
     if (!CUR) return;
-    var ph = document.getElementById('ta_phon').value;
-    document.getElementById('ph_act').innerHTML  = renderDiff(CUR.paroles_actuelles, ph, 'actuel');
-    document.getElementById('ph_prev').innerHTML = renderDiff(CUR.paroles_actuelles, ph, 'propose');
+    var ph = document.getElementById('ta_phon');
+    if (ph) document.getElementById('ph_act').innerHTML = renderDiff(CUR.paroles_actuelles, ph.value, 'actuel');
   }
 
-  // Vue PRONONCIATION (mode 'prononciation') : raisonnement IA + avant/apres "paroles claires" vs "phonetique".
-  // Appliquer = cover qui envoie le phonetique a Suno ; les paroles AFFICHEES au client restent claires.
-  function rendrePrononciation(x){
+  // Bloc PRONONCIATION, affiche DANS la vue modif quand pertinent (gere aussi "prononciation + paroles" ensemble).
+  function blocPrononciation(x){
+    if (!x.est_prononciation) return '';
     var phonProp = x.lyrics_phonetique || x.paroles_actuelles;
-    var courrielDefaut = x.reponse || x.brouillon_ia || '';
-    document.getElementById('detail').innerHTML =
-      '<div class="meta">' + esc(x.expediteur) + ' &middot; ' + esc(x.sujet) + ' &middot; <b>prononciation</b></div>' +
-      (x.message ? '<div class="demande"><div class="label">Demande du client</div>' + esc(x.message) + '</div>' : '') +
-      panneauAnalyse(x.analyse_ia) +
-      '<div class="note">Correction de <b>prononciation</b> : seul le son envoye a Suno change. Les paroles AFFICHEES au client restent claires (le phonetique n\'apparait jamais a l\'ecran).</div>' +
-      '<div class="sectlabel">Paroles affichees vs phonetique (envoye a Suno)</div>' +
-      champEditable('Affichees au client (claires)', x.paroles_actuelles, 'Phonetique (envoye a Suno)', 'ta_phon', phonProp, 'ph') +
-      '<div class="sectlabel">Appliquer</div>' +
-      '<div class="hint" style="margin-bottom:8px">Regenere la chanson avec le son corrige (~1 min). Les paroles a l\'ecran ne changent pas.</div>' +
-      '<div class="actions">' +
-        '<button class="mbtn solid" onclick="appliquerPrononciation()">Appliquer la prononciation (regenerer)</button>' +
-        '<span id="applyState" class="hint"></span>' +
-      '</div>' +
-      '<div class="sectlabel">Reponse au client</div>' +
-      '<div class="send">' +
-        '<textarea class="edit short" id="ta_reponse">' + esc(courrielDefaut) + '</textarea>' +
-        '<div class="actions" style="margin-top:10px">' +
-          '<button class="mbtn solid" id="sendBtn" onclick="envoyer()">Envoyer au client</button>' +
-          '<button class="ghost" onclick="enregistrer()">Enregistrer le brouillon</button>' +
-        '</div>' +
-      '</div>';
-    wireGrow('ta_phon', recalcPhon);
-    wireGrow('ta_reponse');
+    return '<div class="sectlabel">Prononciation &mdash; envoye a Suno</div>' +
+      '<div class="note">Suno ne lit que du <b>texte</b> : pour corriger un mot mal prononce, on le <b>reecrit phonetiquement</b> dans ce qui est envoye a Suno. Les paroles AFFICHEES au client restent claires (le phonetique n\'apparait jamais a l\'ecran).</div>' +
+      champEditable('Affichees (claires)', x.paroles_actuelles, 'Phonetique (Suno)', 'ta_phon', phonProp, 'ph_act') +
+      '<div class="actions" id="pronoBar"><button class="mbtn" onclick="demanderProno()">Appliquer la prononciation (regenerer)</button></div>';
+  }
+
+  // ── SAUVEGARDE AUTOMATIQUE (debounce) : les editions se sauvent toutes seules, plus de bouton Enregistrer. ──
+  var saveTimer=null;
+  function setSaveStatut(t){ var el=document.getElementById('saveStatut'); if(el) el.textContent=t; }
+  // Un champ propose EGAL a l'actuel = "pas de changement" -> enregistre vide (sert au bouton "Paroles uniquement").
+  function champPropose(id, actuel){ var el=document.getElementById(id); if(!el) return undefined; return (el.value===actuel) ? '' : el.value; }
+  function payloadSave(){
+    var out={ id: CUR.id, action:'save' };
+    var p=champPropose('ta_paroles', CUR.paroles_actuelles); if(p!==undefined) out.paroles_corrigees=p;
+    var s=champPropose('ta_style', CUR.prompt_style_actuel); if(s!==undefined) out.prompt_style=s;
+    var rp=document.getElementById('ta_reponse'); if(rp) out.reponse=rp.value;
+    return out;
+  }
+  function autoSave(){
+    if (!CUR) return;
+    clearTimeout(saveTimer); setSaveStatut('Enregistrement...');
+    saveTimer=setTimeout(async function(){ var r=await post(payloadSave()); setSaveStatut(r.ok?'Enregistre':'Echec sauvegarde'); }, 700);
+  }
+  async function flushSave(){ if(!CUR) return true; clearTimeout(saveTimer); var r=await post(payloadSave()); setSaveStatut(r.ok?'Enregistre':'Echec sauvegarde'); return r.ok; }
+
+  // Confirmation DANS la page (remplace la popup du navigateur) : remplace le contenu d'une barre de boutons.
+  function confirmInline(barId, message, labelOui, onOui){
+    var bar=document.getElementById(barId); if(!bar) return;
+    var prev=bar.innerHTML;
+    bar.innerHTML = '<span class="hint">' + esc(message) + '</span>' +
+      '<button class="mbtn solid" id="ciOui">' + esc(labelOui) + '</button>' +
+      '<button class="ghost" id="ciNon">Annuler</button>';
+    document.getElementById('ciOui').onclick = function(){ onOui(); };
+    document.getElementById('ciNon').onclick = function(){ bar.innerHTML = prev; };
   }
 
   function blocRegen(regen){
@@ -299,15 +305,15 @@
         (x.categorie_ia ? ' &middot; <b>' + esc(x.categorie_ia) + '</b>' : '') + '</div>' +
       (x.message ? '<div class="demande"><div class="label">Message du client</div>' + esc(x.message) + '</div>' : '') +
       '<div class="sectlabel">Reponse au client</div>' +
-      '<div class="hint" style="margin-bottom:8px">Aucune modification de chanson ici : relis le brouillon de l\'IA et envoie.</div>' +
+      '<div class="hint" style="margin-bottom:8px">Aucune modification de chanson ici : relis le brouillon de l\'IA et envoie. (Sauvegarde automatique.)</div>' +
       '<div class="send">' +
         '<textarea class="edit short" id="ta_reponse">' + esc(courrielDefaut) + '</textarea>' +
-        '<div class="actions" style="margin-top:10px">' +
-          '<button class="mbtn solid" id="sendBtn" onclick="envoyer()">Envoyer au client</button>' +
-          '<button class="ghost" onclick="enregistrer()">Enregistrer le brouillon</button>' +
+        '<div class="actions" id="sendBar" style="margin-top:10px">' +
+          '<button class="mbtn solid" id="sendBtn" onclick="demanderEnvoyer()">Envoyer au client</button>' +
+          '<span id="saveStatut" class="hint"></span>' +
         '</div>' +
       '</div>';
-    wireGrow('ta_reponse');
+    wireGrow('ta_reponse', autoSave);
   }
 
   async function ouvrir(id, node){
@@ -320,17 +326,13 @@
     CUR = x;
 
     if (x.mode === 'message') { rendreMessage(x); return; }
-    if (x.mode === 'prononciation') { rendrePrononciation(x); return; }
+    // Plus de vue 'prononciation' separee : c'est un BLOC dans la vue modif (gere aussi le cas combine paroles+prononciation).
 
     var enRege = !!(x.regen && x.regen.statut === 'en_production');
     var courrielDefaut = x.reponse || x.brouillon_ia || '';
-    // Aucune proposition IA encore ? On part des valeurs ACTUELLES (editables) au lieu d'afficher tout
-    // l'actuel barre en rouge contre un propose vide. Le diff reste vide tant que rien n'est edite.
+    // Pas encore de proposition IA ? On part des valeurs ACTUELLES (editables). Diff vide tant que rien n'est edite.
     var parProp = x.paroles_corrigees || x.paroles_actuelles;
     var styProp = x.prompt_style       || x.prompt_style_actuel;
-    var parSeed = !x.paroles_corrigees && !!x.paroles_actuelles;
-    var stySeed = !x.prompt_style       && !!x.prompt_style_actuel;
-    var noteSeed = '<div class="hint" style="margin:-2px 0 8px">Aucune proposition : depart = version actuelle, edite directement ci-dessous.</div>';
 
     document.getElementById('detail').innerHTML =
       '<div class="meta">' + esc(x.expediteur) + ' &middot; ' + esc(x.sujet) +
@@ -338,87 +340,80 @@
       (x.message ? '<div class="demande"><div class="label">Demande du client</div>' + esc(x.message) + '</div>' : '') +
       panneauAnalyse(x.analyse_ia) +
 
-      '<div class="sectlabel">Paroles &mdash; actuel vs propose</div>' +
-      (parSeed ? noteSeed : '') +
-      champEditable('Actuel (en ligne)', x.paroles_actuelles, 'Propose (editable)', 'ta_paroles', parProp, 'dp') +
+      '<div class="sectlabel">Paroles &mdash; actuel | propose (editable)</div>' +
+      champEditable('Actuel (en ligne)', x.paroles_actuelles, 'Propose (editable)', 'ta_paroles', parProp, 'dp_act') +
 
-      '<div class="sectlabel">Style &mdash; actuel vs propose</div>' +
-      (stySeed ? noteSeed : '') +
-      champEditable('Actuel (en ligne)', x.prompt_style_actuel, 'Propose (editable)', 'ta_style', styProp, 'ds') +
+      '<div class="sectlabel">Style &mdash; actuel | propose (editable)</div>' +
+      champEditable('Actuel (en ligne)', x.prompt_style_actuel, 'Propose (editable)', 'ta_style', styProp, 'ds_act') +
 
       (x.voix ? '<div class="fieldcard" style="max-width:520px"><div class="label">Voix</div><div class="val">' + esc(x.voix) + '</div></div>' : '') +
 
-      '<div class="sectlabel">Appliquer la correction</div>' +
-      '<div class="hint" style="margin-bottom:8px">Choisis la methode. Tes editions ci-dessus sont enregistrees, puis Suno regenere automatiquement (~1 min).</div>' +
-      '<div class="actions">' +
-        '<button class="mbtn solid" onclick="appliquer(\'cover\')">Garder la melodie (cover)</button>' +
-        '<button class="mbtn" onclick="appliquer(\'rege\')">Nouvelle melodie (rege)</button>' +
-        '<button class="ghost" onclick="enregistrer()">Enregistrer sans regenerer</button>' +
-        '<span id="applyState" class="hint"></span>' +
+      blocPrononciation(x) +
+
+      '<div class="sectlabel">Regenerer</div>' +
+      '<div class="hint" style="margin-bottom:8px">Choisis la methode (rien n\'est pre-selectionne). Tes editions sont deja enregistrees (auto).</div>' +
+      '<div class="actions" id="applyBar">' +
+        '<button class="mbtn" onclick="demanderAppliquer(\'rege\')">Nouvelle melodie</button>' +
+        '<button class="mbtn" onclick="demanderAppliquer(\'cover\')">Garder la melodie (cover)</button>' +
+        '<button class="mbtn" onclick="demanderAppliquer(\'paroles\')">Paroles uniquement</button>' +
       '</div>' +
 
       blocRegen(x.regen) +
 
       '<div class="sectlabel">Reponse au client</div>' +
+      '<div class="hint" style="margin-bottom:8px">Reponse finale OU demande de clarification : envoyer un courriel ne declenche AUCUNE regeneration.</div>' +
       '<div class="send">' +
         '<textarea class="edit short" id="ta_reponse">' + esc(courrielDefaut) + '</textarea>' +
-        '<div class="actions" style="margin-top:10px">' +
-          '<button class="mbtn solid" id="sendBtn" onclick="envoyer()"' + (enRege ? ' disabled' : '') + '>Envoyer au client</button>' +
-          '<button class="ghost" onclick="enregistrer()">Enregistrer le brouillon</button>' +
-          '<span class="hint">' + (enRege ? 'En pause : version en cours de regeneration.' : 'Le courriel part dans le fil (~1 min).') + '</span>' +
+        '<div class="actions" id="sendBar" style="margin-top:10px">' +
+          '<button class="mbtn solid" id="sendBtn" onclick="demanderEnvoyer()"' + (enRege ? ' disabled' : '') + '>Envoyer au client</button>' +
+          '<span class="hint">' + (enRege ? 'En pause : version en cours de regeneration.' : '') + '</span>' +
+          '<span id="saveStatut" class="hint" style="margin-left:auto"></span>' +
         '</div>' +
       '</div>';
 
     wireGrow('ta_paroles', recalc);
     wireGrow('ta_style', recalc);
-    wireGrow('ta_reponse');
-  }
-
-  function editions(){
-    function g(id){ var el = document.getElementById(id); return el ? el.value : undefined; }
-    // En mode message simple, ta_paroles/ta_style n'existent pas -> undefined (JSON.stringify les omet).
-    return { paroles_corrigees: g('ta_paroles'), prompt_style: g('ta_style'), reponse: g('ta_reponse') };
-  }
-
-  async function enregistrer(){
-    if (!CUR) return;
-    var e = editions();
-    var r = await post({ id: CUR.id, action: 'save', paroles_corrigees: e.paroles_corrigees, prompt_style: e.prompt_style, reponse: e.reponse });
-    toast(r.ok ? 'Enregistre.' : 'Echec de l\'enregistrement.');
+    if (x.est_prononciation) wireGrow('ta_phon', recalcPhon);
+    wireGrow('ta_reponse', autoSave);
   }
 
   async function appliquer(methode){
     if (!CUR) return;
-    var lib = methode === 'rege' ? 'NOUVELLE melodie (regeneration complete)' : 'meme melodie (cover)';
-    if (!confirm('Appliquer avec ' + lib + ' ?\nTes editions seront enregistrees et la chanson sera regeneree.')) return;
-    document.getElementById('applyState').textContent = 'Envoi...';
-    var e = editions();
-    var r = await post({ id: CUR.id, action: 'appliquer', methode: methode, paroles_corrigees: e.paroles_corrigees, prompt_style: e.prompt_style });
-    if (r.ok) { toast('Regeneration lancee.'); document.getElementById('applyState').textContent = 'Lance (Suno ~1 min).'; }
-    else { toast('Echec.'); document.getElementById('applyState').textContent = 'Echec : ' + esc((r.d && r.d.error) || r.status); }
+    await flushSave();
+    var r = await post({ id: CUR.id, action: 'appliquer', methode: methode });   // le backend lit les editions deja sauvees
+    var bar = document.getElementById('applyBar');
+    if (r.ok) { toast('Regeneration lancee.'); if (bar) bar.innerHTML = '<span class="hint">Regeneration lancee (Suno ~1 min).</span>'; }
+    else { toast('Echec.'); if (bar) bar.innerHTML = '<span class="err">Echec : ' + esc((r.d && r.d.error) || r.status) + '</span>'; }
+  }
+  function demanderAppliquer(methode){
+    var lib = methode === 'rege' ? 'nouvelle melodie' : (methode === 'paroles' ? 'paroles uniquement (melodie + style inchanges)' : 'garder la melodie');
+    confirmInline('applyBar', 'Regenerer (' + lib + ') ?', 'Oui, regenerer', function(){ appliquer(methode); });
   }
 
-  async function appliquerPrononciation(){
+  async function appliquerProno(){
     if (!CUR) return;
-    if (!confirm('Appliquer la correction de prononciation et regenerer ?\nLes paroles affichees au client ne changent pas, seul le son envoye a Suno change.')) return;
-    document.getElementById('applyState').textContent = 'Envoi...';
     var phon = document.getElementById('ta_phon').value;
     var r = await post({ id: CUR.id, action: 'appliquer_prononciation', lyrics_phonetique: phon });
-    if (r.ok) { toast('Regeneration lancee.'); document.getElementById('applyState').textContent = 'Lance (Suno ~1 min).'; }
-    else { toast('Echec.'); document.getElementById('applyState').textContent = 'Echec : ' + esc((r.d && r.d.error) || r.status); }
+    var bar = document.getElementById('pronoBar');
+    if (r.ok) { toast('Regeneration lancee (prononciation).'); if (bar) bar.innerHTML = '<span class="hint">Regeneration lancee (Suno ~1 min).</span>'; }
+    else { toast('Echec.'); if (bar) bar.innerHTML = '<span class="err">Echec : ' + esc((r.d && r.d.error) || r.status) + '</span>'; }
+  }
+  function demanderProno(){
+    confirmInline('pronoBar', 'Regenerer avec le son corrige (paroles affichees inchangees) ?', 'Oui, regenerer', appliquerProno);
   }
 
   async function envoyer(){
     if (!CUR) return;
-    if (!confirm('Envoyer cette reponse au client ?')) return;
+    await flushSave();
     var rep = document.getElementById('ta_reponse').value;
     var r = await post({ id: CUR.id, action: 'envoyer', reponse: rep });
-    if (r.ok) { toast('Reponse programmee (~1 min).'); document.getElementById('sendBtn').disabled = true; }
-    else if (r.status === 409 && r.d && r.d.error === 'rege_en_cours') {
-      toast('Envoi en pause : version en cours de regeneration.');
-      document.getElementById('sendBtn').disabled = true;
-    }
+    var b = document.getElementById('sendBtn');
+    if (r.ok) { toast('Reponse programmee (~1 min).'); if (b) b.disabled = true; }
+    else if (r.status === 409 && r.d && r.d.error === 'rege_en_cours') { toast('Envoi en pause : version en cours de regeneration.'); if (b) b.disabled = true; }
     else { toast('Echec de l\'envoi.'); }
+  }
+  function demanderEnvoyer(){
+    confirmInline('sendBar', 'Envoyer ce courriel au client ?', 'Oui, envoyer', envoyer);
   }
 
   if (KEY) {
