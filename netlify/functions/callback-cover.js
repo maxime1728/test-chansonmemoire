@@ -92,6 +92,8 @@ exports.handler = async (event) => {
     // Pas de Generation pré-créée (regenerate=true / legacy) -> on en crée une (audio_pending) avec les
     // infos de la version source, puis on la livre par le même chemin partagé.
     if (!coverGen) {
+      // Plafond v2 : régé/cover déclenché par l'équipe (marqueur cover_admin) -> admin_triggered (ne compte pas).
+      const adminCover = process.env.PLAFOND_V2 === '1' && !!p.cover_admin;
       const purchasedNo = parseInt(p.purchased_generation_no, 10);
       let src = {};
       if (Number.isInteger(purchasedNo)) {
@@ -101,7 +103,9 @@ exports.handler = async (event) => {
       const newNo = await prochainNo(API, headers, p.project);
       const fields = {
         project: [projet.id], generation_no: newNo, type: 'cover', generation_status: 'audio_pending',
-        post_purchase: true, suno_task_id: taskId,
+        // Plafond v2 : post_purchase = vraie phase (régé d'aperçu compte AVANT achat). Flag OFF -> true en dur.
+        post_purchase: (process.env.PLAFOND_V2 === '1') ? (p.commercial_status === 'purchased') : true,
+        suno_task_id: taskId,
         lyrics: (p.adjusted_lyrics && p.adjusted_lyrics.trim()) || src.lyrics || '',
         song_title: src.song_title || track.title || 'Pour toujours'
       };
@@ -109,9 +113,12 @@ exports.handler = async (event) => {
       if (src.gen_mood)        fields.gen_mood        = src.gen_mood;
       if (src.gen_voice)       fields.gen_voice       = src.gen_voice;
       if (p.pending_cover_style && p.pending_cover_style.trim()) fields.gen_style_prompt = p.pending_cover_style.trim();
+      if (adminCover) fields.admin_triggered = true;
       const rC = await fetch(`${API}/Generations`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
       coverGen = await rC.json();
       if (!coverGen.fields) coverGen.fields = fields;
+      // Vide le marqueur équipe (la régé l'avait laissé pour ce callback ; ne doit pas fuiter au prochain cover).
+      if (adminCover) { try { await fetch(`${API}/Projects/${projet.id}`, { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { cover_admin: false } }) }); } catch (_) {} }
     }
 
     // Livraison PARTAGÉE (_lib/cover) : audio ré-hébergé, Generation -> audio_generated, version basculée si

@@ -176,7 +176,10 @@ exports.handler = async (event) => {
         const fields = {
           project: [projet.id], generation_no: newNo, type: 'cover', generation_status: 'audio_pending',
           version_status: 'en_production',
-          post_purchase: true, suno_task_id: String(taskId),
+          // Plafond v2 : post_purchase = vraie phase (un cover d'aperçu compte AVANT achat). Flag OFF -> ancien
+          // comportement (true en dur) pour rester byte-identique. Pré-achat (pas d'achat) -> false.
+          post_purchase: (process.env.PLAFOND_V2 === '1') ? (p.commercial_status === 'purchased') : true,
+          suno_task_id: String(taskId),
           lyrics: ((p.adjusted_lyrics && p.adjusted_lyrics.trim()) || g.lyrics || '').slice(0, 6000),
           song_title: (g.song_title || 'Pour toujours'),
           gen_style_prompt: style
