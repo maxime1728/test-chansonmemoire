@@ -90,4 +90,13 @@ ${demande}`;
   };
 }
 
-module.exports = { SYSTEM, analyserModif };
+// Libelle « type de correction » pour le cockpit (#18, lecture seule), derive de l'analyse partagee.
+// regeneration -> nouvelle chanson ; cover + style/ambiance touche -> cover ; sinon paroles seules.
+// Valeurs EXACTES = options du singleSelect Conversations.type_correction (fldg1TDQ7grDQQVZw).
+function typeCorrection({ mode, categories } = {}) {
+  if (mode === 'regeneration') return 'nouvelle chanson (régé)';
+  if (/style|ambiance/.test((categories || '').toLowerCase())) return 'cover (mélodie gardée)';
+  return 'paroles seules';
+}
+
+module.exports = { SYSTEM, analyserModif, typeCorrection };

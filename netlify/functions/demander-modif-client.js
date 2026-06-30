@@ -21,7 +21,7 @@
 // Sécurité : POST, UUID v4 strict, formule échappée, secrets en env. Aucun effet Suno direct (passe par cover-cron).
 // Env : ANTHROPIC_API_KEY, AIRTABLE_TOKEN, AIRTABLE_BASE_ID.
 
-const { analyserModif } = require('./_lib/analyse-modif');
+const { analyserModif, typeCorrection } = require('./_lib/analyse-modif');
 const { styleFor, cataloguePourAmbiance } = require('./_lib/style');
 const { coverEnVol } = require('./_lib/cover');
 
@@ -153,6 +153,7 @@ exports.handler = async (event) => {
             statut:           'a_verifier',
             categorie_ia:     'modification',
             paroles_corrigees: adjLyrics,
+            type_correction:  typeCorrection({ mode: res.mode, categories: res.categories }),
             modif_pregeneree: true,
             Projet:           [projet.id]
           } })

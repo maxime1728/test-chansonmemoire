@@ -22,7 +22,7 @@ const SECRET  = process.env.DECORTIQUE_SECRET || '';
 
 const PROJECTS = 'Projects', GENERATIONS = 'Generations', CONVOS = 'tbl3KBgXthCPromxF';
 
-const { analyserModif } = require('./_lib/analyse-modif');
+const { analyserModif, typeCorrection } = require('./_lib/analyse-modif');
 const { piedAuto } = require('./_lib/pied-courriel');
 const { styleFor, cataloguePourAmbiance } = require('./_lib/style');
 
@@ -113,7 +113,7 @@ Bonne nouvelle${surNom} : votre nouvelle version est prête. Vous pouvez l'écou
 ${piedAuto()}`;
       // paroles_corrigees / prompt_style : versions EDITABLES visibles dans la vue Modifications (l'equipe ajuste
       // puis coche `appliquer` -> appliquer-modification les pousse sur le Projet). Brouillon = reponse client.
-      const champsConvo = { brouillon_ia: brouillon, confiance_ia: 'basse', paroles_corrigees: adjLyrics, prompt_style: adjStyle, modif_pregeneree: true };
+      const champsConvo = { brouillon_ia: brouillon, confiance_ia: 'basse', paroles_corrigees: adjLyrics, prompt_style: adjStyle, modif_pregeneree: true, type_correction: typeCorrection({ mode, categories }) };
       if (genRec) champsConvo.generation_a_travailler = [genRec.id];   // pre-remplit la version de reference (achetee/plus recente), modifiable a la main
       try { await patch(CONVOS, convoId, champsConvo); } catch (_) {}
     }
