@@ -728,10 +728,13 @@ setTimeout(checkReady, 20000); /* premier check après 20 secondes */
    rediriger vers l'aperçu quand la chanson est prête (un éventuel hash #video est préservé). */
 (function(){
   var t = getToken(); if(!t) return;
+  /* En mode modification (maj), on transmet aussi maj/base -> l'onglet exemple redirige sur la NOUVELLE
+     version de paroles (lire-versions), pas seulement sur l'audio prêt. */
+  var majQS = MAJ ? ('&maj=1&base=' + encodeURIComponent(BASE)) : '';
   document.querySelectorAll('a.r-card[href^="exemple-"]').forEach(function(a){
     var h = a.getAttribute('href'), hash = '', i = h.indexOf('#');
     if(i >= 0){ hash = h.slice(i); h = h.slice(0, i); }
-    a.setAttribute('href', h + '?id=' + encodeURIComponent(t) + hash);
+    a.setAttribute('href', h + '?id=' + encodeURIComponent(t) + majQS + hash);
   });
 })();
 

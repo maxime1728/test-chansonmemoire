@@ -20,6 +20,8 @@ PROMPT STYLE (adjusted_style_prompt, en anglais) : tu recois le PROMPT DE STYLE 
 - Garde TOUJOURS l'accent present a la fin du prompt actuel ("Quebec French accent, Canadian French" ou l'accent de la langue). Ne le retire jamais.
 - JAMAIS de noms d'artistes ni de titres de chansons existantes dans le prompt. NE mentionne JAMAIS le genre de la voix ("male voice" / "female voice", "homme", "femme") : la voix est geree separement.
 
+PRONONCIATION (si la categorie "prononciation" s'applique) : le chanteur est une IA (Suno) qui ne lit QUE le TEXTE des paroles, on ne peut PAS lui donner une consigne orale comme a un humain. Le SEUL moyen de corriger un mot mal prononce = le REECRIRE phonetiquement dans les paroles, pour qu'il sonne juste en etant lu a voix haute selon les regles du francais (ex. "Roxanne" mal dit -> "Rocksane" ; "Ghislaine" -> "Jislaine" ; "juin" souvent chante "joint" -> "ju-un"). Pieges : "ou" se lit toujours "ou" ; "ch" se lit "ch" (jamais "tch") ; "g" devant e/i se lit "j" (pour un g dur, ecris "gu"). Dans compte_rendu, decris la REECRITURE phonetique proposee, JAMAIS "dire au chanteur de...". Applique cette reecriture dans adjusted_lyrics (seulement le/les mot(s) concerne(s), garde tout le reste intact).
+
 PAROLES AJUSTEES (en francais quebecois), UNIQUEMENT si la demande touche paroles/souvenirs/prononciation :
 - Garde TOUT ce qui fonctionne ; applique SEULEMENT la demande. N'invente AUCUN fait, nom ni lieu.
 - Sinon, renvoie une chaine vide "".

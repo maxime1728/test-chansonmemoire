@@ -185,7 +185,7 @@
     <div class="section-title">Sa vidéo souvenir</div>
     <p class="section-sub">Un montage de ses photos au fil des paroles, porté par sa chanson.</p>
     <div class="video-frame">
-      <video src="https://res.cloudinary.com/dcx1tfm47/video/upload/v1782528297/video-memoire/memoire_8f42d53a-627e-4370-be0f-2dba1683325b.mp4" poster="https://res.cloudinary.com/dcx1tfm47/video/upload/so_2/v1782528297/video-memoire/memoire_8f42d53a-627e-4370-be0f-2dba1683325b.jpg" controls preload="metadata" playsinline></video>
+      <video src="https://res.cloudinary.com/dcx1tfm47/video/upload/v1782528297/video-memoire/memoire_8f42d53a-627e-4370-be0f-2dba1683325b.mp4" poster="https://res.cloudinary.com/dcx1tfm47/video/upload/so_2/v1782528297/video-memoire/memoire_8f42d53a-627e-4370-be0f-2dba1683325b.jpg" controls preload="none" playsinline></video>
     </div>
   </div>
 
@@ -331,7 +331,7 @@
     function showVideo(url){
       f.innerHTML = '';
       var v = document.createElement('video');
-      v.src = url; v.controls = true; v.preload = 'metadata'; v.setAttribute('playsinline','');
+      v.src = url; v.controls = true; v.preload = 'none'; v.setAttribute('playsinline','');   /* poster instantané, la vidéo ne charge qu'au clic Play */
       var p = posterFor(url); if(p) v.setAttribute('poster', p);
       f.appendChild(v);
     }
@@ -443,17 +443,30 @@
       sessionStorage.setItem('cm_ex_intro_seen','1');
     }
   }catch(_){}
+  /* Deux modes, comme la page d'attente : MAJ (modification/cover) attend une nouvelle VERSION de paroles
+     plus récente que la baseline (lire-versions) ; sinon on attend que l'AUDIO soit prêt (lire-projet). */
+  var qs=new URLSearchParams(location.search);
+  var MAJ = qs.get('maj')==='1';
+  var BASE = parseInt(qs.get('base'),10) || 0;
   var done=false, tries=0;
+  function go(){ if(done) return; done=true; location.href='/apercu?id='+encodeURIComponent(token); }
   function check(){
     if(done) return;
-    if(++tries>90){ return; }   /* ~30 min max */
-    fetch('/api/lire-projet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token}),cache:'no-store'})
-      .then(function(r){ return r.ok?r.json():null; })
-      .then(function(d){ if(d && d.statut==='audio_generated' && !done){ done=true; location.href='/apercu?id='+encodeURIComponent(token); } })
-      .catch(function(){});
+    if(++tries>240){ return; }   /* ~32 min max (poll 8 s) */
+    if(MAJ){
+      fetch('/api/lire-versions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token}),cache:'no-store'})
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(d){ var n=(d&&d.versions&&d.versions.length)||0; if(n>BASE) go(); })
+        .catch(function(){});
+    } else {
+      fetch('/api/lire-projet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token}),cache:'no-store'})
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(d){ if(d && d.statut==='audio_generated') go(); })
+        .catch(function(){});
+    }
   }
-  setInterval(check,20000);
-  setTimeout(check,20000);
+  setTimeout(check,1500);     /* 1er check quasi immédiat -> redirige tout de suite si déjà prêt */
+  setInterval(check,8000);    /* puis toutes les 8 s (avant : 1er check à 20 s seulement) */
 })();
 </script>
   <!-- Popup « page exemple » pour les visiteurs SANS token (navigation libre) : réutilise la même

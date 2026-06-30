@@ -28,7 +28,7 @@ const REC_ID   = /^rec[A-Za-z0-9]{14}$/;
 const { fullAudioUrl } = require('./_lib/cover');
 
 // action_modif : valeurs EXACTES attendues par appliquer-cron / appliquer-modification.
-const ACTION_MODIF = { cover: 'Refaire le cover (même mélodie)', rege: 'Régénérer (nouvelle mélodie)' };
+const ACTION_MODIF = { cover: 'Refaire le cover (même mélodie)', rege: 'Régénérer (nouvelle mélodie)', paroles: 'Refaire le cover (même mélodie)' };
 const ENVOI_VAL    = 'Envoyer la réponse';
 
 // Les lookups (paroles_actuelles, voix, prompt_style_actuel) arrivent en tableau -> aplatis en texte.
@@ -161,9 +161,12 @@ exports.handler = async (event) => {
       if (action === 'appliquer') {
         const methode = (body.methode || '').toString();
         const valeur = ACTION_MODIF[methode];
-        if (!valeur) return fail(400, { error: 'methode invalide (cover|rege)' });
-        // Enregistre les éditions ET arme le déclencheur en un seul PATCH (appliquer-modification relit ces champs).
-        const r = await patchConvo(headers, id, { ...edits, action_modif: valeur });
+        if (!valeur) return fail(400, { error: 'methode invalide (cover|rege|paroles)' });
+        // Les éditions sont déjà sauvées (auto-save). « Paroles uniquement » = cover qui NE touche PAS le style :
+        // on vide prompt_style -> appliquer-modification ne pousse pas adjusted_style_prompt (style inchangé).
+        const champs = { ...edits, action_modif: valeur };
+        if (methode === 'paroles') champs.prompt_style = '';
+        const r = await patchConvo(headers, id, champs);
         if (!r.ok) return fail(502, { error: 'Application échouée', detail: await r.text().catch(() => '') });
         return ok({ ok: true, applied: methode });
       }
@@ -261,8 +264,9 @@ exports.handler = async (event) => {
       lyrics_phonetique:   corr.lyrics_phonetique || '',
       gen_id:              corr.gen_id || '',
       est_prononciation:   estModif && estProno,
-      // mode : 'prononciation' (vue dédiée) > 'modification' (avant/après cover/régé) > 'message' (valider+envoyer).
-      mode: !estModif ? 'message' : (estProno ? 'prononciation' : 'modification'),
+      // mode : 'modification' (avant/après + bloc prononciation si pertinent) ou 'message' (valider+envoyer).
+      // est_prononciation reste un FLAG (le bloc phonétique s'affiche DANS la vue modif, géré avec les paroles).
+      mode: estModif ? 'modification' : 'message',
       regen   // null, ou { statut, titre, no, audio_url }
     };
     return ok({ ok: true, detail });
