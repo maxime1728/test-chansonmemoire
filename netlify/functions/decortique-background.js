@@ -23,6 +23,7 @@ const SECRET  = process.env.DECORTIQUE_SECRET || '';
 const PROJECTS = 'Projects', GENERATIONS = 'Generations', CONVOS = 'tbl3KBgXthCPromxF';
 
 const { analyserModif, typeCorrection } = require('./_lib/analyse-modif');
+const { upsertMot } = require('./_lib/lexique');   // dictionnaire phonétique (étape 2)
 const { piedAuto } = require('./_lib/pied-courriel');
 const { styleFor, cataloguePourAmbiance } = require('./_lib/style');
 
@@ -84,7 +85,7 @@ exports.handler = async (event) => {
     const catalogue = await cataloguePourAmbiance({ mood: gen.gen_mood || p.mood, cadeau: p.song_type === 'cadeau', language: p.language });
 
     // 2. Analyse partagee (Claude) : categories + compte-rendu + prompt style (ajuste depuis l'actuel) + paroles. Best-effort.
-    const { categories, mode, compteRendu: crIA, adjStyle, adjLyrics, phonetique } = await analyserModif({ apiKey, demande, p, gen, styleActuel, catalogue });
+    const { categories, mode, compteRendu: crIA, adjStyle, adjLyrics, phonetique, prononciations } = await analyserModif({ apiKey, demande, p, gen, styleActuel, catalogue });
     const compteRendu = crIA || '(analyse automatique indisponible, a traiter manuellement)';
 
     // 3. Enrichit le Projet : SEULEMENT le compte-rendu lisible (correction_request) + le mode (mode_correction,
@@ -126,6 +127,15 @@ ${piedAuto()}`;
     if (genRec && adjLyrics && adjLyrics.trim()) {
       const valPhon = (phonetique && phonetique.trim()) ? phonetique.trim() : '';
       try { await patch(GENERATIONS, genRec.id, { lyrics_phonetique: valPhon }); } catch (_) {}
+    }
+
+    // 5. DICTIONNAIRE PHONÉTIQUE (étape 2) : apprend les mots corrigés (global par langue) -> appliqués
+    //    automatiquement partout (étape 3). Best-effort, ne bloque jamais.
+    if (Array.isArray(prononciations) && prononciations.length) {
+      const langue = p.language || 'fr-CA';
+      for (const pr of prononciations) {
+        try { await upsertMot(API, headers, { langue, mot: pr.mot, phonetique: pr.phonetique, source: 'analyse' }); } catch (_) {}
+      }
     }
 
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };

@@ -17,6 +17,7 @@ const MG_FROM    = process.env.MAILGUN_FROM || 'Chanson Mémoire <info@chansonme
 const TEAM_EMAIL = process.env.TEAM_NOTIFY_EMAIL;   // destinataire de l'alerte interne
 const SITE       = 'https://chansonmemoire.ca';
 const CONVOS     = 'tbl3KBgXthCPromxF';   // table Conversations (cockpit support / modifications)
+const { upsertMot } = require('./_lib/lexique');   // dictionnaire phonétique (étape 2)
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -157,6 +158,12 @@ ${(lyrics || '').slice(0, 2500)}`;
           });
         }
       } catch (_) { /* le stockage phonétique ne bloque jamais l'alerte équipe */ }
+    }
+
+    // 3b-bis. DICTIONNAIRE PHONÉTIQUE (étape 2) : on apprend le mot -> réécriture (global par langue) pour
+    //         que ce mot soit corrigé automatiquement partout. Best-effort, ne bloque jamais.
+    if (mot && phonetique) {
+      try { await upsertMot(API, headers, { langue: p.language || 'fr-CA', mot, phonetique, source: 'prononciation' }); } catch (_) {}
     }
 
     // 3c. #12 — Enregistre une DEMANDE À APPROUVER dans Airtable (trace + workflow approbation -> cover).

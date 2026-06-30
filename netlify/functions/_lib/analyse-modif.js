@@ -20,7 +20,7 @@ PROMPT STYLE (adjusted_style_prompt, en anglais) : tu recois le PROMPT DE STYLE 
 - Garde TOUJOURS l'accent present a la fin du prompt actuel ("Quebec French accent, Canadian French" ou l'accent de la langue). Ne le retire jamais.
 - JAMAIS de noms d'artistes ni de titres de chansons existantes dans le prompt. NE mentionne JAMAIS le genre de la voix ("male voice" / "female voice", "homme", "femme") : la voix est geree separement.
 
-PRONONCIATION (si la categorie "prononciation" s'applique) : le chanteur est une IA (Suno) qui ne lit QUE le TEXTE des paroles, on ne peut PAS lui donner une consigne orale comme a un humain. Le SEUL moyen de corriger un mot mal prononce = le REECRIRE phonetiquement dans les paroles, pour qu'il sonne juste en etant lu a voix haute selon les regles du francais (ex. "Roxanne" mal dit -> "Rocksane" ; "Ghislaine" -> "Jislaine" ; "juin" souvent chante "joint" -> "ju-un"). Pieges : "ou" se lit toujours "ou" ; "ch" se lit "ch" (jamais "tch") ; "g" devant e/i se lit "j" (pour un g dur, ecris "gu"). Dans compte_rendu, decris la REECRITURE phonetique proposee, JAMAIS "dire au chanteur de...". DEUX sorties distinctes : (1) adjusted_lyrics = les paroles AFFICHEES au client, en mots CLAIRS et lisibles (PAS de reecriture phonetique ; si la demande ne change pas le texte affiche, renvoie les paroles actuelles inchangees). (2) lyrics_phonetique = les MEMES paroles mais avec le/les mot(s) mal prononce(s) reecrits phonetiquement (ce qui est envoye a Suno) ; garde tout le reste intact. Si AUCUNE prononciation a corriger, lyrics_phonetique = chaine vide "".
+PRONONCIATION (si la categorie "prononciation" s'applique) : le chanteur est une IA (Suno) qui ne lit QUE le TEXTE des paroles, on ne peut PAS lui donner une consigne orale comme a un humain. Le SEUL moyen de corriger un mot mal prononce = le REECRIRE phonetiquement dans les paroles, pour qu'il sonne juste en etant lu a voix haute selon les regles du francais (ex. "Roxanne" mal dit -> "Rocksane" ; "Ghislaine" -> "Jislaine" ; "juin" souvent chante "joint" -> "ju-un"). Pieges : "ou" se lit toujours "ou" ; "ch" se lit "ch" (jamais "tch") ; "g" devant e/i se lit "j" (pour un g dur, ecris "gu"). Dans compte_rendu, decris la REECRITURE phonetique proposee, JAMAIS "dire au chanteur de...". DEUX sorties distinctes : (1) adjusted_lyrics = les paroles AFFICHEES au client, en mots CLAIRS et lisibles (PAS de reecriture phonetique ; si la demande ne change pas le texte affiche, renvoie les paroles actuelles inchangees). (2) lyrics_phonetique = les MEMES paroles mais avec le/les mot(s) mal prononce(s) reecrits phonetiquement (ce qui est envoye a Suno) ; garde tout le reste intact. Si AUCUNE prononciation a corriger, lyrics_phonetique = chaine vide "". LISTE AUSSI chaque mot corrige dans le champ "prononciations" : un tableau d'objets {mot, phonetique} = le mot TEL QU'ECRIT dans les paroles claires + sa reecriture. Tableau vide [] si aucune prononciation a corriger.
 
 PAROLES AJUSTEES (en francais quebecois), UNIQUEMENT si la demande touche paroles/souvenirs/prononciation :
 - Garde TOUT ce qui fonctionne ; applique SEULEMENT la demande. N'invente AUCUN fait, nom ni lieu.
@@ -31,14 +31,14 @@ VOIX DE MARQUE : solution-first, digne, jamais ouvrir sur le deuil ; pas de clic
 TYPOGRAPHIE : n'utilise JAMAIS le tiret cadratin/long (—) dans tes textes (compte_rendu, paroles) ; mets une virgule, un deux-points, une parenthese ou un point a la place.
 
 SORTIE, reponds UNIQUEMENT avec un objet JSON valide, sans texte autour, guillemets droits :
-{"categories":["..."],"mode":"cover","compte_rendu":"<resume clair pour l'equipe, en francais>","adjusted_style_prompt":"<prompt actuel inchange, OU ajuste/sur mesure selon la demande, jamais plus court>","adjusted_lyrics":"<paroles AFFICHEES ajustees, mots clairs, en quebecois OU chaine vide>","lyrics_phonetique":"<memes paroles avec les mots mal prononces reecrits phonetiquement pour Suno ; vide si aucune prononciation>"}`;
+{"categories":["..."],"mode":"cover","compte_rendu":"<resume clair pour l'equipe, en francais>","adjusted_style_prompt":"<prompt actuel inchange, OU ajuste/sur mesure selon la demande, jamais plus court>","adjusted_lyrics":"<paroles AFFICHEES ajustees, mots clairs, en quebecois OU chaine vide>","lyrics_phonetique":"<memes paroles avec les mots mal prononces reecrits phonetiquement pour Suno ; vide si aucune prononciation>","prononciations":[{"mot":"<mot tel qu'ecrit>","phonetique":"<sa reecriture pour Suno>"}]}`;
 
 // p = champs du Projet ; gen = champs de la Generation de reference ; demande = texte client ;
 // styleActuel = prompt de style riche de la version de reference ; catalogue = [{style, prompt}] de l'ambiance.
 // Renvoie { ok, categories, mode, compteRendu, adjStyle, adjLyrics }. adjStyle retombe TOUJOURS sur styleActuel
 // si Claude echoue ou renvoie vide (on ne perd jamais le prompt riche).
 async function analyserModif({ apiKey, demande, p = {}, gen = {}, styleActuel = '', catalogue = [] }) {
-  const defaut = { ok: false, categories: '', mode: 'cover', compteRendu: '', adjStyle: styleActuel || '', adjLyrics: '' };
+  const defaut = { ok: false, categories: '', mode: 'cover', compteRendu: '', adjStyle: styleActuel || '', adjLyrics: '', prononciations: [] };
   if (!apiKey || !demande) return defaut;
 
   const cat = (Array.isArray(catalogue) ? catalogue : [])
@@ -89,7 +89,14 @@ ${demande}`;
     compteRendu: (parsed.compte_rendu || '').toString().slice(0, 3000),
     adjStyle:    ((parsed.adjusted_style_prompt || '').toString().slice(0, 2500)) || styleActuel || '',
     adjLyrics:   (parsed.adjusted_lyrics || '').toString().slice(0, 6000),
-    phonetique:  (parsed.lyrics_phonetique || '').toString().slice(0, 6000)   // paroles pour Suno (mots réécrits) ; vide si pas de prononciation
+    phonetique:  (parsed.lyrics_phonetique || '').toString().slice(0, 6000),   // paroles pour Suno (mots réécrits) ; vide si pas de prononciation
+    // Liste des mots corrigés en prononciation {mot, phonetique} -> alimente le dictionnaire (étape 2).
+    prononciations: Array.isArray(parsed.prononciations)
+      ? parsed.prononciations
+          .filter((x) => x && x.mot && x.phonetique)
+          .map((x) => ({ mot: String(x.mot).trim().slice(0, 80), phonetique: String(x.phonetique).trim().slice(0, 80) }))
+          .slice(0, 20)
+      : []
   };
 }
 
