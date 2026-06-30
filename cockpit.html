@@ -6,40 +6,82 @@
 <meta name="robots" content="noindex,nofollow">
 <title>Cockpit corrections</title>
 <style>
-  :root { --plum:#5C2D4A; --cream:#F5F0EA; --ink:#2E1A28; --muted:#7A6070; --line:#E5DAE0; --propbg:#FCF7FA; --propline:#D8B7CC; }
+  :root { --plum:#5C2D4A; --cream:#F5F0EA; --ink:#2E1A28; --muted:#7A6070; --line:#E5DAE0; --propbg:#FCF7FA; --propline:#D8B7CC;
+          --del:#b00020; --delbg:#FBE9EC; --ins:#1E7A43; --insbg:#E7F5EC; --warn:#9A5B00; --warnbg:#FFF4E0; }
   * { box-sizing:border-box; }
   body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--cream); }
-  header { background:var(--plum); color:#fff; padding:12px 18px; font-size:16px; font-weight:600; }
+  header { background:var(--plum); color:#fff; padding:12px 18px; font-size:16px; font-weight:600; display:flex; align-items:center; gap:14px; }
+  header .grow { flex:1; }
+  header button { background:rgba(255,255,255,.16); color:#fff; border:none; padding:7px 12px; border-radius:7px; font-size:13px; cursor:pointer; }
+  @media (hover:hover) { header button:hover { background:rgba(255,255,255,.28); } }
+
   #gate { max-width:360px; margin:80px auto; background:#fff; padding:24px; border-radius:12px; border:1px solid var(--line); }
   #gate label { font-size:14px; color:var(--muted); }
   #gate input { width:100%; padding:10px; font-size:15px; border:1px solid var(--line); border-radius:8px; margin:10px 0; }
   button.btn { background:var(--plum); color:#fff; border:none; padding:10px 16px; border-radius:8px; font-size:14px; cursor:pointer; }
-  button.btn:hover { opacity:.92; }
-  #app { display:none; grid-template-columns:320px 1fr; height:calc(100vh - 46px); }
+  @media (hover:hover) { button.btn:hover { opacity:.92; } }
+
+  #app { display:none; grid-template-columns:320px 1fr; height:calc(100vh - 47px); transition:grid-template-columns .18s ease; }
+  #app.collapsed { grid-template-columns:0 1fr; }
+  #app.collapsed #liste { display:none; }
   #liste { border-right:1px solid var(--line); overflow:auto; background:#fff; }
   .item { padding:12px 16px; border-bottom:1px solid var(--line); cursor:pointer; }
-  .item:hover { background:var(--cream); }
+  @media (hover:hover) { .item:hover { background:var(--cream); } }
   .item.sel { background:#F3E8EF; }
   .item .from { font-size:13px; font-weight:600; }
   .item .subj { font-size:12px; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .chip { display:inline-block; font-size:11px; background:#F3E8EF; color:var(--plum); padding:2px 8px; border-radius:10px; margin-top:6px; }
-  #detail { overflow:auto; padding:18px 22px; }
-  .meta { font-size:13px; color:var(--muted); margin-bottom:14px; }
+
+  #detail { overflow:auto; padding:18px 24px 60px; }
+  .meta { font-size:14px; margin-bottom:6px; }
+  .meta b { color:var(--plum); }
+  .demande { background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin:10px 0 18px; font-size:13.5px; line-height:1.55; white-space:pre-wrap; }
+  .demande .label, .sectlabel { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+  .sectlabel { margin:22px 0 8px; font-weight:700; }
+
   .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
   .col h3 { font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:0 0 8px; }
   .col.prop h3 { color:var(--plum); }
   .fieldcard { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
   .col.prop .fieldcard { border-color:var(--propline); background:var(--propbg); }
-  .label { font-size:11px; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.4px; }
-  .val { font-size:14px; line-height:1.6; white-space:pre-wrap; }
+  .label { font-size:11px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.4px; }
+  .val { font-size:14px; line-height:1.7; white-space:pre-wrap; word-break:break-word; }
   .dim { color:#bbb; }
+  textarea.edit { width:100%; min-height:150px; font:inherit; font-size:14px; line-height:1.7; color:var(--ink); border:1px solid var(--propline); border-radius:8px; padding:10px 12px; background:#fff; resize:vertical; }
+  textarea.short { min-height:90px; }
+  .preview { margin-top:8px; }
+  .preview .label { display:flex; align-items:center; gap:8px; }
+
+  .d-del { color:var(--del); background:var(--delbg); text-decoration:line-through; border-radius:3px; padding:0 1px; }
+  .d-ins { color:var(--ins); background:var(--insbg); border-radius:3px; padding:0 1px; }
+  .legend { font-size:11px; color:var(--muted); margin:2px 0 0; }
+  .legend .s { padding:0 4px; border-radius:3px; }
+
+  .actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:6px 0 4px; }
+  .mbtn { border:1px solid var(--plum); background:#fff; color:var(--plum); padding:10px 16px; border-radius:9px; font-size:14px; font-weight:600; cursor:pointer; }
+  @media (hover:hover) { .mbtn:hover { background:#F3E8EF; } }
+  .mbtn.solid { background:var(--plum); color:#fff; }
+  .ghost { background:transparent; border:1px solid var(--line); color:var(--muted); padding:10px 14px; border-radius:9px; font-size:13px; cursor:pointer; }
+  .hint { font-size:12px; color:var(--muted); }
+
+  .regen { border:1px solid var(--propline); border-radius:10px; padding:12px 14px; background:#fff; margin:6px 0 4px; }
+  .badge { display:inline-block; font-size:12px; font-weight:600; padding:3px 10px; border-radius:11px; }
+  .badge.prod { background:var(--warnbg); color:var(--warn); }
+  .badge.prete { background:var(--insbg); color:var(--ins); }
+  .regen audio { width:100%; margin-top:10px; }
+
+  .send button[disabled] { opacity:.45; cursor:not-allowed; }
   .empty { color:var(--muted); padding:48px 24px; text-align:center; }
   .err { color:#b00020; font-size:13px; margin-top:8px; }
-  .phase2 { margin-top:18px; padding:12px 14px; border:1px dashed var(--propline); border-radius:10px; font-size:13px; color:var(--muted); background:#fff; }
+  #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:11px 18px; border-radius:9px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .2s; z-index:50; }
+  #toast.show { opacity:1; }
 </style>
 </head>
 <body>
-<header>Cockpit corrections</header>
+<header>
+  <button id="toggleBtn" onclick="toggleListe()" style="display:none">Masquer la liste</button>
+  <span class="grow">Cockpit corrections</span>
+</header>
 
 <div id="gate">
   <label for="pass">Mot de passe</label>
@@ -53,32 +95,81 @@
   <div id="detail"><div class="empty">Choisis une conversation a gauche.</div></div>
 </div>
 
+<div id="toast"></div>
+
 <script>
   var KEY_STORE = 'cockpit_key';
   var KEY = sessionStorage.getItem(KEY_STORE) || '';
+  var CUR = null;   // detail courant (sert au recalcul du diff live)
 
   function esc(s){ return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove('show');},2600); }
 
-  async function api(params) {
+  async function api(params){
     var r = await fetch('/api/cockpit-data' + (params || ''), { headers: { 'x-cockpit-key': KEY } });
     if (r.status === 401) throw new Error('401');
     return r.json();
   }
+  async function post(payload){
+    var r = await fetch('/api/cockpit-data', { method:'POST', headers:{ 'x-cockpit-key':KEY, 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
+    var d = await r.json().catch(function(){ return {}; });
+    return { ok:r.ok, status:r.status, d:d };
+  }
 
-  async function entrer() {
+  // ── DIFF AU MOT (miroir de _lib/word-diff.js, testé côté serveur) ────────────────────────────────
+  function tokenize(s){ return String(s==null?'':s).replace(/\r\n/g,'\n').match(/\n|[^\s]+/g) || []; }
+  function diffMots(a, b){
+    var A=tokenize(a), B=tokenize(b), n=A.length, m=B.length;
+    var dp=[]; for(var i=0;i<=n;i++){ dp[i]=new Int32Array(m+1); }
+    for(var i=n-1;i>=0;i--) for(var j=m-1;j>=0;j--) dp[i][j]= A[i]===B[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+    var out=[], i=0, j=0;
+    while(i<n && j<m){
+      if(A[i]===B[j]){ out.push({op:'eq',text:A[i]}); i++; j++; }
+      else if(dp[i+1][j]>=dp[i][j+1]){ out.push({op:'del',text:A[i]}); i++; }
+      else { out.push({op:'ins',text:B[j]}); j++; }
+    }
+    while(i<n){ out.push({op:'del',text:A[i]}); i++; }
+    while(j<m){ out.push({op:'ins',text:B[j]}); j++; }
+    return out;
+  }
+  // side : 'actuel' (montre les retraits barrés) | 'propose' (montre les ajouts verts)
+  function renderDiff(actuel, propose, side){
+    var diff=diffMots(actuel, propose), html='', prevWord=false;
+    for(var k=0;k<diff.length;k++){
+      var op=diff[k].op, t=diff[k].text;
+      if(side==='actuel' && op==='ins') continue;
+      if(side==='propose' && op==='del') continue;
+      if(t==='\n'){ html+='<br>'; prevWord=false; continue; }
+      if(prevWord) html+=' ';
+      var cls = op==='del' ? 'd-del' : (op==='ins' ? 'd-ins' : '');
+      html += cls ? '<span class="'+cls+'">'+esc(t)+'</span>' : esc(t);
+      prevWord=true;
+    }
+    return html || '<span class="dim">vide</span>';
+  }
+
+  async function entrer(){
     KEY = document.getElementById('pass').value.trim();
     try {
       var d = await api('');
       sessionStorage.setItem(KEY_STORE, KEY);
-      document.getElementById('gate').style.display = 'none';
-      document.getElementById('app').style.display = 'grid';
-      afficher(d);
+      ouvrirApp(); afficher(d);
     } catch (e) {
       document.getElementById('gateErr').textContent = 'Mot de passe invalide.';
     }
   }
+  function ouvrirApp(){
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'grid';
+    document.getElementById('toggleBtn').style.display = 'inline-block';
+  }
+  function toggleListe(){
+    var app=document.getElementById('app'), b=document.getElementById('toggleBtn');
+    app.classList.toggle('collapsed');
+    b.textContent = app.classList.contains('collapsed') ? 'Afficher la liste' : 'Masquer la liste';
+  }
 
-  function afficher(d) {
+  function afficher(d){
     if (d && d.ok === false) {
       document.getElementById('liste').innerHTML =
         '<div class="empty">Erreur Airtable (' + esc(d.status) + ' ' + esc(d.detail) + ').<br><br>' +
@@ -87,12 +178,11 @@
     }
     rendreListe((d && d.liste) || []);
   }
-
-  function rendreListe(liste) {
+  function rendreListe(liste){
     var el = document.getElementById('liste');
     if (!liste.length) { el.innerHTML = '<div class="empty">Aucune conversation a traiter.</div>'; return; }
     el.innerHTML = liste.map(function (c) {
-      return '<div class="item" onclick="ouvrir(\'' + c.id + '\', this)">' +
+      return '<div class="item" data-id="' + esc(c.id) + '" onclick="ouvrir(\'' + c.id + '\', this)">' +
         '<div class="from">' + esc(c.expediteur) + '</div>' +
         '<div class="subj">' + esc(c.sujet) + '</div>' +
         (c.type_correction ? '<span class="chip">' + esc(c.type_correction) + '</span>' : '') +
@@ -100,43 +190,143 @@
     }).join('');
   }
 
-  function bloc(label, valeur) {
-    return '<div class="fieldcard"><div class="label">' + label + '</div><div class="val">' +
-      (valeur ? esc(valeur) : '<span class="dim">vide</span>') + '</div></div>';
+  // ── DÉTAIL ───────────────────────────────────────────────────────────────────────────────────────
+  function champEditable(titreActuel, valActuelle, titreProp, idTextarea, valProp, idApercu){
+    return '<div class="cols">' +
+      '<div class="col">' +
+        '<h3>' + titreActuel + '</h3>' +
+        '<div class="fieldcard"><div class="val" id="' + idApercu + '_act">' + renderDiff(valActuelle, valProp, 'actuel') + '</div></div>' +
+      '</div>' +
+      '<div class="col prop">' +
+        '<h3>' + titreProp + '</h3>' +
+        '<div class="fieldcard">' +
+          '<textarea class="edit" id="' + idTextarea + '">' + esc(valProp) + '</textarea>' +
+          '<div class="preview"><div class="label">Apercu surligne ' +
+            '<span class="legend"><span class="s d-del">retire</span> <span class="s d-ins">ajoute</span></span></div>' +
+            '<div class="val" id="' + idApercu + '_prev">' + renderDiff(valActuelle, valProp, 'propose') + '</div></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
   }
 
-  async function ouvrir(id, node) {
+  function recalc(){
+    if (!CUR) return;
+    var par = document.getElementById('ta_paroles').value;
+    var sty = document.getElementById('ta_style').value;
+    document.getElementById('dp_act').innerHTML  = renderDiff(CUR.paroles_actuelles, par, 'actuel');
+    document.getElementById('dp_prev').innerHTML = renderDiff(CUR.paroles_actuelles, par, 'propose');
+    document.getElementById('ds_act').innerHTML  = renderDiff(CUR.prompt_style_actuel, sty, 'actuel');
+    document.getElementById('ds_prev').innerHTML = renderDiff(CUR.prompt_style_actuel, sty, 'propose');
+  }
+
+  function blocRegen(regen){
+    if (!regen || !regen.statut) return '';
+    if (regen.statut === 'en_production') {
+      return '<div class="sectlabel">Version regeneree</div>' +
+        '<div class="regen"><span class="badge prod">Regeneration en cours</span>' +
+        '<div class="hint" style="margin-top:8px">Suno produit la nouvelle version. L\'envoi au client est en pause : il se reactivera quand la version sera prete a revoir.</div></div>';
+    }
+    // prête
+    return '<div class="sectlabel">Version regeneree a revoir' + (regen.no ? ' (V' + esc(regen.no) + ')' : '') + '</div>' +
+      '<div class="regen"><span class="badge prete">Prete a revoir</span>' +
+      (regen.titre ? ' <span class="hint">' + esc(regen.titre) + '</span>' : '') +
+      (regen.audio_url ? '<audio controls preload="none" src="' + esc(regen.audio_url) + '"></audio>'
+                       : '<div class="hint" style="margin-top:8px">Audio indisponible.</div>') +
+      '</div>';
+  }
+
+  async function ouvrir(id, node){
     var items = document.querySelectorAll('.item');
     for (var i = 0; i < items.length; i++) items[i].classList.remove('sel');
     if (node) node.classList.add('sel');
     document.getElementById('detail').innerHTML = '<div class="empty">Chargement...</div>';
     var d = await api('?id=' + encodeURIComponent(id));
     var x = (d && d.detail) || {};
+    CUR = x;
+
+    var enRege = !!(x.regen && x.regen.statut === 'en_production');
+    var courrielDefaut = x.reponse || x.brouillon_ia || '';
+
     document.getElementById('detail').innerHTML =
       '<div class="meta">' + esc(x.expediteur) + ' &middot; ' + esc(x.sujet) +
-        (x.type_correction ? ' &middot; <b style="color:#5C2D4A">' + esc(x.type_correction) + '</b>' : '') + '</div>' +
-      '<div class="cols">' +
-        '<div class="col">' +
-          '<h3>Actuel (en ligne)</h3>' +
-          bloc('Paroles', x.paroles_actuelles) +
-          bloc('Style', x.prompt_style_actuel) +
-          bloc('Voix', x.voix) +
-        '</div>' +
-        '<div class="col prop">' +
-          '<h3>Propose (a appliquer)</h3>' +
-          bloc('Paroles', x.paroles_corrigees) +
-          bloc('Style', x.prompt_style) +
-        '</div>' +
+        (x.type_correction ? ' &middot; <b>' + esc(x.type_correction) + '</b>' : '') + '</div>' +
+      (x.message ? '<div class="demande"><div class="label">Demande du client</div>' + esc(x.message) + '</div>' : '') +
+
+      '<div class="sectlabel">Paroles &mdash; actuel vs propose</div>' +
+      champEditable('Actuel (en ligne)', x.paroles_actuelles, 'Propose (editable)', 'ta_paroles', x.paroles_corrigees, 'dp') +
+
+      '<div class="sectlabel">Style &mdash; actuel vs propose</div>' +
+      champEditable('Actuel (en ligne)', x.prompt_style_actuel, 'Propose (editable)', 'ta_style', x.prompt_style, 'ds') +
+
+      (x.voix ? '<div class="fieldcard" style="max-width:520px"><div class="label">Voix</div><div class="val">' + esc(x.voix) + '</div></div>' : '') +
+
+      '<div class="sectlabel">Appliquer la correction</div>' +
+      '<div class="hint" style="margin-bottom:8px">Choisis la methode. Tes editions ci-dessus sont enregistrees, puis Suno regenere automatiquement (~1 min).</div>' +
+      '<div class="actions">' +
+        '<button class="mbtn solid" onclick="appliquer(\'cover\')">Garder la melodie (cover)</button>' +
+        '<button class="mbtn" onclick="appliquer(\'rege\')">Nouvelle melodie (rege)</button>' +
+        '<button class="ghost" onclick="enregistrer()">Enregistrer sans regenerer</button>' +
+        '<span id="applyState" class="hint"></span>' +
       '</div>' +
-      '<div class="phase2">Phase 2 (a venir) : edition du propose, ecoute de la version regeneree, et les boutons Appliquer / Envoyer ici meme.</div>';
+
+      blocRegen(x.regen) +
+
+      '<div class="sectlabel">Reponse au client</div>' +
+      '<div class="send">' +
+        '<textarea class="edit short" id="ta_reponse">' + esc(courrielDefaut) + '</textarea>' +
+        '<div class="actions" style="margin-top:10px">' +
+          '<button class="mbtn solid" id="sendBtn" onclick="envoyer()"' + (enRege ? ' disabled' : '') + '>Envoyer au client</button>' +
+          '<button class="ghost" onclick="enregistrer()">Enregistrer le brouillon</button>' +
+          '<span class="hint">' + (enRege ? 'En pause : version en cours de regeneration.' : 'Le courriel part dans le fil (~1 min).') + '</span>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById('ta_paroles').addEventListener('input', recalc);
+    document.getElementById('ta_style').addEventListener('input', recalc);
+  }
+
+  function editions(){
+    return {
+      paroles_corrigees: document.getElementById('ta_paroles').value,
+      prompt_style:      document.getElementById('ta_style').value,
+      reponse:           document.getElementById('ta_reponse').value
+    };
+  }
+
+  async function enregistrer(){
+    if (!CUR) return;
+    var e = editions();
+    var r = await post({ id: CUR.id, action: 'save', paroles_corrigees: e.paroles_corrigees, prompt_style: e.prompt_style, reponse: e.reponse });
+    toast(r.ok ? 'Enregistre.' : 'Echec de l\'enregistrement.');
+  }
+
+  async function appliquer(methode){
+    if (!CUR) return;
+    var lib = methode === 'rege' ? 'NOUVELLE melodie (regeneration complete)' : 'meme melodie (cover)';
+    if (!confirm('Appliquer avec ' + lib + ' ?\nTes editions seront enregistrees et la chanson sera regeneree.')) return;
+    document.getElementById('applyState').textContent = 'Envoi...';
+    var e = editions();
+    var r = await post({ id: CUR.id, action: 'appliquer', methode: methode, paroles_corrigees: e.paroles_corrigees, prompt_style: e.prompt_style });
+    if (r.ok) { toast('Regeneration lancee.'); document.getElementById('applyState').textContent = 'Lance (Suno ~1 min).'; }
+    else { toast('Echec.'); document.getElementById('applyState').textContent = 'Echec : ' + esc((r.d && r.d.error) || r.status); }
+  }
+
+  async function envoyer(){
+    if (!CUR) return;
+    if (!confirm('Envoyer cette reponse au client ?')) return;
+    var rep = document.getElementById('ta_reponse').value;
+    var r = await post({ id: CUR.id, action: 'envoyer', reponse: rep });
+    if (r.ok) { toast('Reponse programmee (~1 min).'); document.getElementById('sendBtn').disabled = true; }
+    else if (r.status === 409 && r.d && r.d.error === 'rege_en_cours') {
+      toast('Envoi en pause : version en cours de regeneration.');
+      document.getElementById('sendBtn').disabled = true;
+    }
+    else { toast('Echec de l\'envoi.'); }
   }
 
   if (KEY) {
-    api('').then(function (d) {
-      document.getElementById('gate').style.display = 'none';
-      document.getElementById('app').style.display = 'grid';
-      afficher(d);
-    }).catch(function () { /* clef invalide -> on laisse l'ecran mot de passe */ });
+    api('').then(function (d) { ouvrirApp(); afficher(d); })
+           .catch(function () { /* clef invalide -> on laisse l'ecran mot de passe */ });
   }
 </script>
 </body>
