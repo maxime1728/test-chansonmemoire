@@ -165,9 +165,16 @@ exports.handler = async (event) => {
     const gen = dG.records && dG.records[0];
     if (!gen || !gen.fields.lyrics) return { statusCode: 409, body: JSON.stringify({ error: 'Paroles introuvables' }) };
 
+    // Suivi order bump (Phase 2) : statut 'livre' sur le PROJET (vue admin acheté/commandé/reçu).
+    // Best-effort, posé via typecast (extra_pdf est un singleSelect). No-op pour le legacy non suivi.
+    const marquerPdfLivre = () => fetch(`${API}/Projects/${projet.id}`, {
+      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ typecast: true, fields: { extra_pdf: 'livre' } })
+    }).catch(() => {});
+
     // Idempotence PAR VERSION : déjà généré pour cette version (repli Project pour le legacy).
     const pdfDeja = gen.fields.pdf_url || projet.fields.pdf_url;
-    if (pdfDeja) return { statusCode: 200, body: JSON.stringify({ ok: true, pdf_url: pdfDeja, already: true }) };
+    if (pdfDeja) { await marquerPdfLivre(); return { statusCode: 200, body: JSON.stringify({ ok: true, pdf_url: pdfDeja, already: true }) }; }
 
     const titre   = gen.fields.song_title || '';
     const paroles = stripSectionTags(gen.fields.lyrics || '');   // PDF + courriel : balises Suno masquées
@@ -183,6 +190,9 @@ exports.handler = async (event) => {
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { pdf_url: pdfUrl, pdf_template: 'pdf-1' } })
     });
+
+    // 3b. Order bump livré -> 'livre' sur le Projet (vue admin). Best-effort.
+    await marquerPdfLivre();
 
     // 4. Courriel (paroles + PDF) — best-effort, ne bloque pas la réponse si Mailgun pas prêt.
     try {

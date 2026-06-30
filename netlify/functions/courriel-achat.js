@@ -19,7 +19,7 @@ const UUID_V4  = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const MG_KEY    = process.env.MAILGUN_API_KEY;       // no-op si absent
 const { envoyerCourriel: mgEnvoyer } = require('./_lib/courriel');   // From + sous-domaine d'envoi résolus par TYPE dans le wrapper (Lot 6)
 
-const UPSELL_LABEL = { instrumental: 'la version instrumentale', paroles_vivantes: 'les paroles vivantes en vidéo', pdf_paroles: 'les paroles en PDF' };
+const UPSELL_LABEL = { instrumental: 'la version instrumentale', paroles_vivantes: 'les paroles vivantes en vidéo', pdf_paroles: 'les paroles en PDF', video_memoire: 'la vidéo souvenir' };
 
 function formulaLiteral(v) {
   const s = String(v);
@@ -96,12 +96,23 @@ exports.handler = async (event) => {
     let subject, html;
     if (kind === 'upsell') {
       const label = UPSELL_LABEL[body.upsell_type] || 'votre complément';
-      subject = 'Votre complément est confirmé';
-      html = gabarit({
-        intro: 'Merci, c’est confirmé.',
-        corps: `Nous préparons ${esc(label)} pour votre chanson. Vous le retrouverez sur votre page dès qu’il est prêt.`,
-        lien
-      });
+      if (body.upsell_type === 'video_memoire') {
+        // La vidéo souvenir exige une action du client (ajouter ses photos) -> on l'invite à sa page mémoire,
+        // pas de livraison passive comme les autres compléments.
+        subject = 'Votre vidéo souvenir est confirmée';
+        html = gabarit({
+          intro: 'Merci, c’est confirmé.',
+          corps: 'Pour créer votre vidéo souvenir, rendez-vous sur votre page : ajoutez vos photos (10 à 60), placez-les dans l’ordre souhaité, puis lancez la création. Nous en ferons un film tendre porté par votre chanson.',
+          lien: `${SITE}/page-memoire?id=${encodeURIComponent(token)}`
+        });
+      } else {
+        subject = 'Votre complément est confirmé';
+        html = gabarit({
+          intro: 'Merci, c’est confirmé.',
+          corps: `Nous préparons ${esc(label)} pour votre chanson. Vous le retrouverez sur votre page dès qu’il est prêt.`,
+          lien
+        });
+      }
     } else {
       // Titre de la version achetée (best-effort) pour personnaliser.
       let titre = '';

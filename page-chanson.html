@@ -294,6 +294,7 @@
     var ex = d.extras || {}, achetes = [];
     if(ex.instrumental === 'achete')     achetes.push('ta version instrumentale');
     if(ex.paroles_vivantes === 'achete') achetes.push('ta vidéo des paroles');
+    if(ex.pdf === 'achete')              achetes.push('tes paroles en PDF');
     if(achetes.length){
       var en = document.getElementById('extrasNote');
       if(en){ en.textContent = 'Tu as ajouté ' + achetes.join(' et ') + ' à ton achat. Tu pourras les commander sur ta page, une fois cette version acceptée.'; en.style.display = 'block'; }

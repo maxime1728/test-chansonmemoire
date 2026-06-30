@@ -23,7 +23,8 @@ const UUID_V4  = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const UPSELLS = {
   instrumental:     'STRIPE_PRICE_INSTRUMENTAL',
   paroles_vivantes: 'STRIPE_PRICE_PAROLES_VIVANTES',
-  pdf_paroles:      'STRIPE_PRICE_PDF'
+  pdf_paroles:      'STRIPE_PRICE_PDF',
+  video_memoire:    'STRIPE_PRICE_VIDEO_MEMOIRE'   // vidéo souvenir 99,97 $ (upsell post-achat seul, pas d'order bump)
 };
 
 function formulaLiteral(v) {

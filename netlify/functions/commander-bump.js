@@ -18,7 +18,10 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 // type client -> { champ statut Projet, lanceur }. Seuls ces types sont acceptés (anti-tamper).
 const EXTRAS = {
   instrumental:     { champ: 'extra_instrumental',     lanceur: '/api/lancer-instrumentale' },
-  paroles_vivantes: { champ: 'extra_paroles_vivantes', lanceur: '/api/lancer-paroles-vivantes' }
+  paroles_vivantes: { champ: 'extra_paroles_vivantes', lanceur: '/api/lancer-paroles-vivantes' },
+  pdf_paroles:      { champ: 'extra_pdf',              lanceur: '/api/lancer-cadeau' }
+  // Note : la vidéo souvenir n'est PAS ici (elle exige des photos -> produite au clic « Générer »,
+  // pas « Commander ». Voir lancer-video-memoire + page-memoire initVideoMemoire).
 };
 
 function formulaLiteral(v) {

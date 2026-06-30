@@ -46,7 +46,7 @@ exports.handler = async (event) => {
   }
 
   // Order bumps cochés sur la page de confirmation (clés connues uniquement → anti-tamper).
-  const BUMP_KEYS = ['instrumental', 'paroles_vivantes'];
+  const BUMP_KEYS = ['instrumental', 'paroles_vivantes', 'pdf_paroles'];
   const bumpsRequested = Array.isArray(body.bumps)
     ? body.bumps.filter(b => BUMP_KEYS.includes(b))
     : [];
@@ -134,6 +134,7 @@ exports.handler = async (event) => {
     const SONG_PRICE    = process.env.STRIPE_PRICE_SONG;             // Prix Stripe one-time 139,97 $ CAD
     const PRICE_INSTRU  = process.env.STRIPE_PRICE_INSTRUMENTAL;     // Prix Stripe 19,99 $
     const PRICE_PAROLES = process.env.STRIPE_PRICE_PAROLES_VIVANTES; // Prix Stripe 13,99 $
+    const PRICE_PDF     = process.env.STRIPE_PRICE_PDF;              // Prix Stripe 7,99 $ (PDF des paroles)
 
     // 4. Construit les paramètres communs à toute session Checkout.
     function paramsBase() {
@@ -155,7 +156,7 @@ exports.handler = async (event) => {
       const p = paramsBase();
       p.append('line_items[0][price]', SONG_PRICE);
       p.append('line_items[0][quantity]', '1');
-      const bumpMap = { instrumental: PRICE_INSTRU, paroles_vivantes: PRICE_PAROLES };
+      const bumpMap = { instrumental: PRICE_INSTRU, paroles_vivantes: PRICE_PAROLES, pdf_paroles: PRICE_PDF };
       let li = 1;
       const bumpsFactures = [];
       for (const key of bumpsRequested) {

@@ -205,6 +205,16 @@
   <div class="card" id="videoMemoireCard" style="display:none;">
     <div class="section-title">Ta vidéo souvenir</div>
     <p class="section-sub">Un montage doux de tes photos, porté par ta chanson (10 à 60 photos).</p>
+
+    <!-- Paywall : la vidéo souvenir est un upsell payant (99,97 $). Visible tant qu'elle n'est pas achetée. -->
+    <div id="videoPaywall" style="display:none;margin-top:8px;">
+      <p class="section-sub" style="margin-top:0;">Choisis tes plus belles photos, mets-les dans l'ordre que tu veux, et on en fait un film tendre porté par sa chanson. Un souvenir à garder et à offrir.</p>
+      <div style="margin-top:12px;"><button class="btn btn-block" id="btnBuyVideo" type="button">Obtenir ma vidéo souvenir · 99,97 $</button></div>
+      <p class="ok-msg" id="videoBuyMsg" style="display:none;"></p>
+    </div>
+
+    <!-- Corps interactif (upload + ordre + génération) : visible une fois la vidéo souvenir achetée. -->
+    <div id="videoBody" style="display:none;">
     <ul class="section-sub" style="margin:8px 0 2px;padding-left:20px;line-height:1.7;">
       <li><b>Ajoute</b> tes photos.</li>
       <li><b>Touche</b> une photo pour la choisir : <b>★</b> la met en avant, <b>×</b> la retire.</li>
@@ -226,6 +236,7 @@
     <div id="genVideoWrap" style="margin-top:14px;display:none;"><button class="btn btn-block" id="btnGenVideo" type="button" disabled>Générer ma vidéo souvenir</button></div>
     <p class="ok-msg" id="videoMemoireMsg" style="display:none;"></p>
     <div class="video-frame" id="videoMemoireFrame" style="display:none;margin-top:14px;"></div>
+    </div><!-- /videoBody -->
   </div>
 
   <!-- CRÉER POUR QUELQU'UN D'AUTRE (placé ici, post-achat, pour ne pas nuire à la conversion de l'aperçu) -->
@@ -289,11 +300,14 @@
     if(d.titre){ document.getElementById('title').textContent=d.titre; document.getElementById('playerTitle').textContent=d.titre; document.title=d.titre+' · Chanson Mémoire'; }
     var bits=[d.style,d.ambiance].filter(Boolean); if(bits.length) document.getElementById('subtitle').textContent=bits.join(' · ');
     if(d.audio_url){ source.src=d.audio_url; audio.load(); } else { loading.textContent='Ta chanson se finalise, réessaie dans un instant.'; }
-    // Cadeau : PDF prêt -> téléchargement ; déjà demandé -> en préparation ; sinon -> bouton.
-    if(d.pdf_url){ showCadeauxReady(d.pdf_url); }
-    else if(d.cadeaux_requested){ showCadeauxPending(); }
+    // Cadeau (PDF) : livré -> téléchargement ; en préparation -> attente ; payé au checkout (order bump) ->
+    // à commander sans repayer ; sinon -> bouton d'achat upsell. (Statut extra_pdf : achete/commande/livre.)
+    var pdfStatut = (d.extras && d.extras.pdf) || '';
+    if(d.pdf_url || pdfStatut==='livre'){ showCadeauxReady(d.pdf_url); }
+    else if(pdfStatut==='commande' || d.cadeaux_requested){ showCadeauxPending(); }
+    else if(pdfStatut==='achete'){ showCadeauxCommander(); }
     initUpsell(d.commercial_status === 'purchased', { instrumental: d.instrumental_url, paroles_vivantes: d.video_url }, d.extras || {});
-    initVideoMemoire(d.commercial_status === 'purchased', d.memoire_photos, d.memoire_pinned, d.memoire_naissance, d.memoire_deces, d.memoire_citation, d.video_memoire_url);
+    initVideoMemoire(d.commercial_status === 'purchased', d.memoire_photos, d.memoire_pinned, d.memoire_naissance, d.memoire_deces, d.memoire_citation, d.video_memoire_url, (d.extras && d.extras.video_memoire) || '');
   }).catch(function(){ loading.textContent='Une erreur est survenue.'; });
 
   var cadeauTimer=null;
@@ -315,6 +329,20 @@
         }
       }).catch(function(){});
     }, 8000);
+  }
+  /* PDF payé au checkout (order bump, extra_pdf='achete') -> à COMMANDER sans repayer. Le clic lance
+     lancer-cadeau via commander-bump, puis on bascule en « préparation » (le PDF arrive en ~1 min). */
+  function showCadeauxCommander(){
+    var s=document.getElementById('cadeauxSub'); if(s) s.textContent='Tes paroles en PDF sont incluses dans ton achat. Quand tu es prêt, commande-les ici.';
+    var b=document.getElementById('btnCadeaux'); if(!b) return;
+    var fresh=b.cloneNode(false); fresh.textContent='Commander mes paroles en PDF'; b.parentNode.replaceChild(fresh, b);  /* retire le handler d'achat upsell */
+    fresh.addEventListener('click',function(){
+      fresh.disabled=true; fresh.textContent='Un instant…';
+      post('/api/commander-bump',{token:token, type:'pdf_paroles'}).then(function(res){
+        if(res && res.ok){ showCadeauxPending(); }
+        else { fresh.disabled=false; fresh.textContent='Commander mes paroles en PDF'; cmToast('Un souci est survenu. Réessaie.'); }
+      }).catch(function(){ fresh.disabled=false; fresh.textContent='Commander mes paroles en PDF'; cmToast('Une erreur est survenue.'); });
+    });
   }
   function showCadeauxReady(pdfUrl){
     var ch=document.getElementById('cadeauxChooser'); if(ch) ch.style.display='none';
@@ -431,10 +459,32 @@
   }
 
   /* ── Vidéo mémoire : upload (10–60) + réordonner (glisser) + photo importante (★) + dates/citation. ── */
-  function initVideoMemoire(purchased, photos, pinned, naissance, deces, citation, videoUrl){
+  function initVideoMemoire(purchased, photos, pinned, naissance, deces, citation, videoUrl, extraVideo){
     var card=document.getElementById('videoMemoireCard');
     if(!card || !purchased) return;
     card.style.display='block';
+
+    /* La vidéo souvenir est un upsell PAYANT (99,97 $). Tant qu'elle n'est pas achetée (extra_video_memoire
+       vide) et qu'aucune vidéo legacy n'existe, on montre le paywall et on n'arme pas l'UI d'upload. */
+    extraVideo = (extraVideo || '').toString();
+    var paid = !!extraVideo || !!videoUrl;   /* achete/commande/livre OU legacy déjà livré (grandfather) */
+    var paywall=document.getElementById('videoPaywall'), vbody=document.getElementById('videoBody');
+    if(!paid){
+      if(paywall) paywall.style.display='block';
+      if(vbody) vbody.style.display='none';
+      var bb=document.getElementById('btnBuyVideo');
+      if(bb) bb.addEventListener('click',function(){
+        bb.disabled=true; var old=bb.textContent; bb.textContent='Un instant…';
+        post('/api/creer-upsell',{token:token, upsell_type:'video_memoire'}).then(function(res){
+          if(res && res.url){ window.location.href=res.url; return; }   /* → Stripe Checkout */
+          bb.disabled=false; bb.textContent=old; cmToast('Paiement indisponible pour le moment. Réessaie.');
+        }).catch(function(){ bb.disabled=false; bb.textContent=old; cmToast('Une erreur est survenue.'); });
+      });
+      return;
+    }
+    if(paywall) paywall.style.display='none';
+    if(vbody) vbody.style.display='block';
+
     var MIN=10, MAX=60;
     var list = Array.isArray(photos) ? photos.slice() : [];
     var pins = {}; (Array.isArray(pinned)?pinned:[]).forEach(function(u){ pins[u]=1; });

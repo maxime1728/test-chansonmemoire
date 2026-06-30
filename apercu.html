@@ -1632,7 +1632,8 @@ setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet
   /* Order bumps proposés. Le produit principal reste le héros : ceux-ci sont optionnels, décochés, en dessous. */
   var BUMPS = [
     { key:'instrumental',     label:'Version instrumentale',     price:'19,99 $', desc:'La trame musicale seule, sans voix.' },
-    { key:'paroles_vivantes', label:'Paroles vivantes en vidéo', price:'13,99 $', desc:'Les paroles animées, à partager.' }
+    { key:'paroles_vivantes', label:'Paroles vivantes en vidéo', price:'13,99 $', desc:'Les paroles animées, à partager.' },
+    { key:'pdf_paroles',      label:'Paroles en PDF',            price:'7,99 $',  desc:'Une belle feuille de tes paroles, à imprimer ou à garder.' }
   ];
 
   function closeBuy(){ if (buyOverlay) { buyOverlay.classList.remove('show'); buyOverlay.setAttribute('aria-hidden','true'); } window.cmModal.close(); busy = false; }

@@ -116,6 +116,15 @@ exports.handler = async (event) => {
     const gen = dG.records && dG.records[0];
     if (!gen || !gen.fields.lyrics) return { statusCode: 409, body: JSON.stringify({ error: 'Chanson introuvable' }) };
 
+    // 3b. Gate Phase 2 : la vidéo souvenir est un upsell PAYANT (99,97 $) -> on exige extra_video_memoire
+    //     posé (achete/commande/livre). Défense en profondeur : le `purchased` seul ne suffit plus.
+    //     Exceptions : body.force (aperçus internes) ; legacy (vidéo déjà livrée gratuitement avant la
+    //     bascule payante -> grandfather sur video_memoire_url).
+    const extraVm = (projet.fields.extra_video_memoire || '').toString();
+    if (!body.force && !extraVm && !gen.fields.video_memoire_url) {
+      return { statusCode: 402, body: JSON.stringify({ error: 'Vidéo souvenir à acheter', reason: 'non_achete' }) };
+    }
+
     // 4. Idempotence PAR VERSION (force = aperçus ; regenerate = le client refait après modif).
     if (!body.force && !body.regenerate && gen.fields.video_memoire_url) return { statusCode: 200, body: JSON.stringify({ ok: true, video_memoire_url: gen.fields.video_memoire_url, already: true }) };
     if (!body.force && gen.fields.video_memoire_task_id) return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true }) };
@@ -171,6 +180,14 @@ exports.handler = async (event) => {
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields: { video_memoire_task_id: String(renderId) } })
       });
+      // Suivi order bump (Phase 2) : rendu lancé -> 'commande' sur le Projet (le callback posera 'livre').
+      // Best-effort + typecast (singleSelect). Couvre aussi un legacy gratuit qui régénère (l'intègre au suivi).
+      try {
+        await fetch(`${API}/Projects/${projet.id}`, {
+          method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ typecast: true, fields: { extra_video_memoire: 'commande' } })
+        });
+      } catch (_) {}
     }
 
     return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true, renderId: String(renderId) }) };

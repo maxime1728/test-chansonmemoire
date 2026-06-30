@@ -26,7 +26,8 @@ const PROJECTS = 'tblh7O8eoog7RyTMJ', UPSELLS = 'tbl0Z52D8l4555Has';
 const P = { token:'fldqBcPOplqI7pmTh', commercial:'fldLFpeLNHU0ewF7A', funnel:'fldepcYRBoQsGoVkJ',
   purchase_date:'fldeh0MKHnUvgV4Wo', amount:'fld4qP6Vt9U1Hygcb', stripe_session:'fldrp48w47JknP0P3',
   stripe_pi:'fldsGvEeBhuv6p8zO', purchased_gen_no:'fld6eCLXNbuMzMw1h',
-  extra_instrumental:'fldQqTCFHaMmBwTsa', extra_paroles_vivantes:'fldmZfynBKPLEXlb6' };
+  extra_instrumental:'fldQqTCFHaMmBwTsa', extra_paroles_vivantes:'fldmZfynBKPLEXlb6',
+  extra_pdf:'fld157CflXPSuJbyt', extra_video_memoire:'fldnGh6k7U9YPJhzr' };
 // Upsells
 const U = { price:'fldJoXqpwDjsLVhNg', type:'fldLcJfOQyAnH0uyB', status:'fldUYpFPzKft1YAZL',
   date:'fldZecCcKwrJCbqdr', project:'fldlPqxt6COxeuBgT' };
@@ -93,13 +94,18 @@ async function handler(event) {
       uf[U.price] = montant; uf[U.type] = md.upsell_type || ''; uf[U.status] = 'paid';
       uf[U.date] = new Date().toISOString().slice(0, 10); uf[U.project] = [projet.id];
       await fetch(`${API}/${UPSELLS}`, { method: 'POST', headers: { ...atHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: uf, typecast: true }) });
-      // Extra suivi acheté en upsell -> statut 'commande' (la production se lance juste après).
+      // Extra suivi acheté en upsell -> statut. instrumental/paroles/pdf = 'commande' (la production
+      // se lance juste après). video_memoire = 'achete' : la vidéo exige des photos -> upload débloqué,
+      // production au clic « Générer » (lancer-video-memoire), PAS lancée ici.
       const upf = {};
       if (md.upsell_type === 'instrumental')     upf[P.extra_instrumental]     = 'commande';
       if (md.upsell_type === 'paroles_vivantes') upf[P.extra_paroles_vivantes] = 'commande';
+      if (md.upsell_type === 'pdf_paroles')      upf[P.extra_pdf]              = 'commande';
+      if (md.upsell_type === 'video_memoire')    upf[P.extra_video_memoire]    = 'achete';
       if (Object.keys(upf).length) { try { await fetch(`${API}/${PROJECTS}/${projet.id}`, { method: 'PATCH', headers: { ...atHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: upf, typecast: true }) }); } catch (_) {} }
       if (md.upsell_type === 'instrumental')     await appel('/api/lancer-instrumentale', { token });
       if (md.upsell_type === 'paroles_vivantes') await appel('/api/lancer-paroles-vivantes', { token });
+      if (md.upsell_type === 'pdf_paroles')      await appel('/api/lancer-cadeau', { token });   // corrige le trou Make D (PDF payé jamais généré)
       await appel('/api/courriel-achat', { token, kind: 'upsell', upsell_type: md.upsell_type, email });
       return { statusCode: 200, body: JSON.stringify({ ok: true, kind: 'upsell' }) };
     }
@@ -120,6 +126,7 @@ async function handler(event) {
     const bumps = (md.bumps || '').split(',').map((s) => s.trim()).filter(Boolean);
     if (bumps.includes('instrumental'))     pf[P.extra_instrumental]     = 'achete';
     if (bumps.includes('paroles_vivantes')) pf[P.extra_paroles_vivantes] = 'achete';
+    if (bumps.includes('pdf_paroles'))      pf[P.extra_pdf]              = 'achete';
     const ru = await fetch(`${API}/${PROJECTS}/${projet.id}`, { method: 'PATCH', headers: { ...atHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: pf, typecast: true }) });
     if (!ru.ok) { await capture(new Error('stripe-webhook: update Projet KO'), { token, status: ru.status }); return { statusCode: 500, body: 'maj-projet-ko' }; }   // 500 -> Stripe retentera (idempotence protege)
 

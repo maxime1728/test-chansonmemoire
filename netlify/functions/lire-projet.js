@@ -138,7 +138,9 @@ exports.handler = async (event) => {
         commercial_status: projet.fields.commercial_status || 'preview_only',
         extras: {                                                  // statut order bumps : achete -> commande -> livre (page-memoire)
           instrumental:     projet.fields.extra_instrumental     || '',
-          paroles_vivantes: projet.fields.extra_paroles_vivantes || ''
+          paroles_vivantes: projet.fields.extra_paroles_vivantes || '',
+          pdf:              projet.fields.extra_pdf              || '',   // PDF en order bump (Phase 2)
+          video_memoire:    projet.fields.extra_video_memoire    || ''    // vidéo souvenir = upsell payant gaté
         },
         song_type:         projet.fields.song_type || 'hommage',   // hommage|cadeau -> adapte le copy + pilote le loader anti-flash (non-PII)
         style:             gen.gen_music_style || projet.fields.music_style || '',   // affichage acceptation (titre + style + ambiance)
