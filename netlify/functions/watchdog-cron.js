@@ -184,7 +184,7 @@ exports.handler = async () => {
   // Si l'équipe oublie de revoir/envoyer, le client n'est jamais privé de sa version payée.
   if (process.env.REVUE_AVANT_ENVOI === '1') {
     try {
-      const PRETE_MAX_H = parseInt(process.env.PRETE_MAX_HOURS, 10) || 24;
+      const PRETE_MAX_H = parseInt(process.env.PRETE_MAX_HOURS, 10) || 72;   // défaut 72 h (décision Maxime 2026-06-30 : laisser plus de marge avant l'auto-envoi)
       const headers = { Authorization: `Bearer ${AT_TOKEN}` };
       const recs = await atList(`AND({version_status}="prête", {prete_at}!="", IS_BEFORE({prete_at}, DATEADD(NOW(),-${PRETE_MAX_H},'hours')))`);
       for (const rec of recs) {
