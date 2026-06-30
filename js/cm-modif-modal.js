@@ -239,9 +239,13 @@
           return;   // #16 : pas envoyé -> on garde le brouillon
         }
         if (res.route === 'plafond') {
-          // Plafond atteint : la demande est DÉJÀ enregistrée côté serveur (Maxime la reçoit) -> pas de
-          // double capture. Le client voit « on a bien reçu ta demande, on te revient ».
-          hideLoad(); clearDraft(); showDone();
+          // Plafond atteint : la demande est DÉJÀ enregistrée côté serveur (Maxime la reçoit). On laisse le
+          // client AJOUTER des détails s'il veut : ré-ouvre le champ, vide-le, et chaque nouvel envoi se greffe
+          // à la même demande (côté serveur). Pas de double capture (clearDraft, pas de captureFallback).
+          hideLoad(); clearDraft();
+          els.send.disabled = false;
+          if (els.ta) els.ta.value = '';
+          els.note.textContent = 'On a bien reçu ta demande, on te revient ! Tu peux ajouter des détails ci-dessous si tu veux.';
           return;
         }
         // route 'regen' / 'prononciation' / cas inexploitable -> capture cockpit + message « on te revient ».

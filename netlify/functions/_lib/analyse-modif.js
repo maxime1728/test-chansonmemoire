@@ -20,7 +20,7 @@ PROMPT STYLE (adjusted_style_prompt, en anglais) : tu recois le PROMPT DE STYLE 
 - Garde TOUJOURS l'accent present a la fin du prompt actuel ("Quebec French accent, Canadian French" ou l'accent de la langue). Ne le retire jamais.
 - JAMAIS de noms d'artistes ni de titres de chansons existantes dans le prompt. NE mentionne JAMAIS le genre de la voix ("male voice" / "female voice", "homme", "femme") : la voix est geree separement.
 
-PRONONCIATION (si la categorie "prononciation" s'applique) : le chanteur est une IA (Suno) qui ne lit QUE le TEXTE des paroles, on ne peut PAS lui donner une consigne orale comme a un humain. Le SEUL moyen de corriger un mot mal prononce = le REECRIRE phonetiquement dans les paroles, pour qu'il sonne juste en etant lu a voix haute selon les regles du francais (ex. "Roxanne" mal dit -> "Rocksane" ; "Ghislaine" -> "Jislaine" ; "juin" souvent chante "joint" -> "ju-un"). Pieges : "ou" se lit toujours "ou" ; "ch" se lit "ch" (jamais "tch") ; "g" devant e/i se lit "j" (pour un g dur, ecris "gu"). Dans compte_rendu, decris la REECRITURE phonetique proposee, JAMAIS "dire au chanteur de...". Applique cette reecriture dans adjusted_lyrics (seulement le/les mot(s) concerne(s), garde tout le reste intact).
+PRONONCIATION (si la categorie "prononciation" s'applique) : le chanteur est une IA (Suno) qui ne lit QUE le TEXTE des paroles, on ne peut PAS lui donner une consigne orale comme a un humain. Le SEUL moyen de corriger un mot mal prononce = le REECRIRE phonetiquement dans les paroles, pour qu'il sonne juste en etant lu a voix haute selon les regles du francais (ex. "Roxanne" mal dit -> "Rocksane" ; "Ghislaine" -> "Jislaine" ; "juin" souvent chante "joint" -> "ju-un"). Pieges : "ou" se lit toujours "ou" ; "ch" se lit "ch" (jamais "tch") ; "g" devant e/i se lit "j" (pour un g dur, ecris "gu"). Dans compte_rendu, decris la REECRITURE phonetique proposee, JAMAIS "dire au chanteur de...". DEUX sorties distinctes : (1) adjusted_lyrics = les paroles AFFICHEES au client, en mots CLAIRS et lisibles (PAS de reecriture phonetique ; si la demande ne change pas le texte affiche, renvoie les paroles actuelles inchangees). (2) lyrics_phonetique = les MEMES paroles mais avec le/les mot(s) mal prononce(s) reecrits phonetiquement (ce qui est envoye a Suno) ; garde tout le reste intact. Si AUCUNE prononciation a corriger, lyrics_phonetique = chaine vide "".
 
 PAROLES AJUSTEES (en francais quebecois), UNIQUEMENT si la demande touche paroles/souvenirs/prononciation :
 - Garde TOUT ce qui fonctionne ; applique SEULEMENT la demande. N'invente AUCUN fait, nom ni lieu.
@@ -31,7 +31,7 @@ VOIX DE MARQUE : solution-first, digne, jamais ouvrir sur le deuil ; pas de clic
 TYPOGRAPHIE : n'utilise JAMAIS le tiret cadratin/long (—) dans tes textes (compte_rendu, paroles) ; mets une virgule, un deux-points, une parenthese ou un point a la place.
 
 SORTIE, reponds UNIQUEMENT avec un objet JSON valide, sans texte autour, guillemets droits :
-{"categories":["..."],"mode":"cover","compte_rendu":"<resume clair pour l'equipe, en francais>","adjusted_style_prompt":"<prompt actuel inchange, OU ajuste/sur mesure selon la demande, jamais plus court>","adjusted_lyrics":"<paroles ajustees en quebecois OU chaine vide>"}`;
+{"categories":["..."],"mode":"cover","compte_rendu":"<resume clair pour l'equipe, en francais>","adjusted_style_prompt":"<prompt actuel inchange, OU ajuste/sur mesure selon la demande, jamais plus court>","adjusted_lyrics":"<paroles AFFICHEES ajustees, mots clairs, en quebecois OU chaine vide>","lyrics_phonetique":"<memes paroles avec les mots mal prononces reecrits phonetiquement pour Suno ; vide si aucune prononciation>"}`;
 
 // p = champs du Projet ; gen = champs de la Generation de reference ; demande = texte client ;
 // styleActuel = prompt de style riche de la version de reference ; catalogue = [{style, prompt}] de l'ambiance.
@@ -88,7 +88,8 @@ ${demande}`;
     mode:        parsed.mode === 'regeneration' ? 'regeneration' : 'cover',
     compteRendu: (parsed.compte_rendu || '').toString().slice(0, 3000),
     adjStyle:    ((parsed.adjusted_style_prompt || '').toString().slice(0, 2500)) || styleActuel || '',
-    adjLyrics:   (parsed.adjusted_lyrics || '').toString().slice(0, 6000)
+    adjLyrics:   (parsed.adjusted_lyrics || '').toString().slice(0, 6000),
+    phonetique:  (parsed.lyrics_phonetique || '').toString().slice(0, 6000)   // paroles pour Suno (mots réécrits) ; vide si pas de prononciation
   };
 }
 

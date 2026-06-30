@@ -104,21 +104,44 @@ exports.handler = async (event) => {
     if (action === 'analyser' && process.env.PLAFOND_V2 === '1' && (body.texte || '').toString().trim()) {
       const post = p.commercial_status === 'purchased';
       if (await nbAppelsSuno(API, headers, p.project, post) >= PLAFOND_SUNO) {
+        const texteCap = (body.texte || '').toString().trim().slice(0, 4000);
         try {
-          const to = await emailClient(projet, headers);
-          await fetch(`${API}/${CONVOS}`, {
-            method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ typecast: true, fields: {
-              expediteur:   to || '',
-              sujet:        `Demande (plafond atteint)${p.deceased_name ? ' : ' + p.deceased_name : ''}`,
-              message:      (body.texte || '').toString().trim().slice(0, 4000),
-              recu_le:      new Date().toISOString(),
-              statut:       'a_verifier',
-              categorie_ia: 'modification',
-              phase_achat:  post ? 'apres_achat' : 'avant_achat',
-              Projet:       [projet.id]
-            } })
-          });
+          // GREFFE : une conversation « plafond » déjà ouverte (a_verifier) pour ce projet ? -> on AJOUTE le
+          // détail à SA demande (un projet = une demande). Sinon on en crée une (Maxime reçoit la 1re demande,
+          // même sans détail). cap_convo_id pointe la conversation ouverte.
+          const capId = (p.cap_convo_id || '').toString().trim();
+          let grafted = false;
+          if (/^rec[A-Za-z0-9]{14}$/.test(capId)) {
+            const rConv = await fetch(`${API}/${CONVOS}/${capId}`, { headers });
+            if (rConv.ok) {
+              const cf = (await rConv.json()).fields || {};
+              if (cf.statut === 'a_verifier') {
+                const msg = ((cf.message || '') + '\n\n— Détail ajouté par le client —\n' + texteCap).slice(-8000);
+                await fetch(`${API}/${CONVOS}/${capId}`, {
+                  method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ fields: { message: msg } })
+                });
+                grafted = true;
+              }
+            }
+          }
+          if (!grafted) {
+            const to = await emailClient(projet, headers);
+            const rNew = await fetch(`${API}/${CONVOS}`, {
+              method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ typecast: true, fields: {
+                expediteur:   to || '',
+                sujet:        `Demande (plafond atteint)${p.deceased_name ? ' : ' + p.deceased_name : ''}`,
+                message:      texteCap,
+                recu_le:      new Date().toISOString(),
+                statut:       'a_verifier',
+                categorie_ia: 'modification',
+                phase_achat:  post ? 'apres_achat' : 'avant_achat',
+                Projet:       [projet.id]
+              } })
+            });
+            try { const nc = await rNew.json(); if (nc && nc.id) await patchProjet(projet.id, { cap_convo_id: nc.id }, headers); } catch (_) {}
+          }
         } catch (_) { /* la trace ne bloque jamais la réponse */ }
         return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, route: 'plafond' }) };
       }
