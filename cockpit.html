@@ -459,10 +459,9 @@
 
             '<div class="glab" style="margin-top:16px">Nouvelle version</div>'+
             '<div class="vbox">'+
-              '<details class="promptdd" open><summary>Prompt de style · éditable</summary>'+
-                '<div class="promptbox editable small" id="bloc_style" contenteditable="true" spellcheck="false">'+renderInline(x.prompt_style_actuel||'',styProp)+'</div>'+
-                '<div class="note" style="margin-top:6px">Ajuste le prompt à la main au besoin (sauvegarde auto).</div>'+
-              '</details>'+
+              '<div class="sectlabel" style="margin:0 0 8px">Prompt de style <span class="act"><button class="btn-regen" onclick="regenPrompt()">↻ Regénérer</button></span></div>'+
+              '<div class="promptbox editable small" id="bloc_style" contenteditable="true" spellcheck="false">'+renderInline(x.prompt_style_actuel||'',styProp)+'</div>'+
+              '<div class="note" style="margin-top:6px">Ajuste-le à la main, ou Regénérer selon les demandes du client (sauvegarde auto).</div>'+
               '<div class="methods" id="applyBar" style="margin-top:12px">'+
                 '<button class="btn-line" onclick="demanderAppliquer(\'rege\')"'+(enRege?' disabled':'')+'>↻ Nouvelle mélodie</button>'+
                 '<button class="btn-line" onclick="demanderAppliquer(\'cover\')"'+(enRege?' disabled':'')+'>🎨 Cover (garder la mélodie)</button>'+
@@ -478,6 +477,8 @@
   }
 
   function scrollStudio(){ var s=document.getElementById('studio'); if(s) s.scrollIntoView({behavior:'smooth',block:'center'}); }
+  // Regénérer le prompt selon les demandes du client (réécriture via analyse-modif) : branché au jalon 2.
+  function regenPrompt(){ toast('Regénérer le prompt selon les demandes : branché au jalon 2.'); }
 
   async function appliquer(methode){
     if(!CUR) return;
@@ -495,15 +496,19 @@
   var regenPoll=null;
   function stopRegenPoll(){ if(regenPoll){ clearInterval(regenPoll); regenPoll=null; } }
   function rechargerDetail(){ if(CUR) ouvrir(CUR.id,document.querySelector('.item.sel')); }
+  // pollRegen (repris de #279, éprouvé) : gère flag ON (attend 'prête') ET flag OFF (détecte le changement
+  // d'audio_actuel APRÈS avoir vu 'en_production' -> évite un faux refresh). ~8 min max.
   function pollRegen(id){
     stopRegenPoll(); if(!id) return;
-    var tries=0, audioAvant=CUR?CUR.audio_actuel:'';
+    var tries=0, sawProd=false, baseAudio=(CUR&&CUR.audio_actuel)||'';
     regenPoll=setInterval(async function(){
       tries++; if(tries>40||!CUR||CUR.id!==id){ stopRegenPoll(); return; }
-      var d=await api('?id='+encodeURIComponent(id)); var x=(d&&d.detail)||{};
-      var rg=x.regen;
-      if((rg&&rg.statut==='prête')||(x.audio_actuel&&x.audio_actuel!==audioAvant)){ stopRegenPoll(); rechargerDetail(); toast('Nouvelle version prête.'); }
-    },15000);
+      var d=await api('?id='+encodeURIComponent(id)); var det=d&&d.detail; if(!det) return;
+      var rg=det.regen;
+      if(rg&&rg.statut==='en_production'){ sawProd=true; return; }
+      if(rg&&rg.statut==='prête'){ stopRegenPoll(); rechargerDetail(); toast('Nouvelle version prête à revoir.'); return; }
+      if(sawProd&&det.audio_actuel&&det.audio_actuel!==baseAudio){ stopRegenPoll(); rechargerDetail(); toast('Nouvelle version en ligne.'); return; }
+    },12000);
   }
 
   // ── PRONONCIATION ──
