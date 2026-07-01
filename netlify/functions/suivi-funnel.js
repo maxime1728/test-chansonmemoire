@@ -40,6 +40,7 @@ async function patchProject(id, fields, headers) {
    source, ni dans event_id (haché). Secrets en env (jamais en dur) ; no-op si absents. */
 const crypto       = require('crypto');
 const { withSentry } = require('./_lib/sentry');  // capture des exceptions non gerees
+const { estCourrielInterne } = require('./_lib/courriels-internes');  // équipe/tests -> jamais à Meta
 const CAPI_TOKEN   = process.env.META_CAPI_TOKEN;     // secret — var d'env Netlify, JAMAIS en dur
 const CAPI_DATASET = process.env.META_DATASET_ID;     // ex. 909919758755200 — var d'env Netlify
 const CAPI_EVENT   = { preview_played: 'PreviewPlayed', checkout_started: 'InitiateCheckout', purchase: 'Purchase', lead: 'Lead' };
@@ -152,12 +153,17 @@ exports.handler = async (event) => {
           || (event.headers['x-nf-client-connection-ip'] || event.headers['x-forwarded-for'] || '').split(',')[0].trim();
         const ua = (body.client_user_agent || '').trim() || event.headers['user-agent'] || '';
         const email = await clientEmailOf(projet, headers);
-        const res = await sendCapi(evt, projet, email, ip, ua, token);
-        // Observabilité + idempotence : drapeau posé SEULEMENT si Meta a accepté (permet le réessai si échec).
-        if (sentField) {
-          const upd = { capi_last_response: res.summary };
-          if (res.sent) upd[sentField] = true;
-          try { await patchProject(projet.id, upd, headers); } catch (_) {}
+        if (estCourrielInterne(email)) {
+          // Courriel équipe/tests -> on n'envoie RIEN à Meta. Pas de drapeau _sent (aucun envoi).
+          if (sentField) { try { await patchProject(projet.id, { capi_last_response: 'skip-interne' }, headers); } catch (_) {} }
+        } else {
+          const res = await sendCapi(evt, projet, email, ip, ua, token);
+          // Observabilité + idempotence : drapeau posé SEULEMENT si Meta a accepté (permet le réessai si échec).
+          if (sentField) {
+            const upd = { capi_last_response: res.summary };
+            if (res.sent) upd[sentField] = true;
+            try { await patchProject(projet.id, upd, headers); } catch (_) {}
+          }
         }
       }
     } catch (_) { /* CAPI best-effort */ }
