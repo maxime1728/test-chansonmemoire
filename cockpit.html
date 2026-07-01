@@ -78,6 +78,17 @@
   .analyse .val { padding:0 0 12px; font-size:13.5px; }
   .note { background:var(--propbg); border:1px solid var(--propline); border-radius:10px; padding:10px 14px; margin:8px 0 16px; font-size:13px; line-height:1.55; }
 
+  .lexrow { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:6px 0; border-top:1px solid var(--line); }
+  .lexrow:first-of-type { border-top:none; }
+  .lexmot { min-width:120px; font-size:13.5px; font-weight:600; }
+  .lexinput { flex:1; min-width:120px; font:inherit; font-size:13px; border:1px solid var(--line); border-radius:7px; padding:6px 9px; }
+  .lexacts { display:flex; gap:6px; flex-wrap:wrap; }
+  .lexacts .ghost { padding:5px 9px; font-size:12px; }
+  .lexbadge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; margin-left:6px; }
+  .lexbadge.ov { background:#F3E8EF; color:var(--plum); }
+  .lexbadge.off { background:var(--delbg); color:var(--del); }
+  .lexadd { margin-top:6px; }
+
   .send button[disabled] { opacity:.45; cursor:not-allowed; }
   .empty { color:var(--muted); padding:48px 24px; text-align:center; }
   .err { color:#b00020; font-size:13px; margin-top:8px; }
@@ -267,6 +278,38 @@
       '<div class="actions" id="pronoBar"><button class="mbtn" onclick="demanderProno()">Appliquer la prononciation (regenerer)</button></div>';
   }
 
+  // Étape 4 : DICTIONNAIRE de prononciation du projet (voir/éditer/désactiver/override). Repliable.
+  function renderLexique(x){
+    var lex = x.lexique || [];
+    var rows = lex.map(function(e){
+      var badges = (e.override ? '<span class="lexbadge ov">override projet</span>' : '') +
+                   (e.desactive ? '<span class="lexbadge off">desactive</span>' : '') +
+                   (e.attempts > 1 ? '<span class="hint"> ' + esc(e.attempts) + ' essais</span>' : '');
+      return '<div class="lexrow">' +
+        '<div class="lexmot">' + esc(e.mot) + badges + '</div>' +
+        '<input class="lexinput" id="lexp_' + esc(e.id) + '" value="' + esc(e.phonetique) + '">' +
+        '<div class="lexacts">' +
+          '<button class="ghost" onclick="lexEnregistrer(\'' + e.id + '\')">Enregistrer</button>' +
+          '<button class="ghost" onclick="lexToggle(\'' + e.id + '\',' + (!e.desactive) + ')">' + (e.desactive ? 'Reactiver' : 'Desactiver') + '</button>' +
+          '<button class="ghost" onclick="lexSupprimer(\'' + e.id + '\')">Supprimer</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    return '<details class="analyse lexdict"' + (lex.length ? ' open' : '') + '>' +
+      '<summary>Dictionnaire de prononciation (' + lex.length + ')</summary>' +
+      '<div class="val">' +
+        '<div class="hint" style="margin-bottom:8px">Ces mots sont reecrits automatiquement quand les paroles partent a Suno (l\'affiche client reste clair). Global par langue (' + esc(x.langue || '') + '), override possible pour ce projet.</div>' +
+        (rows || '<div class="hint">Aucune entree pour cette langue.</div>') +
+        '<div class="lexrow lexadd">' +
+          '<input class="lexinput" id="lex_mot" placeholder="mot (ex. Roxanne)">' +
+          '<input class="lexinput" id="lex_phon" placeholder="reecriture (ex. Roksane)">' +
+          '<label class="hint" style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="lex_override"> override ce projet</label>' +
+          '<button class="mbtn" onclick="lexAjouter()">Ajouter</button>' +
+        '</div>' +
+      '</div>' +
+    '</details>';
+  }
+
   // ── SAUVEGARDE AUTOMATIQUE (debounce) : les editions se sauvent toutes seules, plus de bouton Enregistrer. ──
   var saveTimer=null;
   function setSaveStatut(t){ var el=document.getElementById('saveStatut'); if(el) el.textContent=t; }
@@ -365,6 +408,7 @@
       (x.voix ? '<div class="fieldcard" style="max-width:520px"><div class="label">Voix</div><div class="val">' + esc(x.voix) + '</div></div>' : '') +
 
       blocPrononciation(x) +
+      renderLexique(x) +
 
       '<div class="sectlabel">Regenerer</div>' +
       '<div class="hint" style="margin-bottom:8px">Choisis la methode (rien n\'est pre-selectionne). Tes editions sont deja enregistrees (auto).</div>' +
@@ -404,6 +448,35 @@
   function demanderAppliquer(methode){
     var lib = methode === 'rege' ? 'nouvelle melodie' : (methode === 'paroles' ? 'paroles uniquement (melodie + style inchanges)' : 'garder la melodie');
     confirmInline('applyBar', 'Regenerer (' + lib + ') ?', 'Oui, regenerer', function(){ appliquer(methode); });
+  }
+
+  // ── DICTIONNAIRE de prononciation (étape 4) : ajouter / éditer / (dés)activer / supprimer une entrée. ──
+  function rechargerDetail(){ if (CUR) ouvrir(CUR.id, document.querySelector('.item.sel')); }
+  async function lexAjouter(){
+    if (!CUR) return;
+    var mot = (document.getElementById('lex_mot').value || '').trim();
+    var phon = (document.getElementById('lex_phon').value || '').trim();
+    var scope = document.getElementById('lex_override').checked ? 'projet' : 'global';
+    if (!mot || !phon) { toast('Mot et reecriture requis.'); return; }
+    var r = await post({ id: CUR.id, action: 'lex_save', mot: mot, phonetique: phon, scope: scope });
+    if (r.ok) { toast('Ajoute au dictionnaire.'); rechargerDetail(); } else { toast('Echec.'); }
+  }
+  async function lexEnregistrer(recId){
+    if (!CUR) return;
+    var phon = (document.getElementById('lexp_' + recId).value || '').trim();
+    var r = await post({ id: CUR.id, action: 'lex_save', recId: recId, phonetique: phon });
+    toast(r.ok ? 'Enregistre.' : 'Echec.');
+  }
+  async function lexToggle(recId, desactive){
+    if (!CUR) return;
+    var r = await post({ id: CUR.id, action: 'lex_save', recId: recId, desactive: desactive });
+    if (r.ok) { toast(desactive ? 'Desactive.' : 'Reactive.'); rechargerDetail(); } else { toast('Echec.'); }
+  }
+  async function lexSupprimer(recId){
+    if (!CUR) return;
+    if (!confirm('Supprimer cette entree du dictionnaire ?')) return;
+    var r = await post({ id: CUR.id, action: 'lex_delete', recId: recId });
+    if (r.ok) { toast('Supprime.'); rechargerDetail(); } else { toast('Echec.'); }
   }
 
   async function appliquerProno(){

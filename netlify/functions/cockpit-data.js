@@ -23,6 +23,7 @@ const API      = `https://api.airtable.com/v0/${BASE_ID}`;
 const SECRET   = process.env.COCKPIT_SECRET;
 const CONVOS   = 'tbl3KBgXthCPromxF';
 const PROJECTS = 'tblh7O8eoog7RyTMJ';
+const LEXIQUE  = 'Lexique_Phonetique';   // dictionnaire phonétique (étape 4)
 const REC_ID   = /^rec[A-Za-z0-9]{14}$/;
 
 const { fullAudioUrl } = require('./_lib/cover');
@@ -108,12 +109,12 @@ async function patchConvo(headers, id, fields) {
 // phonétique envoyée à Suno (lyrics_phonetique de la version liée). Un lyrics_phonetique présent = cas
 // prononciation (les paroles AFFICHÉES restent claires ; Suno reçoit le phonétique). Best-effort.
 async function detailsCorrection(headers, f) {
-  let analyse_ia = '', lyrics_phonetique = '', gen_id = '';
+  let analyse_ia = '', lyrics_phonetique = '', gen_id = '', langue = '';
   const projetId = projetDe(f);
   if (projetId) {
     try {
       const rP = await fetch(`${API}/${PROJECTS}/${projetId}`, { headers });
-      if (rP.ok) analyse_ia = str(((await rP.json()).fields || {}).correction_request);
+      if (rP.ok) { const pf = (await rP.json()).fields || {}; analyse_ia = str(pf.correction_request); langue = str(pf.language); }
     } catch (_) {}
   }
   const genLink = (Array.isArray(f.generation_a_travailler) && f.generation_a_travailler[0]) || null;
@@ -124,7 +125,35 @@ async function detailsCorrection(headers, f) {
       if (rG.ok) lyrics_phonetique = str(((await rG.json()).fields || {}).lyrics_phonetique);
     } catch (_) {}
   }
-  return { analyse_ia, lyrics_phonetique, gen_id };
+  return { analyse_ia, lyrics_phonetique, gen_id, langue: langue || 'fr-CA', projetId };
+}
+
+// Étape 4 — DICTIONNAIRE phonétique du projet : entrées globales de sa langue + overrides du projet (avec
+// leur record id, pour l'édition dans le cockpit). Renvoie [] si pas de langue. Best-effort.
+async function lireLexiqueBrut(headers, langue, projetId) {
+  const lit = formulaLiteral(langue);
+  if (lit === null) return [];
+  try {
+    const r = await fetch(`${API}/${LEXIQUE}?filterByFormula=${encodeURIComponent(`{langue}=${lit}`)}&maxRecords=1000`, { headers });
+    if (!r.ok) return [];
+    const recs = ((await r.json()).records) || [];
+    return recs
+      .filter((rec) => {
+        const pr = (rec.fields || {}).projet;
+        const sur = Array.isArray(pr) && pr.length ? pr : null;
+        return !sur || (projetId && sur.includes(projetId));   // globales + overrides de CE projet
+      })
+      .map((rec) => ({
+        id: rec.id,
+        mot: str(rec.fields.mot),
+        phonetique: str(rec.fields.phonetique),
+        override: !!(Array.isArray(rec.fields.projet) && rec.fields.projet.length),
+        desactive: !!rec.fields.desactive,
+        attempts: rec.fields.attempts || 0,
+        historique: str(rec.fields.historique)
+      }))
+      .sort((a, b) => a.mot.localeCompare(b.mot));
+  } catch (_) { return []; }
 }
 
 exports.handler = async (event) => {
@@ -209,6 +238,45 @@ exports.handler = async (event) => {
         return ok({ ok: true, archived: true });
       }
 
+      // ── DICTIONNAIRE phonétique (étape 4) : gestion à la main depuis le cockpit. ──
+      if (action === 'lex_save') {
+        const convo = await lireConvo(headers, id);
+        if (!convo) return fail(404, { error: 'Conversation introuvable' });
+        const recId = (body.recId || '').toString();
+        const phon  = (body.phonetique || '').toString().trim();
+        const desactive = !!body.desactive;
+        if (REC_ID.test(recId)) {
+          // Édition d'une entrée existante : réécriture et/ou (dés)activation.
+          const fields = {};
+          if (typeof body.phonetique === 'string')  fields.phonetique = phon;
+          if (typeof body.desactive !== 'undefined') fields.desactive = desactive;
+          if (!Object.keys(fields).length) return ok({ ok: true, noop: true });
+          const r = await fetch(`${API}/${LEXIQUE}/${recId}`, { method: 'PATCH', headers: { ...headers, ...HJSON }, body: JSON.stringify({ fields }) });
+          if (!r.ok) return fail(502, { error: 'Maj lexique échouée', detail: await r.text().catch(() => '') });
+          return ok({ ok: true, updated: recId });
+        }
+        // Création : mot + réécriture requis. Scope global (défaut) ou override du projet courant.
+        const mot = (body.mot || '').toString().trim();
+        if (!mot || !phon) return fail(400, { error: 'mot et phonetique requis' });
+        const projetId = projetDe(convo);
+        let langue = 'fr-CA';
+        if (projetId) { try { const rP = await fetch(`${API}/${PROJECTS}/${projetId}`, { headers }); if (rP.ok) langue = str(((await rP.json()).fields || {}).language) || 'fr-CA'; } catch (_) {} }
+        const fields = { mot, phonetique: phon, langue, source: 'cockpit' };
+        if (body.scope === 'projet' && projetId) fields.projet = [projetId];
+        if (desactive) fields.desactive = true;
+        const r = await fetch(`${API}/${LEXIQUE}`, { method: 'POST', headers: { ...headers, ...HJSON }, body: JSON.stringify({ fields }) });
+        if (!r.ok) return fail(502, { error: 'Ajout lexique échoué', detail: await r.text().catch(() => '') });
+        return ok({ ok: true, created: true });
+      }
+
+      if (action === 'lex_delete') {
+        const recId = (body.recId || '').toString();
+        if (!REC_ID.test(recId)) return fail(400, { error: 'recId invalide' });
+        const r = await fetch(`${API}/${LEXIQUE}/${recId}`, { method: 'DELETE', headers });
+        if (!r.ok) return fail(502, { error: 'Suppression échouée', detail: await r.text().catch(() => '') });
+        return ok({ ok: true, deleted: recId });
+      }
+
       return fail(400, { error: 'action inconnue' });
     } catch (err) {
       console.error('[cockpit-data] action', err && err.message);
@@ -252,6 +320,7 @@ exports.handler = async (event) => {
     const corr  = await detailsCorrection(headers, f).catch(() => ({}));
     const estProno = !!(corr.lyrics_phonetique) || /prononciation/i.test(corr.analyse_ia || '');
     const estModif = str(f.categorie_ia) === 'modification';
+    const lexique = await lireLexiqueBrut(headers, corr.langue, corr.projetId).catch(() => []);
 
     const detail = {
       id,
@@ -274,6 +343,10 @@ exports.handler = async (event) => {
       lyrics_phonetique:   corr.lyrics_phonetique || '',
       gen_id:              corr.gen_id || '',
       est_prononciation:   estModif && estProno,
+      // Étape 4 : dictionnaire phonétique du projet (global langue + overrides) + langue pour les actions lex_*.
+      lexique:             lexique,
+      langue:              corr.langue || 'fr-CA',
+      projetId:            corr.projetId || '',
       // mode : 'modification' (avant/après + bloc prononciation si pertinent) ou 'message' (valider+envoyer).
       // est_prononciation reste un FLAG (le bloc phonétique s'affiche DANS la vue modif, géré avec les paroles).
       mode: estModif ? 'modification' : 'message',
