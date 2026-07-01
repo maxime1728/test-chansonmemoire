@@ -72,6 +72,7 @@
   .badge.prod { background:var(--warnbg); color:var(--warn); }
   .badge.prete { background:var(--insbg); color:var(--ins); }
   .regen audio { width:100%; margin-top:10px; }
+  .regen-lyrics { white-space:pre-wrap; font:14px/1.7 Georgia,serif; color:var(--ink); background:var(--insbg); border:1px solid var(--propline); border-radius:8px; padding:12px 14px; margin-top:10px; max-height:340px; overflow:auto; }
 
   .analyse { background:#fff; border:1px solid var(--line); border-radius:10px; padding:0 14px; margin:0 0 16px; }
   .analyse summary { cursor:pointer; padding:11px 0; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700; }
@@ -353,6 +354,7 @@
       (regen.titre ? ' <span class="hint">' + esc(regen.titre) + '</span>' : '') +
       (regen.audio_url ? '<audio controls preload="none" src="' + esc(regen.audio_url) + '"></audio>'
                        : '<div class="hint" style="margin-top:8px">Audio indisponible.</div>') +
+      (regen.paroles ? '<div class="label" style="margin-top:12px">Paroles de cette version</div><div class="regen-lyrics">' + esc(regen.paroles) + '</div>' : '') +
       '</div>';
   }
 
@@ -376,6 +378,7 @@
   }
 
   async function ouvrir(id, node){
+    stopRegenPoll();   // on change d'item -> on coupe un eventuel sondage de regeneration en cours
     var items = document.querySelectorAll('.item');
     for (var i = 0; i < items.length; i++) items[i].classList.remove('sel');
     if (node) node.classList.add('sel');
@@ -435,6 +438,7 @@
     wireGrow('ta_style', recalc);
     if (x.est_prononciation) wireGrow('ta_phon', recalcPhon);
     wireGrow('ta_reponse', autoSave);
+    if (enRege) pollRegen(id);   // item deja en regeneration -> l'audio + les paroles s'afficheront des que pret
   }
 
   async function appliquer(methode){
@@ -442,12 +446,30 @@
     await flushSave();
     var r = await post({ id: CUR.id, action: 'appliquer', methode: methode });   // le backend lit les editions deja sauvees
     var bar = document.getElementById('applyBar');
-    if (r.ok) { toast('Regeneration lancee.'); if (bar) bar.innerHTML = '<span class="hint">Regeneration lancee (Suno ~1 min).</span>'; }
+    if (r.ok) { toast('Regeneration lancee.'); if (bar) bar.innerHTML = '<span class="hint">Regeneration lancee (Suno ~1 min). La version prete s\'affichera ici automatiquement.</span>'; pollRegen(CUR.id); }
     else { toast('Echec.'); if (bar) bar.innerHTML = '<span class="err">Echec : ' + esc((r.d && r.d.error) || r.status) + '</span>'; }
   }
   function demanderAppliquer(methode){
     var lib = methode === 'rege' ? 'nouvelle melodie' : (methode === 'paroles' ? 'paroles uniquement (melodie + style inchanges)' : 'garder la melodie');
     confirmInline('applyBar', 'Regenerer (' + lib + ') ?', 'Oui, regenerer', function(){ appliquer(methode); });
+  }
+
+  // Auto-rafraichissement apres une regeneration : on sonde la version jusqu'a ce que Suno la livre
+  // ('prête'), puis on recharge le detail -> l'audio + les paroles de la nouvelle version apparaissent
+  // tout seuls (plus besoin de recharger la page). S'arrete si l'admin change d'item ou apres ~10 min.
+  var regenPoll = null;
+  function stopRegenPoll(){ if (regenPoll) { clearInterval(regenPoll); regenPoll = null; } }
+  function pollRegen(id){
+    stopRegenPoll();
+    if (!id) return;
+    var tries = 0;
+    regenPoll = setInterval(async function(){
+      tries++;
+      if (tries > 40 || !CUR || CUR.id !== id) { stopRegenPoll(); return; }   // ~10 min max, ou item change
+      var d = await api('?id=' + encodeURIComponent(id));
+      var rg = d && d.detail && d.detail.regen;
+      if (rg && rg.statut === 'prête') { stopRegenPoll(); rechargerDetail(); toast('Nouvelle version prete a revoir.'); }
+    }, 15000);
   }
 
   // ── DICTIONNAIRE de prononciation (étape 4) : ajouter / éditer / (dés)activer / supprimer une entrée. ──
@@ -484,7 +506,7 @@
     var phon = document.getElementById('ta_phon').value;
     var r = await post({ id: CUR.id, action: 'appliquer_prononciation', lyrics_phonetique: phon });
     var bar = document.getElementById('pronoBar');
-    if (r.ok) { toast('Regeneration lancee (prononciation).'); if (bar) bar.innerHTML = '<span class="hint">Regeneration lancee (Suno ~1 min).</span>'; }
+    if (r.ok) { toast('Regeneration lancee (prononciation).'); if (bar) bar.innerHTML = '<span class="hint">Regeneration lancee (Suno ~1 min). La version prete s\'affichera ici automatiquement.</span>'; pollRegen(CUR.id); }
     else { toast('Echec.'); if (bar) bar.innerHTML = '<span class="err">Echec : ' + esc((r.d && r.d.error) || r.status) + '</span>'; }
   }
   function demanderProno(){

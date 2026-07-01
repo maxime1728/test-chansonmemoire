@@ -27,6 +27,7 @@ const LEXIQUE  = 'Lexique_Phonetique';   // dictionnaire phonétique (étape 4)
 const REC_ID   = /^rec[A-Za-z0-9]{14}$/;
 
 const { fullAudioUrl } = require('./_lib/cover');
+const { stripSectionTags } = require('./_lib/lyrics');   // masque les balises [Verse]/[Chorus] pour l'affichage
 
 // action_modif : valeurs EXACTES attendues par appliquer-cron / appliquer-modification.
 const ACTION_MODIF = { cover: 'Refaire le cover (même mélodie)', rege: 'Régénérer (nouvelle mélodie)', paroles: 'Refaire le cover (même mélodie)' };
@@ -72,7 +73,8 @@ async function versionRegen(headers, convoFields) {
     statut: gf.version_status,                                   // 'en_production' | 'prête'
     titre: str(gf.song_title),
     no: gf.generation_no || null,
-    audio_url: prete ? fullAudioUrl(gf.cloudinary_audio_url) : ''  // signé/complet seulement quand prête
+    audio_url: prete ? fullAudioUrl(gf.cloudinary_audio_url) : '',  // signé/complet seulement quand prête
+    paroles: prete ? stripSectionTags(str(gf.lyrics)) : ''         // paroles de la version régé (à relire avant envoi ; balises masquées)
   };
 }
 
