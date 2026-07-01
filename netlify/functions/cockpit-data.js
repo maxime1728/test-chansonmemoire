@@ -226,6 +226,37 @@ async function ficheAddons(headers, projetId) {
   } catch (_) { return null; }
 }
 
+// VERSIONS du projet (jalon 3a) : liste des générations pour le sélecteur « version de référence »
+// (au cas où le client parle d'une version précise). Best-effort. Plus récentes d'abord.
+async function versionsProjet(headers, projetId) {
+  if (!projetId) return [];
+  try {
+    const rP = await fetch(`${API}/${PROJECTS}/${projetId}`, { headers });
+    if (!rP.ok) return [];
+    const p = (await rP.json()).fields || {};
+    const lit = formulaLiteral(p.project);
+    if (lit === null) return [];
+    const purchasedNo = parseInt(p.purchased_generation_no, 10);
+    const url = `${API}/Generations?filterByFormula=${encodeURIComponent(`{project}=${lit}`)}&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=25`;
+    const r = await fetch(url, { headers });
+    if (!r.ok) return [];
+    const recs = (((await r.json().catch(() => ({}))).records) || []);
+    return recs.map((g) => {
+      const gf = g.fields || {};
+      return {
+        no: gf.generation_no,
+        achetee: Number.isInteger(purchasedNo) && gf.generation_no === purchasedNo,
+        type: str(gf.type),
+        statut: str(gf.version_status),
+        voix: str(gf.gen_voice),
+        titre: str(gf.song_title),
+        style_prompt: str(gf.gen_style_prompt),
+        audio: gf.cloudinary_audio_url ? fullAudioUrl(gf.cloudinary_audio_url) : ''
+      };
+    }).filter((v) => v.no != null);
+  } catch (_) { return []; }
+}
+
 exports.handler = async (event) => {
   if (!SECRET) { console.error('[cockpit-data] COCKPIT_SECRET manquant'); return fail(500, { error: 'Configuration manquante' }); }
 
@@ -421,6 +452,7 @@ exports.handler = async (event) => {
     const lexique = await lireLexiqueBrut(headers, corr.langue, corr.projetId).catch(() => []);
     const audio_actuel = await audioVersionCourante(headers, corr.projetId).catch(() => '');   // lecteur « version actuelle »
     const fiche = await ficheAddons(headers, corr.projetId).catch(() => null);                 // commande + add-ons (jalon 2)
+    const versions = await versionsProjet(headers, corr.projetId).catch(() => []);             // sélecteur version de référence (jalon 3a)
 
     const detail = {
       id,
@@ -452,6 +484,7 @@ exports.handler = async (event) => {
       mode: estModif ? 'modification' : 'message',
       audio_actuel,   // audio de la version en ligne -> lecteur « écouter la version actuelle » dans le cockpit
       fiche,          // jalon 2 : { commande:{statut}, addons:[{type,nom,etat,url,relance}] }
+      versions,       // jalon 3a : [{no,achetee,type,statut,voix,titre,style_prompt,audio}]
       regen   // null, ou { statut, titre, no, audio_url, paroles }
     };
     return ok({ ok: true, detail });

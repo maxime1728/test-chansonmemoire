@@ -125,6 +125,7 @@
   .vs{font-size:11.5px;color:var(--muted);}
   .vr{margin-left:auto;font-size:11px;color:var(--faint);}
   .vmeta{font-size:12px;color:var(--muted);margin-top:9px;}
+  .vpick{flex:1;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;}
   .promptdd{margin-top:10px;}
   .promptdd summary{cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);list-style:none;display:flex;align-items:center;gap:6px;}
   .promptdd summary::-webkit-details-marker{display:none;}
@@ -468,9 +469,12 @@
           '</div>'+
 
           '<div class="blk"><div class="sectlabel">Studio IA</div><div class="studio" id="studio">'+
-            '<div class="glab">Version de référence</div>'+
-            '<div class="vbox locked"><div class="vhead"><div><div class="vt">Version en ligne'+(x.regen&&x.regen.no?' · V'+esc(x.regen.no):'')+'</div><div class="vs">'+(x.voix?'Voix : '+esc(x.voix):'version actuelle')+'</div></div><span class="vr">🔒 réf.</span></div>'+
-              '<details class="promptdd"><summary>Prompt de style utilisé</summary><div class="promptbox ro">'+esc(x.prompt_style_actuel||'(non renseigné)')+'</div></details></div>'+
+            '<div class="glab">Version de référence <span class="note">(celle dont parle le client)</span></div>'+
+            '<div class="vbox locked">'+
+              (x.versions&&x.versions.length
+                ? '<div class="vhead">'+refSelect(x.versions)+'<span class="vr">🔒 réf.</span></div><div id="refInfo"></div>'
+                : '<div class="vhead"><div><div class="vt">Version en ligne'+(x.regen&&x.regen.no?' · V'+esc(x.regen.no):'')+'</div><div class="vs">'+(x.voix?'Voix : '+esc(x.voix):'version actuelle')+'</div></div><span class="vr">🔒 réf.</span></div><details class="promptdd"><summary>Prompt de style utilisé</summary><div class="promptbox ro">'+esc(x.prompt_style_actuel||'(non renseigné)')+'</div></details>')+
+            '</div>'+
 
             '<div class="glab" style="margin-top:16px">Nouvelle version</div>'+
             '<div class="vbox">'+
@@ -489,9 +493,29 @@
 
     wireEdit('bloc_paroles'); wireEdit('bloc_style'); wireGrow('ta_reponse'); document.getElementById('ta_reponse').addEventListener('input',autoSave);
     if(enRege) pollRegen(id);
+    if(x.versions&&x.versions.length) majRef();
   }
 
   function scrollStudio(){ var s=document.getElementById('studio'); if(s) s.scrollIntoView({behavior:'smooth',block:'center'}); }
+
+  // Sélecteur de version de référence (jalon 3a) : parmi les générations du projet (x.versions).
+  function refSelect(versions){
+    return '<select class="vpick" id="refPick" onchange="majRef()">'+versions.map(function(v){
+      var lbl='V'+v.no+(v.achetee?' · achetée':'')+(v.type?' · '+v.type:'')+(v.statut?' · '+v.statut:'');
+      return '<option value="'+v.no+'"'+(v.achetee?' selected':'')+'>'+esc(lbl)+'</option>';
+    }).join('')+'</select>';
+  }
+  function majRef(){
+    if(!CUR || !CUR.versions) return;
+    var pick=document.getElementById('refPick'); if(!pick) return;
+    var no=parseInt(pick.value,10);
+    var v=CUR.versions.filter(function(z){return z.no===no;})[0]; if(!v) return;
+    var el=document.getElementById('refInfo'); if(!el) return;
+    el.innerHTML=
+      ((v.voix||v.titre)?'<div class="vmeta">'+(v.voix?'Voix : '+esc(v.voix):'')+(v.titre?((v.voix?' · ':'')+esc(v.titre)):'')+'</div>':'')+
+      (v.audio?'<audio class="cur" controls preload="none" src="'+esc(v.audio)+'"></audio>':'')+
+      '<details class="promptdd"><summary>Prompt de style utilisé</summary><div class="promptbox ro">'+esc(v.style_prompt||'(non renseigné)')+'</div></details>';
+  }
   // Regénérer le prompt selon les demandes du client (réécriture via analyse-modif) : branché au jalon 2.
   function regenPrompt(){ toast('Regénérer le prompt selon les demandes : branché au jalon 2.'); }
 
