@@ -11,6 +11,8 @@ CATEGORISE la demande dans une ou plusieurs des 5 categories EXACTES : "paroles"
 
 MODE : "cover" par defaut (garde la melodie existante, ajuste les paroles). "regeneration" UNIQUEMENT si le client veut une autre musique / melodie / style.
 
+NOUVELLE CHANSON (a distinguer d'une simple retouche) : si la demande n'est PAS une modification de CETTE chanson mais une demande de chanson COMPLETEMENT NOUVELLE (une AUTRE personne honoree, un autre sujet, ou explicitement "je veux une nouvelle chanson / une autre chanson"), mets "nouvelle_chanson": true et n'ajuste RIEN (categories: [], adjusted_lyrics: "", lyrics_phonetique: ""). Dans le DOUTE (ca pourrait etre une retouche de la chanson actuelle), mets false. Par defaut false.
+
 PROMPT STYLE (adjusted_style_prompt, en anglais) : tu recois le PROMPT DE STYLE ACTUEL (deja riche) et un CATALOGUE de styles de reference. Regles :
 - Par defaut, si la demande NE touche PAS le style/l'ambiance, renvoie le prompt actuel TEL QUEL.
 - Si le client veut un AUTRE style musical ou une AUTRE ambiance : inspire-toi du CATALOGUE pour le style qui s'en rapproche, et ecris un prompt SUR MESURE dans le meme niveau de detail.
@@ -31,14 +33,14 @@ VOIX DE MARQUE : solution-first, digne, jamais ouvrir sur le deuil ; pas de clic
 TYPOGRAPHIE : n'utilise JAMAIS le tiret cadratin/long (—) dans tes textes (compte_rendu, paroles) ; mets une virgule, un deux-points, une parenthese ou un point a la place.
 
 SORTIE, reponds UNIQUEMENT avec un objet JSON valide, sans texte autour, guillemets droits :
-{"categories":["..."],"mode":"cover","compte_rendu":"<resume clair pour l'equipe, en francais>","adjusted_style_prompt":"<prompt actuel inchange, OU ajuste/sur mesure selon la demande, jamais plus court>","adjusted_lyrics":"<paroles AFFICHEES ajustees, mots clairs, en quebecois OU chaine vide>","lyrics_phonetique":"<memes paroles avec les mots mal prononces reecrits phonetiquement pour Suno ; vide si aucune prononciation>","prononciations":[{"mot":"<mot tel qu'ecrit>","phonetique":"<sa reecriture pour Suno>"}]}`;
+{"nouvelle_chanson":false,"categories":["..."],"mode":"cover","compte_rendu":"<resume clair pour l'equipe, en francais>","adjusted_style_prompt":"<prompt actuel inchange, OU ajuste/sur mesure selon la demande, jamais plus court>","adjusted_lyrics":"<paroles AFFICHEES ajustees, mots clairs, en quebecois OU chaine vide>","lyrics_phonetique":"<memes paroles avec les mots mal prononces reecrits phonetiquement pour Suno ; vide si aucune prononciation>","prononciations":[{"mot":"<mot tel qu'ecrit>","phonetique":"<sa reecriture pour Suno>"}]}`;
 
 // p = champs du Projet ; gen = champs de la Generation de reference ; demande = texte client ;
 // styleActuel = prompt de style riche de la version de reference ; catalogue = [{style, prompt}] de l'ambiance.
 // Renvoie { ok, categories, mode, compteRendu, adjStyle, adjLyrics }. adjStyle retombe TOUJOURS sur styleActuel
 // si Claude echoue ou renvoie vide (on ne perd jamais le prompt riche).
 async function analyserModif({ apiKey, demande, p = {}, gen = {}, styleActuel = '', catalogue = [] }) {
-  const defaut = { ok: false, categories: '', mode: 'cover', compteRendu: '', adjStyle: styleActuel || '', adjLyrics: '', prononciations: [] };
+  const defaut = { ok: false, nouvelleChanson: false, categories: '', mode: 'cover', compteRendu: '', adjStyle: styleActuel || '', adjLyrics: '', prononciations: [] };
   if (!apiKey || !demande) return defaut;
 
   const cat = (Array.isArray(catalogue) ? catalogue : [])
@@ -83,7 +85,8 @@ ${demande}`;
   if (!parsed) return defaut;
 
   return {
-    ok:          true,
+    ok:              true,
+    nouvelleChanson: parsed.nouvelle_chanson === true,   // demande de chanson COMPLÈTEMENT neuve (pas une retouche)
     categories:  Array.isArray(parsed.categories) ? parsed.categories.join(', ') : '',
     mode:        parsed.mode === 'regeneration' ? 'regeneration' : 'cover',
     compteRendu: (parsed.compte_rendu || '').toString().slice(0, 3000),

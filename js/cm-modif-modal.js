@@ -248,6 +248,16 @@
           els.note.textContent = 'On a bien reçu ta demande, on te revient ! Tu peux ajouter des détails ci-dessous si tu veux.';
           return;
         }
+        if (res.route === 'nouvelle_chanson') {
+          // Chanson complètement neuve (pas une retouche) : le serveur a déjà alerté l'équipe (courriel +
+          // cockpit). On l'annonce au client sans double capture (pas de captureFallback).
+          hideLoad(); clearDraft();
+          els.form.style.display = 'none';
+          els.done.innerHTML = 'Ça ressemble à une <strong>nouvelle chanson</strong>, pas à une retouche de celle-ci. On a bien reçu ta demande et on te revient très vite.<br><br>Tu peux aussi en commander une nouvelle dès maintenant sur <a href="https://chansonmemoire.ca" style="color:#5C2D4A;">chansonmemoire.ca</a>.';
+          els.done.style.display = 'block';
+          els.note.textContent = '';
+          return;
+        }
         // route 'regen' / 'prononciation' / cas inexploitable -> capture cockpit + message « on te revient ».
         hideLoad(); captureFallback(texte); clearDraft(); showDone();
       })

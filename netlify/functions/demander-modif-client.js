@@ -25,6 +25,7 @@ const { analyserModif, typeCorrection } = require('./_lib/analyse-modif');
 const { styleFor, cataloguePourAmbiance } = require('./_lib/style');
 const { coverEnVol } = require('./_lib/cover');
 const { nbAppelsSuno, PLAFOND_SUNO } = require('./_lib/comptage');
+const { envoyerCourriel } = require('./_lib/courriel');   // alerte interne « nouvelle chanson » (log:false)
 
 const BASE_ID = process.env.AIRTABLE_BASE_ID;
 const TOKEN   = process.env.AIRTABLE_TOKEN;
@@ -58,6 +59,44 @@ async function emailClient(projet, headers) {
     const d = await r.json();
     return (d.fields && d.fields.email) || '';
   } catch (_) { return ''; }
+}
+
+function escHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'); }
+
+// « Nouvelle chanson » (pas une retouche) : on N'exécute rien. On CAPTURE la demande pour Maxime, sans rien
+// perdre : (1) ligne Conversations durable (il la voit dans le cockpit) + (2) courriel à l'équipe avec le
+// texte complet. Best-effort : n'empêche jamais la réponse au client. Le front dit au client que c'est une
+// nouvelle commande.
+async function alerterNouvelleChanson(projet, texte, headers) {
+  const p = projet.fields || {};
+  const to = await emailClient(projet, headers);
+  try {
+    await fetch(`${API}/${CONVOS}`, {
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ typecast: true, fields: {
+        expediteur:   to || '',
+        sujet:        `Nouvelle chanson demandée${p.deceased_name ? ' (autre que ' + p.deceased_name + ')' : ''}`,
+        message:      texte,
+        recu_le:      new Date().toISOString(),
+        statut:       'a_verifier',
+        categorie_ia: 'nouvelle_chanson',
+        phase_achat:  p.commercial_status === 'purchased' ? 'apres_achat' : 'avant_achat',
+        Projet:       [projet.id]
+      } })
+    });
+  } catch (_) { /* la trace ne bloque jamais la réponse */ }
+  try {
+    const dest = process.env.TEAM_NOTIFY_EMAIL;
+    if (dest) {
+      const html = `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.6;max-width:600px;">` +
+        `<h2 style="color:#5C2D4A;margin:0 0 6px;">Nouvelle chanson demandée (pas une retouche)</h2>` +
+        `<p style="color:#7A6070;margin:0 0 12px;">Un client a écrit, dans la boîte de modification, une demande qui ressemble à une chanson complètement neuve.</p>` +
+        `<p><strong>Projet actuel :</strong> ${escHtml(p.deceased_name || '(sans nom)')}</p>` +
+        `<p><strong>Courriel du client :</strong> ${escHtml(to || '(introuvable)')}</p>` +
+        `<p><strong>Sa demande :</strong><br>${escHtml(texte)}</p></div>`;
+      await envoyerCourriel({ to: dest, subject: `Nouvelle chanson demandée${p.deceased_name ? ' — ' + String(p.deceased_name).slice(0, 40) : ''}`, html, type: 'achat', log: false });
+    }
+  } catch (_) { /* le courriel ne bloque jamais la réponse */ }
 }
 
 exports.handler = async (event) => {
@@ -186,6 +225,14 @@ exports.handler = async (event) => {
       // Rien de concret à appliquer (consigne trop vague, ou paroles déjà conformes) : on renvoie les paroles
       // ACTUELLES inchangées + un signal 'noop' -> la page affiche un message utile, pas un dead-end.
       return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, route: 'cover', noop: true, lyrics: baseLyrics, titre: gen.song_title || '' }) };
+    }
+
+    // 4a. NOUVELLE CHANSON (pas une retouche de celle-ci) : on n'exécute RIEN. On alerte Maxime (ligne
+    //     Conversations + courriel avec la demande complète), et le front annonce au client que c'est une
+    //     nouvelle commande. Prioritaire sur les routes de modification.
+    if (res.nouvelleChanson) {
+      await alerterNouvelleChanson(projet, texte, headers);
+      return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, route: 'nouvelle_chanson' }) };
     }
 
     const cats = (res.categories || '').toLowerCase();

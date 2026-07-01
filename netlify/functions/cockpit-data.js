@@ -130,6 +130,29 @@ async function detailsCorrection(headers, f) {
   return { analyse_ia, lyrics_phonetique, gen_id, langue: langue || 'fr-CA', projetId };
 }
 
+// Audio de la VERSION ACTUELLE (en ligne) du projet — pour l'ÉCOUTER dans le cockpit (Maxime : « je veux
+// une place pour écouter la chanson »). On prend la Generation la plus récente qui a un audio et n'est PAS
+// en cours de rendu ('en_production'). URL signée/complète via fullAudioUrl. Best-effort (vide si rien).
+async function audioVersionCourante(headers, projetId) {
+  if (!projetId) return '';
+  try {
+    const rP = await fetch(`${API}/${PROJECTS}/${projetId}`, { headers });
+    if (!rP.ok) return '';
+    const lit = formulaLiteral(((await rP.json()).fields || {}).project);
+    if (lit === null) return '';
+    const url = `${API}/Generations?filterByFormula=${encodeURIComponent(`{project}=${lit}`)}` +
+      `&sort%5B0%5D%5Bfield%5D=generation_no&sort%5B0%5D%5Bdirection%5D=desc&maxRecords=5`;
+    const r = await fetch(url, { headers });
+    if (!r.ok) return '';
+    const recs = (((await r.json().catch(() => ({}))).records) || []);
+    for (const g of recs) {
+      const gf = g.fields || {};
+      if (gf.cloudinary_audio_url && gf.version_status !== 'en_production') return fullAudioUrl(gf.cloudinary_audio_url);
+    }
+    return '';
+  } catch (_) { return ''; }
+}
+
 // Étape 4 — DICTIONNAIRE phonétique du projet : entrées globales de sa langue + overrides du projet (avec
 // leur record id, pour l'édition dans le cockpit). Renvoie [] si pas de langue. Best-effort.
 async function lireLexiqueBrut(headers, langue, projetId) {
@@ -323,6 +346,7 @@ exports.handler = async (event) => {
     const estProno = !!(corr.lyrics_phonetique) || /prononciation/i.test(corr.analyse_ia || '');
     const estModif = str(f.categorie_ia) === 'modification';
     const lexique = await lireLexiqueBrut(headers, corr.langue, corr.projetId).catch(() => []);
+    const audio_actuel = await audioVersionCourante(headers, corr.projetId).catch(() => '');   // lecteur « version actuelle »
 
     const detail = {
       id,
@@ -352,7 +376,8 @@ exports.handler = async (event) => {
       // mode : 'modification' (avant/après + bloc prononciation si pertinent) ou 'message' (valider+envoyer).
       // est_prononciation reste un FLAG (le bloc phonétique s'affiche DANS la vue modif, géré avec les paroles).
       mode: estModif ? 'modification' : 'message',
-      regen   // null, ou { statut, titre, no, audio_url }
+      audio_actuel,   // audio de la version en ligne -> lecteur « écouter la version actuelle » dans le cockpit
+      regen   // null, ou { statut, titre, no, audio_url, paroles }
     };
     return ok({ ok: true, detail });
   } catch (err) {

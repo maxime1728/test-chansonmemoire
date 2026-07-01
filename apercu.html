@@ -2028,6 +2028,15 @@ setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet
           if (statusEl) statusEl.textContent = 'Pour changer le style, choisis-le dans la liste.';
           closeModal(); if (bStyle) bStyle.click(); return;
         }
+        if (res.route === 'nouvelle_chanson'){
+          /* chanson complètement neuve (pas une retouche) : le serveur a déjà alerté l'équipe. */
+          hideLoad(); clearDraft();
+          var fN=document.getElementById('cm-modif-form'), dN=document.getElementById('cm-modif-done');
+          if (fN) fN.style.display='none';
+          if (dN){ dN.innerHTML = 'Ça ressemble à une <strong>nouvelle chanson</strong>, pas à une retouche de celle-ci. On a bien reçu ta demande et on te revient très vite.<br><br>Tu peux aussi en commander une nouvelle sur <a href="https://chansonmemoire.ca" style="color:#5C2D4A;">chansonmemoire.ca</a>.'; dN.style.display='block'; }
+          if (statusEl) statusEl.textContent='';
+          return;
+        }
         /* prononciation : enregistre la demande (texte) pour l'équipe, message « on te revient ». */
         return fetch('/api/prononciation', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, mot:'', indication:'', autre: texte }) })
           .then(function(){ hideLoad(); clearDraft(); var f=document.getElementById('cm-modif-form'), d=document.getElementById('cm-modif-done'); if (f) f.style.display='none'; if (d) d.style.display='block'; if (statusEl) statusEl.textContent=''; });
