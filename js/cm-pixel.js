@@ -14,10 +14,36 @@
   window._cmPixelShared = true;
   var PIXEL_ID = '909919758755200';
 
+  // Courriels équipe / tests : on ne les envoie JAMAIS à Meta (pixel + CAPI). Doit rester synchronisé
+  // avec netlify/functions/_lib/courriels-internes.js (côté serveur).
+  var COURRIELS_INTERNES = window.CM_COURRIELS_INTERNES = [
+    'maximeblanchet.mb@gmail.com',
+    'maxime@labmarketing.ca',
+    'roxannetrudel.rt@gmail.com'
+  ];
+  function estCourrielInterne(email) {
+    return !!email && typeof email === 'string' && COURRIELS_INTERNES.indexOf(email.trim().toLowerCase()) !== -1;
+  }
+
+  // Flag « ne rien tracker » (appareil/navigateur), persistant. Posé automatiquement quand un courriel
+  // interne est saisi (voir window.cmSetNoTrack), ou manuellement via ?cm_no_track=1 (0 pour réactiver).
+  function noTrack() { try { return localStorage.getItem('cm_no_track') === '1'; } catch (e) { return false; } }
+  function setNoTrack(on) { try { on ? localStorage.setItem('cm_no_track', '1') : localStorage.removeItem('cm_no_track'); } catch (e) {} }
+
+  // Toggle par URL : ?cm_no_track=1 (silence total sur cet appareil) / ?cm_no_track=0 (réactive).
+  try {
+    var qp = new URLSearchParams(location.search);
+    if (qp.has('cm_no_track')) setNoTrack(qp.get('cm_no_track') !== '0');
+  } catch (e) {}
+
+  // Appelé par le funnel (ex. survey) avec le courriel saisi : si interne -> pose le flag no-track.
+  window.cmSetNoTrack = function (email) { if (estCourrielInterne(email)) setNoTrack(true); return noTrack(); };
+
   function consent() { try { return localStorage.getItem('cm_consent'); } catch (e) { return null; } }
 
   function getCookie(n) { var m = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)'); return m ? m.pop() : ''; }
   function loadPixel() {
+    if (noTrack()) return;   // équipe/tests -> aucun pixel, aucun PageView, aucun appel CAPI
     if (window._px) return; window._px = true;
     !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments) }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s) }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
     fbq('init', PIXEL_ID);
@@ -42,7 +68,7 @@
 
   // API events (consentement requis). PreviewPlayed = event personnalisé.
   window.cmTrack = async function (eventName, evtKey, tok, custom) {
-    if (consent() !== 'yes' || !tok) return;
+    if (noTrack() || consent() !== 'yes' || !tok) return;
     loadPixel();
     var o = {}; if (evtKey) { var id = await eid(tok + '.' + evtKey); if (id) o.eventID = id; }
     try { if (eventName === 'PreviewPlayed') fbq('trackCustom', eventName, custom || {}, o); else fbq('track', eventName, custom || {}, o); } catch (e) {}
@@ -72,6 +98,7 @@
   }
 
   function boot() {
+    if (noTrack()) return;          // équipe/tests -> ni pixel ni bannière
     var c = consent();
     if (c === 'yes') loadPixel();   // PageView gated, sur chaque page
     else if (!c) injectBanner();    // pas encore choisi -> bannière (refus = rien)

@@ -626,7 +626,7 @@ body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text
       headers:{ 'Content-Type':'application/json' },
       body:JSON.stringify(data)
     })
-    .then(function(){ if(window.cmTrack) window.cmTrack('Lead','lead',token); redirigerVersRevision(); })
+    .then(function(){ if(window.cmSetNoTrack) window.cmSetNoTrack(email); if(window.cmTrack) window.cmTrack('Lead','lead',token); redirigerVersRevision(); })
     .catch(function(err){ console.error('Erreur soumission:', err); redirigerVersRevision(); });
   });
 
