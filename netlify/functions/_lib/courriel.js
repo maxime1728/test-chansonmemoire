@@ -11,28 +11,36 @@
 //
 // Best-effort sur le LOG : jamais une exception de journalisation ne doit casser un envoi. Si Mailgun ou
 // Airtable manquent (env vide), tout est inerte (no-op) — comme les anciens helpers.
-// Env : MAILGUN_API_KEY, MAILGUN_DOMAIN, MAILGUN_FROM, AIRTABLE_TOKEN, AIRTABLE_BASE_ID.
+// Env : MAILGUN_API_KEY, MAILGUN_DOMAIN, MAILGUN_FROM (support), MAILGUN_FROM_NOTIF (notifications@ « machine »),
+//       MAILGUN_DOMAIN_ACHAT / _MARKETING / _SUPPORT, AIRTABLE_TOKEN, AIRTABLE_BASE_ID.
 
 const COURRIELS = 'Courriels';   // table de journalisation (créée côté Airtable, schéma additif)
 const CLIENTS   = 'tblQbF1OlE3uRxFra';
 const TYPES_SUPPRIMABLES = new Set(['nurture', 'sequence', 'recovery']);   // flux RÉPÉTABLES : on saute les adresses mortes
 const TYPES_MARKETING    = new Set(['nurture', 'sequence']);               // marketing : on saute AUSSI les clients désabonnés (nurture_optout, LCAP)
 
-// ── Lot 6 : From AFFICHÉ + sous-domaine d'ENVOI, résolus par TYPE (un seul endroit décide) ──────────
-// DÉCISION (Maxime) : le From affiché est TOUJOURS la racine (cohérence de marque). On protège quand
-// même la racine en ENVOYANT via un sous-domaine par flux (achat./info./support.), jamais la racine :
-// l'IP, le DKIM, le Return-Path et les flux de plaintes restent isolés sur le sous-domaine, et DMARC
-// relaxed aligne le From racine avec le DKIM du sous-domaine. `MAILGUN_FROM` = surcharge globale du From.
-const FROM_RACINE = 'Chanson Mémoire <nathalie@chansonmemoire.ca>';
+// ── From AFFICHÉ + sous-domaine d'ENVOI, résolus par TYPE (un seul endroit décide) ──────────────────
+// DÉCISION (Maxime 2026-06-30) : SPLIT d'EXPÉDITEUR selon que le courriel « sonne humain » ou non.
+//   - 'support'  = réponses au client (souvent rédigées par l'IA, ton humain) -> nathalie@ (FROM_RACINE).
+//     NB : repondre-courriel envoie par son PROPRE code, déjà nathalie@ ; ce cas ne sert que de repli.
+//   - TOUT LE RESTE (reçu d'achat, « version prête », cadeau, recovery, nurture, séquences) = automatisé
+//     « machine » -> notifications@ (FROM_NOTIF). Garde Nathalie humaine, sort les notifications robots.
+// On protège toujours la racine en ENVOYANT via un sous-domaine par flux (achat./info./support.) : DKIM,
+// Return-Path et plaintes restent isolés, et DMARC relaxed aligne le From racine (nathalie@ / notifications@)
+// avec le DKIM du sous-domaine. Seul le From AFFICHÉ change ici, jamais le domaine d'envoi.
+// Surcharges : MAILGUN_FROM (support), MAILGUN_FROM_NOTIF (machine).
+const FROM_RACINE = 'Chanson Mémoire <nathalie@chansonmemoire.ca>';        // humain (réponses support)
+const FROM_NOTIF  = 'Chanson Mémoire <notifications@chansonmemoire.ca>';   // machine (reçus, version prête, marketing)
 
-// { domain, from } selon le type. from = racine (affichée) ; domain = sous-domaine d'ENVOI (jamais la racine).
+// { domain, from } selon le type. from = adresse AFFICHÉE ; domain = sous-domaine d'ENVOI (jamais la racine).
 function expediteurParType(type) {
-  const from = process.env.MAILGUN_FROM || FROM_RACINE;
+  if (type === 'support') {
+    return { from: process.env.MAILGUN_FROM || FROM_RACINE, domain: process.env.MAILGUN_DOMAIN_SUPPORT || 'support.chansonmemoire.ca' };
+  }
+  // Automatisé « machine » -> notifications@. Le sous-domaine d'ENVOI reste par flux (marketing vs achat).
+  const from = process.env.MAILGUN_FROM_NOTIF || FROM_NOTIF;
   if (type === 'nurture' || type === 'sequence' || type === 'recovery') {
     return { from, domain: process.env.MAILGUN_DOMAIN_MARKETING };                       // marketing -> info.
-  }
-  if (type === 'support') {
-    return { from, domain: process.env.MAILGUN_DOMAIN_SUPPORT || 'support.chansonmemoire.ca' };
   }
   return { from, domain: process.env.MAILGUN_DOMAIN_ACHAT || process.env.MAILGUN_DOMAIN };  // transactionnel
 }
