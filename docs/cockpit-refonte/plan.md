@@ -121,3 +121,16 @@ _Rédigé 2026-07-01. Source design : `docs/cockpit-refonte/cockpit-prototype.ht
 **Découpe du build :**
 - **Jalon 1 (ce build)** : nouveau design + layout + **100 % des features ci-dessus** rebranchées sur le `cockpit-data.js` EXISTANT (contrat inchangé). Studio en style neuf avec les capacités actuelles (version de référence = version en ligne, prompt éditable, 3 méthodes, bloc régé).
 - **Jalon 2+ (backend)** : sélecteur multi-générations en vrai, **versions A/B** (2ᵉ génération + choix client), **style/ambiance/voix + prompt PAR version**, **ton du courriel**, **lien token inséré**, **vraie fusion** des courriels à l'intake. Chacun = sa PR.
+
+## 10. Jalon 2 — fiche client COMPLÈTE (décidé 2026-07-01)
+
+Décision Maxime : **le cockpit gère 100 % de la fiche client.** Même si le client ne demande que des paroles, l'admin a accès à TOUT en lecture + édition. Séquence : **#280 (jalon 1) se merge d'abord**, la fiche = **PR dédiée** ensuite (partir de `main` à jour).
+
+**Structure de la fiche (détail) :**
+1. **Client + commande** : nom, courriel, no commande, date, montant, statut (`commercial_status` : aperçu / acheté / livré / remboursé).
+2. **Chanson (tout éditable)** : titre, paroles, style + ambiance, voix, prononciation + dictionnaire, versions (studio A/B).
+3. **Add-ons / upsells achetés (TOUS)** — mode **voir + relancer** (édition des paramètres = plus tard) : instrumentale, vidéo mémoire, paroles vivantes, PDF, karaoké, photos mémoire. Lus via `Projects.upsells` → table **Upsells** (`type` = video / lyrics_pdf / instrumental / plaque_indoor / plaque_outdoor, `delivery_url`) + champs `extra_*` + photos. Par item : statut (acheté / en cours / livré / échoué), écouter ou voir le rendu, **relancer/régénérer** (branché sur `lancer-instrumentale` / `lancer-video-memoire` / `lancer-paroles-vivantes` / `commander-bump`), + **ajouter un add-on**.
+4. **Courriel client** (ton, lien token).
+5. **Historique** : versions + conversations (fil fusionné).
+
+**Backend** : `cockpit-data` étendu (lecture fiche : Projet + Client + Upsells + Generations) + actions de relance gatées `COCKPIT_SECRET` → mêmes fonctions/déclencheurs existants (rien de dupliqué). Non destructif. Champs exacts (Upsells vs `extra_*` vs order bumps) à confirmer au build.
