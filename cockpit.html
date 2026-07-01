@@ -126,6 +126,11 @@
   .vr{margin-left:auto;font-size:11px;color:var(--faint);}
   .vmeta{font-size:12px;color:var(--muted);margin-top:9px;}
   .vpick{flex:1;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;}
+  .vsel{display:flex;gap:8px;margin:2px 0 8px;flex-wrap:wrap;}
+  .vsel label{flex:1;min-width:86px;font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.3px;display:flex;flex-direction:column;gap:3px;}
+  .vsel select{font-family:inherit;font-size:12px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff;}
+  .promptta{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 13px;font:inherit;font-size:13.5px;line-height:1.6;color:var(--ink);background:#fff;outline:none;resize:vertical;min-height:80px;}
+  .promptta:focus{border-color:var(--mauve-strong);box-shadow:0 0 0 3px rgba(133,103,166,.12);}
   .promptdd{margin-top:10px;}
   .promptdd summary{cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);list-style:none;display:flex;align-items:center;gap:6px;}
   .promptdd summary::-webkit-details-marker{display:none;}
@@ -476,17 +481,10 @@
                 : '<div class="vhead"><div><div class="vt">Version en ligne'+(x.regen&&x.regen.no?' · V'+esc(x.regen.no):'')+'</div><div class="vs">'+(x.voix?'Voix : '+esc(x.voix):'version actuelle')+'</div></div><span class="vr">🔒 réf.</span></div><details class="promptdd"><summary>Prompt de style utilisé</summary><div class="promptbox ro">'+esc(x.prompt_style_actuel||'(non renseigné)')+'</div></details>')+
             '</div>'+
 
-            '<div class="glab" style="margin-top:16px">Nouvelle version</div>'+
-            '<div class="vbox">'+
-              '<div class="sectlabel" style="margin:0 0 8px">Prompt de style <span class="act"><button class="btn-regen" onclick="regenPrompt()">↻ Regénérer</button></span></div>'+
-              '<div class="promptbox editable small" id="bloc_style" contenteditable="true" spellcheck="false">'+renderInline(x.prompt_style_actuel||'',styProp)+'</div>'+
-              '<div class="note" style="margin-top:6px">Ajuste-le à la main, ou Regénérer selon les demandes du client (sauvegarde auto).</div>'+
-              '<div class="methods" id="applyBar" style="margin-top:12px">'+
-                '<button class="btn-line" onclick="demanderAppliquer(\'rege\')"'+(enRege?' disabled':'')+'>↻ Nouvelle mélodie</button>'+
-                '<button class="btn-line" onclick="demanderAppliquer(\'cover\')"'+(enRege?' disabled':'')+'>🎨 Cover (garder la mélodie)</button>'+
-                '<button class="btn-line" onclick="demanderAppliquer(\'paroles\')"'+(enRege?' disabled':'')+'>Paroles uniquement</button>'+
-              '</div>'+
-            '</div>'+
+            '<div class="glab" style="margin-top:16px">Nouvelles versions à comparer <span class="note">(A puis B ; chacune écoutable via le sélecteur une fois prête)</span></div>'+
+            boxVersion('A', styProp, x.voix, enRege)+
+            '<div class="note" style="margin:2px 0 8px">Optionnel · une 2ᵉ version si le client hésite entre deux</div>'+
+            boxVersion('B', styProp, x.voix, enRege)+
           '</div></div>'+
         '</div>'+
       '</div>';
@@ -518,6 +516,46 @@
   }
   // Regénérer le prompt selon les demandes du client (réécriture via analyse-modif) : branché au jalon 2.
   function regenPrompt(){ toast('Regénérer le prompt selon les demandes : branché au jalon 2.'); }
+
+  // ── STUDIO A/B (jalon 3b) : Version A puis B, chacune style/ambiance/voix + prompt éditable + générer. ──
+  function val(id){ var e=document.getElementById(id); return e?e.value:''; }
+  function boxVersion(L, promptDef, voixDef, enRege){
+    var styles=['Ballade folk','Pop douce','Chanson française','Country doux','Gospel'];
+    var ambiances=['Nostalgique','Apaisé','Tendre','Lumineux','Solennel'];
+    function opt(arr,def){ return arr.map(function(o){return '<option'+(o===def?' selected':'')+'>'+esc(o)+'</option>';}).join(''); }
+    var estFem=/Fém/i.test(voixDef||'');
+    return '<div class="vbox">'+
+      '<div class="vhead"><div class="vt">Version '+L+'</div><div class="vs">à générer</div></div>'+
+      '<div class="vsel">'+
+        '<label>Style<select id="style_'+L+'">'+opt(styles,'Ballade folk')+'</select></label>'+
+        '<label>Ambiance<select id="amb_'+L+'">'+opt(ambiances,'Nostalgique')+'</select></label>'+
+        '<label>Voix<select id="voix_'+L+'"><option'+(estFem?'':' selected')+'>Masculin</option><option'+(estFem?' selected':'')+'>Féminin</option></select></label>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:flex-end;margin:2px 0 6px"><button class="btn-regen" onclick="composeStyle(\''+L+'\')">✨ Composer le prompt</button></div>'+
+      '<textarea class="promptta" id="prompt_'+L+'">'+esc(promptDef||'')+'</textarea>'+
+      '<div class="methods" id="genBar_'+L+'" style="margin-top:10px">'+
+        '<button class="btn-line" onclick="demanderGenerer(\''+L+'\',\'rege\')"'+(enRege?' disabled':'')+'>↻ Nouvelle mélodie</button>'+
+        '<button class="btn-line" onclick="demanderGenerer(\''+L+'\',\'cover\')"'+(enRege?' disabled':'')+'>🎨 Cover</button>'+
+      '</div>'+
+    '</div>';
+  }
+  function composeStyle(L){
+    var s=val('style_'+L), a=val('amb_'+L), v=val('voix_'+L);
+    var el=document.getElementById('prompt_'+L); if(!el) return;
+    el.value = s+' douce, voix '+(v||'').toLowerCase()+' chaleureuse, '+a.toLowerCase()+', guitare acoustique, ~3 min.';
+  }
+  function demanderGenerer(L, methode){
+    var lib = methode==='rege' ? 'nouvelle mélodie' : 'cover (garder la mélodie)';
+    confirmInline('genBar_'+L, 'Générer la Version '+L+' ('+lib+') ? Ça lance une vraie génération (crédits Suno).', 'Oui, générer', function(){ genererVersion(L, methode); });
+  }
+  async function genererVersion(L, methode){
+    if(!CUR) return;
+    await flushSave();
+    var r=await post({ id:CUR.id, action:'generer_version', methode:methode, prompt_style:val('prompt_'+L), voix:val('voix_'+L) });
+    var bar=document.getElementById('genBar_'+L);
+    if(r.ok){ toast('Version '+L+' lancée (Suno ~1 min).'); if(bar) bar.innerHTML='<span class="hint">Version '+L+' en génération. Elle apparaîtra dans le sélecteur de versions une fois prête.</span>'; pollRegen(CUR.id); }
+    else { toast('Échec.'); if(bar) bar.innerHTML='<span class="err">Échec : '+esc((r.d&&r.d.error)||r.status)+'</span>'; }
+  }
 
   // FICHE (jalon 2) : commande + add-ons ACHETÉS (voir/écouter + relancer). Données = x.fiche du backend.
   function renderFiche(f){

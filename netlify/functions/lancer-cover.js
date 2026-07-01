@@ -96,6 +96,7 @@ exports.handler = async (event) => {
     if (!gen && Number.isInteger(overrideNo)) gen = await trouverGen(null);   // version demandée introuvable -> dernière génération
     if (!gen) return { statusCode: 409, body: JSON.stringify({ error: 'Version source introuvable' }) };
     const g = gen.fields;
+    const voixOverride = (g.adjusted_voice || '').toString().trim();   // override voix du studio A/B (jalon 3b), posé sur la Generation source
 
     const uploadUrl = fullAudioUrl(g.cloudinary_audio_url || '');
     if (!regenerate && !uploadUrl) return { statusCode: 409, body: JSON.stringify({ error: 'Audio source introuvable' }) };
@@ -133,7 +134,9 @@ exports.handler = async (event) => {
     if (!prompt.trim()) return { statusCode: 409, body: JSON.stringify({ error: 'Paroles introuvables' }) };
     const style = propStyle || (p.adjusted_style_prompt && p.adjusted_style_prompt.trim())
       || await styleFor({ music_style: g.gen_music_style || p.music_style, mood: g.gen_mood || p.mood, cadeau: p.song_type === 'cadeau', language: p.language });
-    const vocalGender = /Masculin/i.test(g.gen_voice || p.voice || '') ? 'm' : 'f';
+    // Voix : override cockpit A/B (adjusted_voice sur la Gen source, jalon 3b) EN PRIORITÉ, sinon la voix source.
+    // Champ optionnel : absent -> '' -> repli inchangé.
+    const vocalGender = /Masculin/i.test(voixOverride || g.gen_voice || p.voice || '') ? 'm' : 'f';
 
     // 4. Suno (async -> callback-cover). regenerate=true : /generate (NOUVELLE mélodie, sans source) ;
     //    sinon : /upload-cover (mélodie PRÉSERVÉE, à partir de l'audio source).
@@ -170,6 +173,8 @@ exports.handler = async (event) => {
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { cover_task_id: String(taskId), cover_launched_at: new Date().toISOString(), pending_cover_style: style, ...(adminCover && !regenerate ? { cover_admin: false } : {}) } })
     });
+    // Override voix consommé UNE FOIS : vidé sur la Generation source (best-effort, jalon 3b).
+    if (voixOverride) { try { await fetch(`${API}/Generations/${gen.id}`, { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { adjusted_voice: '' } }) }); } catch (_) {} }
 
     // 5b. MODÈLE GENERATION-LEVEL (cover « mélodie préservée » seulement) : crée la Generation cover en
     //     audio_pending DÈS le lancement, pour qu'elle soit suivie/relancée/alertée comme une chanson
@@ -205,7 +210,7 @@ exports.handler = async (event) => {
         };
         const ms = g.gen_music_style || p.music_style; if (ms) fields.gen_music_style = ms;
         const md = g.gen_mood        || p.mood;        if (md) fields.gen_mood        = md;
-        const vx = g.gen_voice       || p.voice;       if (vx) fields.gen_voice       = vx;
+        const vx = voixOverride || g.gen_voice || p.voice; if (vx) fields.gen_voice = vx;
         if (adminCover) fields.admin_triggered = true;
         await fetch(`${API}/Generations`, {
           method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },

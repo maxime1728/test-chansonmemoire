@@ -301,6 +301,28 @@ exports.handler = async (event) => {
         return ok({ ok: true, applied: methode });
       }
 
+      // ── STUDIO A/B (jalon 3b) : générer une version avec son PROPRE prompt de style + voix. Séquentiel
+      // (l'idempotence cover_task_id empêche 2 rendus en vol). Effet de bord = vraie génération (crédits Suno).
+      if (action === 'generer_version') {
+        const methode = (body.methode || '').toString();
+        if (methode !== 'rege' && methode !== 'cover') return fail(400, { error: 'methode invalide (rege|cover)' });
+        const champs = { action_modif: ACTION_MODIF[methode] };
+        if (typeof body.prompt_style === 'string') champs.prompt_style = body.prompt_style;   // -> adjusted_style_prompt (appliquer-modification)
+        const r = await patchConvo(headers, id, champs);
+        if (!r.ok) return fail(502, { error: 'Génération échouée', detail: await r.text().catch(() => '') });
+        // Override de voix sur le Projet (best-effort : le champ adjusted_voice peut ne pas exister encore ->
+        // dans ce cas l'override est ignoré, le reste marche ; lancer-cover le consomme et le vide).
+        const voix = (body.voix || '').toString().trim();
+        if (voix) {
+          try {
+            const convo = await lireConvo(headers, id);
+            const genId = (Array.isArray(convo && convo.generation_a_travailler) && convo.generation_a_travailler[0]) || null;
+            if (genId) await fetch(`${API}/Generations/${genId}`, { method: 'PATCH', headers: { ...headers, ...HJSON }, body: JSON.stringify({ fields: { adjusted_voice: voix } }) });
+          } catch (_) {}
+        }
+        return ok({ ok: true, generation: methode, voix: voix || null });
+      }
+
       if (action === 'appliquer_prononciation') {
         // Prononciation : régénère en COVER mais SANS toucher paroles_corrigees -> appliquer-modification
         // ne pose pas adjusted_lyrics, et lancer-cover retombe sur lyrics_phonetique de la version source
