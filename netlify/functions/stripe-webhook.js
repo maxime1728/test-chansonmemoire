@@ -122,7 +122,7 @@ async function handler(event) {
     pf[P.stripe_pi] = sess.payment_intent || '';
     if (md.generation_no) pf[P.purchased_gen_no] = Number(md.generation_no);
     // Order bumps achetés au checkout (metadata posée par creer-checkout) -> statut 'achete' (à COMMANDER
-    // par le client sur page-memoire). On NE lance PAS la production ici (décision Maxime : commande explicite).
+    // par le client sur espace-client). On NE lance PAS la production ici (décision Maxime : commande explicite).
     const bumps = (md.bumps || '').split(',').map((s) => s.trim()).filter(Boolean);
     if (bumps.includes('instrumental'))     pf[P.extra_instrumental]     = 'achete';
     if (bumps.includes('paroles_vivantes')) pf[P.extra_paroles_vivantes] = 'achete';

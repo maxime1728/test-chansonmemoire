@@ -1,6 +1,6 @@
 /* js/cm-modif-modal.js
    MODALE DE MODIFICATION UNIFIÉE (post-achat) — même composant que l'aperçu, partagé entre
-   page-chanson.html et page-memoire.html. Autonome : injecte son CSS scopé + son focus-trap,
+   page-chanson.html et espace-client.html. Autonome : injecte son CSS scopé + son focus-trap,
    construit la modale une seule fois, et l'ouvre depuis un bouton déclencheur.
 
    Choix post-achat (locké avec Maxime) : 3 puces SANS « style/voix ». Le client a déjà entendu

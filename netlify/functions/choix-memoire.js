@@ -1,5 +1,5 @@
 // netlify/functions/choix-memoire.js
-// Enregistre les choix de la page-memoire : modèle PDF + modèle signet + texte du signet,
+// Enregistre les choix de l'espace client : modèle PDF + modèle signet + texte du signet,
 // et les inscriptions waitlist (Mémoire vivante / vidéo). Écriture ponctuelle, champs dédiés.
 // Le FULFILLMENT (génération Canva des cadeaux) est déclenché séparément (Phase D).
 // Sécurité : POST, UUID v4 strict, gaté `purchased`, secrets en env.

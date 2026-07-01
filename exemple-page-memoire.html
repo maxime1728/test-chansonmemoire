@@ -78,7 +78,7 @@
   .spin{width:30px;height:30px;border-radius:50%;border:3px solid rgba(245,240,234,.3);border-top-color:var(--cm-gold-light);animation:spin .8s linear infinite;margin:0 auto 12px;}
   @keyframes spin{to{transform:rotate(360deg);}}
 
-  /* ── LECTEUR (porté de page-memoire.html) ── */
+  /* ── LECTEUR (porté de espace-client.html) ── */
   @property --cm-border-angle { syntax:'<angle>'; initial-value:0deg; inherits:false; }
   #cm-player-root .cm-players-container { display:flex; justify-content:center; padding:0 20px; }
   #cm-player-root .cm-player-wrap { display:flex; justify-content:center; font-family:'Sora',sans-serif; width:100%; max-width:300px; margin:0 auto; }
@@ -381,7 +381,7 @@
       .catch(function(){ showButton(); });
   })();
 
-  /* ── LECTEUR (logique portée de page-memoire.html) ── */
+  /* ── LECTEUR (logique portée de espace-client.html) ── */
   var wrap=document.querySelector('.cm-player-wrap'), audio=wrap.querySelector('.cm-audio'), source=audio.querySelector('source');
   var playBtn=wrap.querySelector('.cm-play-btn'), eq=wrap.querySelector('.cm-eq'), progress=wrap.querySelector('.cm-progress'), bar=wrap.querySelector('.cm-progress-bar');
   var curEl=wrap.querySelector('.cm-current'), totEl=wrap.querySelector('.cm-total'), volInput=wrap.querySelector('.cm-volume'), volBar=wrap.querySelector('.cm-volume-bar'), muteBtn=wrap.querySelector('.cm-mute-btn');

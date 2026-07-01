@@ -128,7 +128,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         versions:          versions,
         commercial_status: projet.fields.commercial_status || 'preview_only',
-        accepted:          projet.fields.funnel_step === 'delivery_accepted',   // étape courante : apercu redirige un acheteur vers page-chanson/page-memoire (anti-rachat)
+        accepted:          projet.fields.funnel_step === 'delivery_accepted',   // étape courante : apercu redirige un acheteur vers page-chanson/espace-client (anti-rachat)
         // Version « actuelle » (achetée / dernière livrée) -> la page d'acceptation la marque « actuelle ».
         purchased_generation_no: parseInt(projet.fields.purchased_generation_no, 10) || null,
         song_type:         projet.fields.song_type || 'hommage'   // hommage|cadeau -> adapte le copy de l'aperçu (non-PII)

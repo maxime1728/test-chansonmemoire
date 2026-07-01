@@ -21,7 +21,7 @@ const EXTRAS = {
   paroles_vivantes: { champ: 'extra_paroles_vivantes', lanceur: '/api/lancer-paroles-vivantes' },
   pdf_paroles:      { champ: 'extra_pdf',              lanceur: '/api/lancer-cadeau' }
   // Note : la vidéo souvenir n'est PAS ici (elle exige des photos -> produite au clic « Générer »,
-  // pas « Commander ». Voir lancer-video-memoire + page-memoire initVideoMemoire).
+  // pas « Commander ». Voir lancer-video-memoire + espace-client initVideoMemoire).
 };
 
 function formulaLiteral(v) {

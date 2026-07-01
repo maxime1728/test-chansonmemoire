@@ -15,7 +15,7 @@
 //
 // Planifie dans netlify.toml (toutes les 5 min). Les conteneurs Lambda restent chauds ~5-15 min.
 
-// Fonctions vues par le client au chargement d'une page (page-chanson / page-memoire / attente / exemple).
+// Fonctions vues par le client au chargement d'une page (page-chanson / espace-client / attente / exemple).
 const CIBLES = ['lire-projet', 'lire-versions'];
 
 exports.handler = async () => {
