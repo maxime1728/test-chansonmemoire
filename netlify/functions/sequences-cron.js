@@ -158,7 +158,7 @@ exports.handler = async () => {
 
         const token = pf.token || '';
         const unsub = `${SITE}/api/desabonnement?id=${encodeURIComponent(token)}`;
-        const ctx = { prenom: pf.deceased_name || '', token, song_type: pf.song_type || 'hommage', lien: `${SITE}/page-memoire?id=${encodeURIComponent(token)}`, unsub, postal: POSTAL };
+        const ctx = { prenom: pf.deceased_name || '', token, song_type: pf.song_type || 'hommage', lien: `${SITE}/espace-client?id=${encodeURIComponent(token)}`, unsub, postal: POSTAL };
         const mail = seq.emails[step];
 
         const ok = await envoyer(to, mail.subject, mail.html(ctx), unsub, project && project.id);

@@ -6,59 +6,119 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <script src="/js/cm-token.js"></script>
-<title>Ta chanson · Chanson Mémoire</title>
-<!-- Page MÉMOIRE (livraison finale, post-acceptation). SEULE page où le téléchargement est offert.
-     Lecteur de l'aperçu + download chanson + cadeau v1 = paroles en PDF (signet à venir),
-     teaser Mémoire vivante + upsell vidéo (waitlists). Domaine .ca / chemins relatifs. -->
+<title>Ton espace · Chanson Mémoire</title>
+<!-- ESPACE CLIENT (ancienne page-memoire) — livraison finale, post-acceptation. Page PRIVÉE, token-gated,
+     non partageable. SEULE page où le téléchargement est offert. Lecteur + download chanson,
+     upsell vidéo souvenir (paywall), PDF paroles, add-ons (instrumentale / paroles vivantes),
+     modale de modification, teaser Mémoire vivante (waitlist). Domaine .ca / chemins relatifs.
+     Design : refonte Claude Design « page-2-espace-client » (Newsreader + Work Sans, mauve). -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Mulish:wght@400;500;600;700;800&family=Sora:wght@400;600&display=swap" rel="stylesheet">
-<!-- Icones : sprite SVG inline (#cm-icons en bas de body). Remplace Font Awesome (allégé + non bloquant). -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Sora:wght@400;600&family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Icones : sprite SVG inline (#cm-icons en bas de body). -->
 <style>
   :root{
+    /* Design system (refonte espace client) */
+    --bg:#F7F3EE; --surface:#FDFBF8; --ink:#2B2530; --muted:#8A7F88; --line:#EAE2E6;
+    --accent:#7C6591; --accent-deep:#4A3855; --soft:#EFE7F0; --gold:#C79A4B;
+    /* Tokens du lecteur (conservés tels quels pour garder le player éprouvé) */
     --cm-plum-dark:#5C2D4A; --cm-plum-mid:#8B4A6E; --cm-mauve:#C98BB0;
-    --cm-gold:#C4963A; --cm-gold-light:#E8C97A; --cm-off-white:#F5F0E8; --cm-white:#FDFAF7;
-    --cm-bg:#F8F4F0; --cm-text:#2E1A28; --cm-text-sub:#7A6070; --cm-border-w:2.5px; --line:#e7dde4;
+    --cm-gold:#C4963A; --cm-gold-light:#E8C97A; --cm-white:#FDFAF7; --cm-text:#2E1A28;
+    --cm-text-sub:#7A6070; --cm-border-w:2.5px;
   }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
   .cm-ic{width:1em;height:1em;vertical-align:-0.125em;flex-shrink:0;}
   html,body{overflow-x:hidden;}
-  body{background:var(--cm-bg);color:var(--cm-text);font:400 16px/1.6 Mulish,system-ui,sans-serif;padding-bottom:60px;}
-  .wrap{max-width:560px;margin:0 auto;padding:36px 20px;}
+  body{background:#EDE8E1;color:var(--ink);font:400 15px/1.6 'Work Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  /* iOS Safari : un champ de saisie <16px provoque un zoom auto au focus -> 16px mini sur tous les champs. */
+  input,textarea,select{font-family:inherit;font-size:16px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .page{min-height:100vh;background:radial-gradient(120% 55% at 50% 0%, #F3ECF4 0%, var(--bg) 44%);display:flex;justify-content:center;}
+  .col{width:100%;max-width:440px;min-height:100vh;display:flex;flex-direction:column;position:relative;}
+
+  /* DESKTOP : le mobile-first est conservé; sur grand écran la colonne devient un panneau centré, encadré,
+     pour que la page s'affiche proprement (et pas comme une bande perdue sur fond vide). */
+  @media (min-width:640px){
+    .page{background:#E7E1D9;padding:44px 20px;align-items:flex-start;}
+    .col{max-width:452px;min-height:auto;border-radius:26px;box-shadow:0 30px 80px rgba(74,56,69,.16),0 4px 12px rgba(74,56,69,.06);background:radial-gradient(120% 42% at 50% 0%, #F3ECF4 0%, var(--bg) 46%);}
+    .hdr{position:static;border-radius:26px 26px 0 0;}
+    .wrap{padding-bottom:36px;}
+  }
+
+  /* Header collant */
+  .hdr{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
+  .hdr img{height:26px;width:auto;display:block;}
+  .hdr .tag{font:700 10px 'Work Sans';letter-spacing:.08em;color:var(--muted);}
+
+  /* Colonne de contenu (remplacée en bloc si lien invalide -> garder .wrap + #title) */
+  .wrap{flex:1;padding:22px 18px 56px;display:flex;flex-direction:column;gap:16px;}
   .center{text-align:center;}
-  .cm-logo{font-family:'Fraunces',serif;font-style:italic;font-size:22px;font-weight:600;color:var(--cm-plum-dark);text-align:center;margin-bottom:28px;}
-  .cm-logo span{color:var(--cm-gold);}
-  .eyebrow{font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--cm-gold);text-align:center;margin-bottom:12px;}
-  h1#title{font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:clamp(26px,6vw,34px);font-weight:400;color:var(--cm-plum-dark);text-align:center;margin:0 0 10px;line-height:1.25;}
-  .subtitle{color:var(--cm-text-sub);font-size:13px;text-align:center;margin:0 0 26px;text-transform:uppercase;letter-spacing:0.10em;font-weight:700;min-height:1em;}
-  .loading{color:var(--cm-text-sub);font-size:14px;text-align:center;margin:16px 0 0;}
-  .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px 22px;margin:22px 0;}
-  .section-title{font-family:'Fraunces',serif;font-style:italic;font-size:21px;color:var(--cm-plum-dark);margin:0 0 6px;}
-  .section-sub{font-size:14px;color:var(--cm-text-sub);margin:0 0 16px;line-height:1.5;}
-  label.fld{display:block;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--cm-gold);margin:16px 0 8px;}
-  .choices{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;}
-  .choice{border:1.5px solid var(--line);border-radius:10px;padding:12px 6px;text-align:center;font-size:13px;font-weight:600;color:var(--cm-text);cursor:pointer;background:#fff;}
-  .choice.sel{border-color:var(--cm-plum-dark);background:var(--cm-off-white);}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
-  .chip{border:1px solid var(--cm-mauve);border-radius:999px;padding:7px 12px;font-size:13px;color:var(--cm-plum-dark);background:#fff;cursor:pointer;}
-  textarea{width:100%;padding:12px 14px;border:1.5px solid var(--cm-mauve);border-radius:12px;font:inherit;color:var(--cm-text);resize:vertical;}
-  textarea:focus{outline:none;border-color:var(--cm-plum-mid);}
-  .btn{font-family:'Mulish',sans-serif;background:var(--cm-plum-dark);color:#fff;border:none;border-radius:999px;padding:14px 28px;font-size:16px;font-weight:700;cursor:pointer;}
-  @media(hover:hover){.btn:hover{background:var(--cm-plum-mid);}}
-  .btn[disabled]{opacity:.6;cursor:default;}
-  .btn-ghost{background:none;border:1.5px solid var(--cm-plum-dark);color:var(--cm-plum-dark);}
-  .btn-block{display:block;width:100%;}
-  .note{font-size:12px;color:var(--cm-text-sub);margin-top:10px;}
-  .ok-msg{font-size:14px;color:var(--cm-plum-dark);font-weight:600;margin-top:12px;}
-  .teaser{background:linear-gradient(135deg,var(--cm-plum-dark) 0%,#3D1A30 100%);color:#fff;border:none;}
-  .teaser .section-title,.teaser .feat strong{color:var(--cm-gold-light);}
-  .teaser .section-sub,.teaser .feat{color:rgba(255,255,255,0.85);}
-  .feat{font-size:14px;line-height:1.7;}
-  .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--cm-plum-dark);background:var(--cm-gold-light);border-radius:999px;padding:4px 10px;margin-bottom:10px;}
+
+  /* En-tête chanson */
+  .eyebrow{font:700 10px 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:var(--accent);text-align:center;}
+  h1#title{font-family:'Newsreader',Georgia,serif;font-style:italic;font-weight:400;font-size:clamp(26px,7vw,32px);color:var(--accent-deep);text-align:center;line-height:1.2;margin:6px 0 4px;}
+  .subtitle{font:700 11px 'Work Sans';letter-spacing:.10em;text-transform:uppercase;color:var(--muted);text-align:center;min-height:1em;}
+  .loading{font:400 13px 'Work Sans';color:var(--muted);text-align:center;}
+
+  /* Bandeau succès */
+  .success{display:flex;align-items:center;gap:13px;background:linear-gradient(135deg,#EEF6F0,#E7F1EA);border:1px solid #CDE6D6;border-radius:20px;padding:16px 18px;}
+  .success .ico{width:38px;height:38px;border-radius:50%;background:#3E9B6C;color:#fff;flex:none;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .success .t{font:700 15px 'Work Sans';color:#1f3a2b;}
+  .success .s{font:400 12px 'Work Sans';color:#4d6b58;}
+
+  .hint{font:400 13px/1.5 'Work Sans';color:var(--muted);margin:2px 2px -2px;}
+
+  /* Cartes */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px;}
+  .card.hero{border:1.5px solid #D9C9EC;box-shadow:0 12px 34px rgba(74,56,69,.10);}
+  .section-title{font:500 21px/1.2 'Newsreader',serif;color:var(--ink);margin:0 0 6px;}
+  .section-sub{font:400 13px/1.55 'Work Sans';color:var(--muted);margin:0 0 4px;}
+  .up-price{font:700 13px 'Work Sans';color:var(--ink);}
+
+  /* Boutons */
+  .btn{font-family:'Work Sans',sans-serif;background:var(--accent);color:#fff;border:none;border-radius:14px;padding:15px 22px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 30%,transparent);}
+  @media(hover:hover){.btn:hover{background:var(--accent-deep);}}
+  .btn[disabled]{opacity:.6;cursor:default;box-shadow:none;}
+  .btn-ghost{background:var(--surface);border:1.5px solid var(--accent);color:var(--accent);box-shadow:none;}
+  @media(hover:hover){.btn-ghost:hover{background:var(--soft);}}
+  .btn-block{display:flex;width:100%;}
+  .note{font:400 12px 'Work Sans';color:var(--muted);margin-top:10px;}
+  .ok-msg{font:600 13px 'Work Sans';color:var(--accent-deep);margin-top:12px;}
+
+  /* Badge */
+  .badge{display:inline-block;font:800 9px 'Work Sans';letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;margin-bottom:10px;}
+  .badge.love{color:#fff;background:var(--accent);border:none;}
+
+  /* Rangée upsell secondaire */
+  .up-row{display:flex;align-items:center;gap:14px;}
+  .up-row + .up-row{margin-top:14px;padding-top:16px;border-top:1px solid var(--line);}
+  .up-ic{width:44px;height:44px;border-radius:12px;background:var(--soft);color:var(--accent);flex:none;display:flex;align-items:center;justify-content:center;font-size:19px;}
+  .up-main{flex:1;}
+  .up-name{font:700 14px 'Work Sans';color:var(--ink);}
+  .up-desc{font:400 11.5px/1.4 'Work Sans';color:var(--muted);margin-top:1px;}
+  .up-main .up-price{display:inline-block;margin-top:4px;font-weight:600;color:var(--muted);}
+  .up-row .btn{white-space:nowrap;padding:9px 16px;font-size:12px;border-radius:20px;}
+
+  /* Puces features */
+  .feat{font:500 12.5px/1.7 'Work Sans';color:var(--ink);}
+  .feat strong{color:var(--accent);font-weight:700;}
+
+  /* Teaser Mémoire vivante (waitlist, look clair) */
+  .teaser{background:linear-gradient(150deg,#F3ECF6,#F7F1EC);border:1px solid #E4D6EA;}
+  .teaser .section-title{color:var(--ink);}
+  .teaser .section-sub{color:var(--muted);}
+
+  /* Grille photos (vidéo souvenir) */
+  .hero-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0;}
+  .hero-strip>div{aspect-ratio:1;border-radius:10px;}
+
+  details summary{cursor:pointer;font-weight:600;padding:12px 0;list-style:none;font-family:'Work Sans';}
+  details summary::-webkit-details-marker{display:none;}
 
   /* ── LECTEUR (porté de l'aperçu, plein format) ── */
   @property --cm-border-angle { syntax:'<angle>'; initial-value:0deg; inherits:false; }
-  #cm-player-root .cm-players-container { display:flex; justify-content:center; padding:0 20px; }
+  #cm-player-root .cm-players-container { display:flex; justify-content:center; padding:0; }
   #cm-player-root .cm-player-wrap { display:flex; justify-content:center; font-family:'Sora',sans-serif; width:100%; max-width:300px; margin:0 auto; }
   #cm-player-root .cm-player-box {
     width:100%; padding:calc(24px + var(--cm-border-w)); border-radius:24px;
@@ -119,140 +179,188 @@
   <symbol id="ic-images" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
   <symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
 </svg>
-<div class="wrap">
-  <img src="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire" style="height:42px;width:auto;display:block;margin:0 auto 28px;">
-  <div class="eyebrow">Ta chanson, pour toujours</div>
-  <h1 id="title">Ta chanson</h1>
-  <p class="subtitle" id="subtitle"></p>
 
-  <!-- LECTEUR -->
-  <div id="cm-player-root">
-    <div class="cm-players-container">
-      <div class="cm-player-wrap">
-        <div class="cm-player-box">
-          <div class="cm-title" id="playerTitle">Ta chanson</div>
-          <div class="cm-equalizer cm-eq"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-          <audio class="cm-audio"><source src="" type="audio/mpeg"></audio>
-          <button class="cm-play-btn" type="button" aria-label="Lire la chanson" disabled><svg class="cm-ic" aria-hidden="true"><use href="#ic-play"></use></svg></button>
-          <div class="cm-time"><span class="cm-current">0:00</span><span class="cm-total">0:00</span></div>
-          <div class="cm-progress-wrap"><div class="cm-progress-bar"></div><input class="cm-progress" type="range" min="0" max="100" step="0.01" value="0"></div>
-          <div class="cm-volume-wrap">
-            <button class="cm-mute-btn" type="button" aria-label="Couper / activer le son"><svg class="cm-ic" aria-hidden="true"><use href="#ic-volume-high"></use></svg></button>
-            <div class="cm-volume-slider-wrap"><div class="cm-volume-bar"></div><input class="cm-volume" type="range" min="0" max="1" step="0.01" value="1"></div>
+<div class="page">
+  <div class="col">
+    <div class="hdr">
+      <img src="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire">
+      <span class="tag">ESPACE CLIENT</span>
+    </div>
+
+    <div class="wrap">
+
+      <!-- BANDEAU SUCCÈS -->
+      <div class="success">
+        <div class="ico">✓</div>
+        <div><div class="t">Ta chanson est validée</div><div class="s">Elle est à toi, pour toujours.</div></div>
+      </div>
+
+      <!-- EN-TÊTE CHANSON -->
+      <div class="center">
+        <div class="eyebrow">Ta chanson, pour toujours</div>
+        <h1 id="title">Ta chanson</h1>
+        <p class="subtitle" id="subtitle"></p>
+      </div>
+
+      <!-- LECTEUR -->
+      <div id="cm-player-root">
+        <div class="cm-players-container">
+          <div class="cm-player-wrap">
+            <div class="cm-player-box">
+              <div class="cm-title" id="playerTitle">Ta chanson</div>
+              <div class="cm-equalizer cm-eq"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+              <audio class="cm-audio"><source src="" type="audio/mpeg"></audio>
+              <button class="cm-play-btn" type="button" aria-label="Lire la chanson" disabled><svg class="cm-ic" aria-hidden="true"><use href="#ic-play"></use></svg></button>
+              <div class="cm-time"><span class="cm-current">0:00</span><span class="cm-total">0:00</span></div>
+              <div class="cm-progress-wrap"><div class="cm-progress-bar"></div><input class="cm-progress" type="range" min="0" max="100" step="0.01" value="0"></div>
+              <div class="cm-volume-wrap">
+                <button class="cm-mute-btn" type="button" aria-label="Couper / activer le son"><svg class="cm-ic" aria-hidden="true"><use href="#ic-volume-high"></use></svg></button>
+                <div class="cm-volume-slider-wrap"><div class="cm-volume-bar"></div><input class="cm-volume" type="range" min="0" max="1" step="0.01" value="1"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <p class="loading" id="loading">La chanson se télécharge… quelques secondes d'attente.</p>
+      <p class="loading" id="loading">La chanson se télécharge… quelques secondes d'attente.</p>
 
-  <!-- TÉLÉCHARGEMENT -->
-  <div class="card center">
-    <button class="btn btn-block" id="btnDownload" type="button"><svg class="cm-ic" aria-hidden="true"><use href="#ic-download"></use></svg>&nbsp; Télécharger ma chanson</button>
-    <p class="note">Elle t'appartient, garde-la pour toujours.</p>
-  </div>
-
-  <!-- PDF DES PAROLES (upsell payant ; l'affichage prêt/en préparation est réutilisé après paiement) -->
-  <div class="card" id="cadeauxCard">
-    <div class="section-title">Les paroles en PDF</div>
-    <p class="section-sub" id="cadeauxSub">Une belle feuille de tes paroles, mise en page, à imprimer ou à garder précieusement. Reçue par courriel et téléchargeable ici.</p>
-
-    <div id="cadeauxChooser">
-      <div style="margin-top:6px;"><button class="btn btn-block" id="btnCadeaux" type="button">Obtenir le PDF · 7,99 $</button></div>
-      <p class="ok-msg" id="cadeauxMsg" style="display:none;"></p>
-    </div>
-
-    <div id="cadeauxReady" style="display:none;"></div>
-  </div>
-
-  <!-- DEMANDER UNE MODIFICATION (E/F — correction post-achat) — modale unifiée (js/cm-modif-modal.js) -->
-  <div class="card" id="correctionCard">
-    <div class="section-title">Une demande de modification ?</div>
-    <p class="section-sub">Tu aimerais ajuster ta chanson ? Dis-nous en quelques mots : un <strong>mot mal prononcé</strong>, un <strong>souvenir</strong> à ajouter, un <strong>détail dans les paroles</strong>, le <strong>style</strong> ou le <strong>titre</strong>. Notre équipe la prépare et te revient.</p>
-    <div style="margin-top:14px;"><button class="btn btn-block" id="btnCorrection" type="button">Quelque chose à ajuster&nbsp;?</button></div>
-  </div>
-
-  <!-- UPSELL POST-ACHAT : add-ons payants (affiché aux acheteurs, pic émotionnel) -->
-  <div class="card" id="upsellCard" style="display:none;">
-    <div class="section-title">Prolonge ta chanson</div>
-    <p class="section-sub">Des compléments pour faire durer et partager ce souvenir.</p>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;text-align:left;">
-      <div><strong>Version instrumentale</strong> <span class="up-price">· 19,99 $</span><br><span style="font-size:13px;opacity:.7;">La trame musicale seule, sans voix.</span></div>
-      <button class="btn btn-ghost" type="button" data-upsell="instrumental" style="white-space:nowrap;">Ajouter</button>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;text-align:left;">
-      <div><strong>Paroles vivantes en vidéo</strong> <span class="up-price">· 13,99 $</span><br><span style="font-size:13px;opacity:.7;">Les paroles animées, à partager avec tes proches.</span></div>
-      <button class="btn btn-ghost" type="button" data-upsell="paroles_vivantes" style="white-space:nowrap;">Ajouter</button>
-    </div>
-    <p class="ok-msg" id="upsellMsg" style="display:none;"></p>
-  </div>
-
-  <!-- TEASER MÉMOIRE VIVANTE -->
-  <div class="card teaser">
-    <div class="badge">À venir</div>
-    <div class="section-title">Mémoire vivante</div>
-    <p class="section-sub" id="memoireSub">La mémoire grandit par la création. Une plateforme pour faire vivre son souvenir, à ton rythme.</p>
-    <p class="feat" id="memoireFeat">
-      <strong>✦ Déposer</strong> des photos et des vidéos en souvenir.<br>
-      <strong>✦ Une nouvelle œuvre</strong> tous les trois mois, à partir de nouveaux souvenirs ou d'une nouvelle formulation, dans le style de ton choix.<br>
-      <strong>✦ Une page famille</strong> partagée, pour se souvenir ensemble.
-    </p>
-    <div style="margin-top:16px;"><button class="btn btn-ghost btn-block" id="btnWaitMemoire" type="button" style="border-color:var(--cm-gold-light);color:var(--cm-gold-light);">M'inscrire à la liste d'attente</button></div>
-    <p class="ok-msg" id="memoireMsg" style="display:none;color:var(--cm-gold-light);"></p>
-  </div>
-
-  <!-- VIDÉO MÉMOIRE : photos du client + chanson -->
-  <div class="card" id="videoMemoireCard" style="display:none;">
-    <div class="section-title">Ta vidéo souvenir</div>
-    <p class="section-sub">Un montage doux de tes photos, porté par ta chanson (10 à 60 photos).</p>
-
-    <!-- Paywall : la vidéo souvenir est un upsell payant (99,97 $). Visible tant qu'elle n'est pas achetée. -->
-    <div id="videoPaywall" style="display:none;margin-top:8px;">
-      <p class="section-sub" style="margin-top:0;">Choisis tes plus belles photos, mets-les dans l'ordre que tu veux, et on en fait un film tendre porté par sa chanson. Un souvenir à garder et à offrir.</p>
-      <div style="margin-top:12px;"><button class="btn btn-block" id="btnBuyVideo" type="button">Obtenir ma vidéo souvenir · 99,97 $</button></div>
-      <p class="ok-msg" id="videoBuyMsg" style="display:none;"></p>
-    </div>
-
-    <!-- Corps interactif (upload + ordre + génération) : visible une fois la vidéo souvenir achetée. -->
-    <div id="videoBody" style="display:none;">
-    <ul class="section-sub" style="margin:8px 0 2px;padding-left:20px;line-height:1.7;">
-      <li><b>Ajoute</b> tes photos.</li>
-      <li><b>Touche</b> une photo pour la choisir : <b>★</b> la met en avant, <b>×</b> la retire.</li>
-      <li><b>Maintiens puis glisse</b> une photo pour changer l'ordre (ou les flèches <b>‹ ›</b>).</li>
-    </ul>
-    <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
-    <div style="margin-top:6px;"><button class="btn btn-ghost btn-block" id="btnAddPhotos" type="button"><svg class="cm-ic" aria-hidden="true"><use href="#ic-images"></use></svg>&nbsp; Ajouter mes photos</button></div>
-    <p class="section-sub" id="photoCount" style="margin-top:10px;display:none;"></p>
-    <div id="photoGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:10px;margin-top:12px;"></div>
-    <div id="memoireInfos" style="display:none;margin-top:18px;">
-      <div style="display:flex;gap:10px;">
-        <label style="flex:1;font-size:13px;">Naissance<input type="text" id="memNaissance" placeholder="1949" maxlength="40" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid rgba(92,45,74,.25);background:#fff;color:#2E1A28;"></label>
-        <label style="flex:1;font-size:13px;">Décès<input type="text" id="memDeces" placeholder="2024" maxlength="40" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid rgba(92,45,74,.25);background:#fff;color:#2E1A28;"></label>
+      <!-- TÉLÉCHARGEMENT -->
+      <div class="card center">
+        <button class="btn btn-block" id="btnDownload" type="button"><svg class="cm-ic" aria-hidden="true"><use href="#ic-download"></use></svg>&nbsp; Télécharger ma chanson</button>
+        <p class="note">Elle t'appartient, garde-la pour toujours.</p>
       </div>
-      <label style="display:block;margin-top:10px;font-size:13px;">Citation (optionnel)<input type="text" id="memCitation" placeholder="Une phrase qui lui ressemble…" maxlength="300" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid rgba(92,45,74,.25);background:#fff;color:#2E1A28;"></label>
-      <div style="margin-top:12px;"><button class="btn btn-ghost btn-block" id="btnSaveMemoire" type="button">Enregistrer l'ordre et les infos</button></div>
-      <p class="ok-msg" id="memSaveMsg" style="display:none;"></p>
+
+      <p class="hint">Pour aller plus loin, si le cœur t'en dit. Chaque option est facultative.</p>
+
+      <!-- VIDÉO SOUVENIR (upsell héro) : photos du client + chanson -->
+      <div class="card hero" id="videoMemoireCard" style="display:none;">
+        <!-- Paywall : la vidéo souvenir est un upsell payant (99,97 $). Visible tant qu'elle n'est pas achetée. -->
+        <div id="videoPaywall" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <span class="badge love">Le plus aimé</span>
+            <span class="up-price">99,97 $</span>
+          </div>
+          <div class="section-title">Crée ta vidéo souvenir</div>
+          <p class="section-sub">Ses plus belles photos, portées par sa chanson. Un souvenir à revoir et à partager avec toute la famille.</p>
+          <div class="hero-strip">
+            <div style="background:linear-gradient(135deg,#E7DCF0,#D9C9EC)"></div>
+            <div style="background:linear-gradient(135deg,#F0E6DC,#E6D3C0)"></div>
+            <div style="background:linear-gradient(135deg,#DCEBE6,#C7DED4)"></div>
+            <div style="background:linear-gradient(135deg,#ECE0E9,#DcC9D8)"></div>
+          </div>
+          <div class="feat" style="margin:6px 0 14px;">
+            <div><strong>✦</strong>&nbsp; Jusqu'à 60 photos</div>
+            <div><strong>✦</strong>&nbsp; Glisse pour réorganiser l'ordre</div>
+            <div><strong>✦</strong>&nbsp; Mets tes favorites : elles restent plus longtemps à l'écran</div>
+          </div>
+          <div><button class="btn btn-block" id="btnBuyVideo" type="button">Obtenir ma vidéo souvenir · 99,97 $</button></div>
+          <p class="ok-msg" id="videoBuyMsg" style="display:none;"></p>
+        </div>
+
+        <!-- Corps interactif (upload + ordre + génération) : visible une fois la vidéo souvenir achetée. -->
+        <div id="videoBody" style="display:none;">
+        <div class="section-title">Ta vidéo souvenir</div>
+        <p class="section-sub">Un montage doux de tes photos, porté par ta chanson (10 à 60 photos).</p>
+        <ul class="section-sub" style="margin:8px 0 2px;padding-left:20px;line-height:1.7;">
+          <li><b>Ajoute</b> tes photos.</li>
+          <li><b>Touche</b> une photo pour la choisir : <b>★</b> la met en avant, <b>×</b> la retire.</li>
+          <li><b>Maintiens puis glisse</b> une photo pour changer l'ordre (ou les flèches <b>‹ ›</b>).</li>
+        </ul>
+        <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+        <div style="margin-top:6px;"><button class="btn btn-ghost btn-block" id="btnAddPhotos" type="button"><svg class="cm-ic" aria-hidden="true"><use href="#ic-images"></use></svg>&nbsp; Ajouter mes photos</button></div>
+        <p class="section-sub" id="photoCount" style="margin-top:10px;display:none;"></p>
+        <div id="photoGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:10px;margin-top:12px;"></div>
+        <div id="memoireInfos" style="display:none;margin-top:18px;">
+          <div style="display:flex;gap:10px;">
+            <label style="flex:1;font-size:13px;">Naissance<input type="text" id="memNaissance" placeholder="1949" maxlength="40" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);"></label>
+            <label style="flex:1;font-size:13px;">Décès<input type="text" id="memDeces" placeholder="2024" maxlength="40" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);"></label>
+          </div>
+          <label style="display:block;margin-top:10px;font-size:13px;">Citation (optionnel)<input type="text" id="memCitation" placeholder="Une phrase qui lui ressemble…" maxlength="300" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);"></label>
+          <div style="margin-top:12px;"><button class="btn btn-ghost btn-block" id="btnSaveMemoire" type="button">Enregistrer l'ordre et les infos</button></div>
+          <p class="ok-msg" id="memSaveMsg" style="display:none;"></p>
+        </div>
+        <div id="genVideoWrap" style="margin-top:14px;display:none;"><button class="btn btn-block" id="btnGenVideo" type="button" disabled>Générer ma vidéo souvenir</button></div>
+        <p class="ok-msg" id="videoMemoireMsg" style="display:none;"></p>
+        <div class="video-frame" id="videoMemoireFrame" style="display:none;margin-top:14px;border-radius:14px;overflow:hidden;"></div>
+        </div><!-- /videoBody -->
+      </div>
+
+      <!-- UPSELL POST-ACHAT : add-ons payants (affiché aux acheteurs, pic émotionnel) -->
+      <div class="card" id="upsellCard" style="display:none;">
+        <div class="section-title">Prolonge ta chanson</div>
+        <p class="section-sub">Des compléments pour faire durer et partager ce souvenir.</p>
+        <div style="margin-top:16px;">
+          <div class="up-row">
+            <div class="up-ic">♪</div>
+            <div class="up-main">
+              <div class="up-name">Version instrumentale</div>
+              <div class="up-desc">La trame musicale seule, sans voix.</div>
+              <span class="up-price">· 19,99 $</span>
+            </div>
+            <button class="btn btn-ghost" type="button" data-upsell="instrumental">Ajouter</button>
+          </div>
+          <div class="up-row">
+            <div class="up-ic">✦</div>
+            <div class="up-main">
+              <div class="up-name">Paroles vivantes en vidéo</div>
+              <div class="up-desc">Les paroles animées, à partager avec tes proches.</div>
+              <span class="up-price">· 13,99 $</span>
+            </div>
+            <button class="btn btn-ghost" type="button" data-upsell="paroles_vivantes">Ajouter</button>
+          </div>
+        </div>
+        <p class="ok-msg" id="upsellMsg" style="display:none;"></p>
+      </div>
+
+      <!-- PDF DES PAROLES (upsell payant ; l'affichage prêt/en préparation est réutilisé après paiement) -->
+      <div class="card" id="cadeauxCard">
+        <div class="section-title">Les paroles en PDF</div>
+        <p class="section-sub" id="cadeauxSub">Une belle feuille de tes paroles, mise en page, à imprimer ou à garder précieusement. Reçue par courriel et téléchargeable ici.</p>
+        <div id="cadeauxChooser">
+          <div style="margin-top:10px;"><button class="btn btn-block" id="btnCadeaux" type="button">Obtenir le PDF · 7,99 $</button></div>
+          <p class="ok-msg" id="cadeauxMsg" style="display:none;"></p>
+        </div>
+        <div id="cadeauxReady" style="display:none;"></div>
+      </div>
+
+      <!-- DEMANDER UNE MODIFICATION (E/F — correction post-achat) — modale unifiée (js/cm-modif-modal.js) -->
+      <div class="card" id="correctionCard">
+        <div class="section-title">Une demande de modification ?</div>
+        <p class="section-sub">Tu aimerais ajuster ta chanson ? Dis-nous en quelques mots : un <strong>mot mal prononcé</strong>, un <strong>souvenir</strong> à ajouter, un <strong>détail dans les paroles</strong>, le <strong>style</strong> ou le <strong>titre</strong>. Notre équipe la prépare et te revient.</p>
+        <div style="margin-top:14px;"><button class="btn btn-block" id="btnCorrection" type="button">Quelque chose à ajuster&nbsp;?</button></div>
+      </div>
+
+      <!-- TEASER MÉMOIRE VIVANTE -->
+      <div class="card teaser">
+        <div class="badge">À venir</div>
+        <div class="section-title">Mémoire vivante</div>
+        <p class="section-sub" id="memoireSub">La mémoire grandit par la création. Une plateforme pour faire vivre son souvenir, à ton rythme.</p>
+        <p class="feat" id="memoireFeat" style="margin:6px 0 2px;">
+          <strong>✦ Déposer</strong> des photos et des vidéos en souvenir.<br>
+          <strong>✦ Une nouvelle œuvre</strong> tous les trois mois, à partir de nouveaux souvenirs ou d'une nouvelle formulation, dans le style de ton choix.<br>
+          <strong>✦ Une page famille</strong> partagée, pour se souvenir ensemble.
+        </p>
+        <div style="margin-top:16px;"><button class="btn btn-ghost btn-block" id="btnWaitMemoire" type="button">M'inscrire à la liste d'attente</button></div>
+        <p class="ok-msg" id="memoireMsg" style="display:none;"></p>
+      </div>
+
+      <!-- CRÉER POUR QUELQU'UN D'AUTRE (post-achat, pour ne pas nuire à la conversion de l'aperçu) -->
+      <div class="card center">
+        <div class="section-title">Une chanson pour quelqu'un d'autre ?</div>
+        <p class="section-sub">Offre la même émotion à une autre personne qui compte pour toi.</p>
+        <div style="margin-top:14px;"><a class="btn btn-ghost btn-block" href="/souvenirs">Créer une nouvelle chanson</a></div>
+      </div>
+
+      <!-- FAQ -->
+      <div class="card">
+        <div class="section-title">Questions fréquentes</div>
+        <details style="margin-top:8px;border-top:1px solid var(--line);"><summary>Comment télécharger ma chanson ?</summary><p class="section-sub" style="margin:0 0 10px;">Le bouton de téléchargement est sur cette page. Ton fichier MP3 est aussi dans le courriel qu'on t'a envoyé après l'achat.</p></details>
+        <details style="border-top:1px solid var(--line);"><summary>Puis-je encore demander une modification ?</summary><p class="section-sub" style="margin:0 0 10px;">Oui. Décris ce que tu veux ajuster et on retravaille ta version, sans frais.</p></details>
+        <details style="border-top:1px solid var(--line);"><summary>Où sont mes paroles en PDF ?</summary><p class="section-sub" style="margin:0 0 10px;">Ils apparaissent ici une fois prêts, et tu reçois aussi un courriel. Compte de quelques minutes à quelques heures.</p></details>
+        <details style="border-top:1px solid var(--line);"><summary>Comment partager ma chanson ?</summary><p class="section-sub" style="margin:0 0 10px;">Télécharge le MP3 et partage-le comme tu veux : par courriel, par message, ou directement lors d'une cérémonie.</p></details>
+      </div>
+
     </div>
-    <div id="genVideoWrap" style="margin-top:14px;display:none;"><button class="btn btn-block" id="btnGenVideo" type="button" disabled>Générer ma vidéo souvenir</button></div>
-    <p class="ok-msg" id="videoMemoireMsg" style="display:none;"></p>
-    <div class="video-frame" id="videoMemoireFrame" style="display:none;margin-top:14px;"></div>
-    </div><!-- /videoBody -->
-  </div>
-
-  <!-- CRÉER POUR QUELQU'UN D'AUTRE (placé ici, post-achat, pour ne pas nuire à la conversion de l'aperçu) -->
-  <div class="card center">
-    <div class="section-title">Une chanson pour quelqu'un d'autre ?</div>
-    <p class="section-sub">Offre la même émotion à une autre personne qui compte pour toi.</p>
-    <a class="btn btn-ghost btn-block" href="/souvenirs">Créer une nouvelle chanson</a>
-  </div>
-
-  <div class="card">
-    <div class="section-title">Questions fréquentes</div>
-    <details style="margin-top:8px;border-top:1px solid rgba(92,45,74,.10);"><summary style="cursor:pointer;font-weight:600;padding:12px 0;list-style:none;">Comment télécharger ma chanson ?</summary><p class="section-sub" style="margin:0 0 10px;">Le bouton de téléchargement est sur cette page. Ton fichier MP3 est aussi dans le courriel qu'on t'a envoyé après l'achat.</p></details>
-    <details style="border-top:1px solid rgba(92,45,74,.10);"><summary style="cursor:pointer;font-weight:600;padding:12px 0;list-style:none;">Puis-je encore demander une modification ?</summary><p class="section-sub" style="margin:0 0 10px;">Oui. Décris ce que tu veux ajuster et on retravaille ta version, sans frais.</p></details>
-    <details style="border-top:1px solid rgba(92,45,74,.10);"><summary style="cursor:pointer;font-weight:600;padding:12px 0;list-style:none;">Où sont mes paroles en PDF ?</summary><p class="section-sub" style="margin:0 0 10px;">Ils apparaissent ici une fois prêts, et tu reçois aussi un courriel. Compte de quelques minutes à quelques heures.</p></details>
-    <details style="border-top:1px solid rgba(92,45,74,.10);"><summary style="cursor:pointer;font-weight:600;padding:12px 0;list-style:none;">Comment partager ma chanson ?</summary><p class="section-sub" style="margin:0 0 10px;">Télécharge le MP3 et partage-le comme tu veux : par courriel, par message, ou directement lors d'une cérémonie.</p></details>
   </div>
 </div>
 
@@ -265,7 +373,7 @@
   function cmToast(msg){
     var t=document.getElementById('cm-toast');
     if(!t){ t=document.createElement('div'); t.id='cm-toast'; t.setAttribute('role','alert'); t.setAttribute('aria-live','assertive');
-      t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2E1A28;color:#fff;padding:13px 20px;border-radius:12px;font:600 14px/1.4 Mulish,system-ui,sans-serif;max-width:90%;box-shadow:0 8px 30px rgba(0,0,0,.3);z-index:9999;text-align:center;';
+      t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2E1A28;color:#fff;padding:13px 20px;border-radius:12px;font:600 14px/1.4 "Work Sans",system-ui,sans-serif;max-width:90%;box-shadow:0 8px 30px rgba(0,0,0,.3);z-index:9999;text-align:center;';
       document.body.appendChild(t); }
     t.textContent=msg; t.style.display='block';
     clearTimeout(t._h); t._h=setTimeout(function(){ t.style.display='none'; }, 5000);
@@ -297,7 +405,7 @@
 
   post('/api/lire-projet',{token:token}).then(function(d){
     if(!d){ loading.textContent='Lien introuvable.'; return; }
-    /* Filet (étape courante) : la page-mémoire = livraison post-acceptation. Si pas encore acheté, on renvoie
+    /* Filet (étape courante) : l'espace client = livraison post-acceptation. Si pas encore acheté, on renvoie
        à l'aperçu (un ancien lien ne doit pas exposer la livraison avant l'achat). */
     if(d.commercial_status !== 'purchased'){ location.replace('/apercu?id=' + encodeURIComponent(token)); return; }
     adaptMemoireType(d.song_type);

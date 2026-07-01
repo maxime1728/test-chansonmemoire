@@ -133,7 +133,7 @@ exports.handler = async (event) => {
     const phrase = (projet.fields.signet_text || '').toString().trim() || (cadeau ? 'Avec tout mon cœur.' : 'Pour toujours dans nos cœurs.');
 
     // QR -> page de la chanson (token-routée). Le scan ouvre la page qui joue la chanson.
-    const qrBuffer = await QRCode.toBuffer(`${SITE}/page-memoire?id=${token}`, { margin: 1, scale: 6 });
+    const qrBuffer = await QRCode.toBuffer(`${SITE}/espace-client?id=${token}`, { margin: 1, scale: 6 });
 
     const pdfBuffer = await genererSignetPdf({ prenom, phrase, qrBuffer, cadeau });
     const signetUrl = await uploadCloudinary(pdfBuffer, `signet_${token}`);

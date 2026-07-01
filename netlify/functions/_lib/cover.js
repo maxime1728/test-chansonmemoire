@@ -93,7 +93,7 @@ async function prochainNo(api, headers, projectPrimary) {
 // Email « votre nouvelle version est prête » (voix de marque, sans tiret cadratin). Pur -> réutilisé par
 // livrerCover (livraison directe) et annoncerVersionPrete (watchdog #19).
 function htmlNouvelleVersion(p, site) {
-  const lien = p.page_url || ((site || SITE) + '/page-memoire?id=' + encodeURIComponent(p.token));
+  const lien = p.page_url || ((site || SITE) + '/espace-client?id=' + encodeURIComponent(p.token));
   return `<div style="font-family:Georgia,serif;color:#2E1A28;line-height:1.7;max-width:560px;">` +
     `<p style="font-size:18px;color:#5C2D4A;">Votre nouvelle version est prête.</p>` +
     `<p>On a appliqué votre demande de modification. Écoutez et téléchargez la version mise à jour sur votre page :</p>` +
@@ -114,6 +114,12 @@ async function livrerCover({ api, headers, projet, coverGen, audioUrl, songId })
   // client). L'équipe revoit dans le cockpit, puis l'envoi de la réponse publie (publierVersionPrete).
   // Flag OFF -> livraison directe (publiée + bascule + courriel), comportement strictement inchangé.
   const revue = process.env.REVUE_AVANT_ENVOI === '1' && Number.isInteger(purchasedNo);
+  // Studio A/B (jalon 3c) : une version GÉNÉRÉE AU STUDIO est livrée (audio prêt, écoutable) mais NI promue
+  // en `purchased_generation_no` NI annoncée au client, tant que l'équipe ne l'a pas explicitement envoyée
+  // (bouton « Envoyer » du cockpit -> offrir_ab). Marqueur transitoire par-projet posé par generer_version,
+  // consommé ici. Le flux modif NORMAL (pas de marqueur) reste inchangé (bascule + courriel auto).
+  const candidate = !!p.pending_ab_candidate && Number.isInteger(purchasedNo);
+  const held = revue || candidate;   // held = audio prêt, mais version NI promue NI annoncée au client
 
   // 1. Ré-héberge l'audio (permanent). Repli sur l'URL source si Cloudinary échoue.
   const hosted = await rehost(audioUrl, { folder: 'covers', publicId: `cover_${p.token}_${newNo}`, resourceType: 'video' }) || audioUrl;
@@ -134,7 +140,10 @@ async function livrerCover({ api, headers, projet, coverGen, audioUrl, songId })
   // 3. Ferme la boucle côté Projet (prêt pour un éventuel tour suivant). purchased_generation_no n'est
   //    basculé qu'en POST-achat ; en pré-achat la nouvelle génération devient simplement la plus récente.
   const projPatch = { approval_status: 'published', cover_task_id: null, cover_launched_at: null, pending_cover_style: null };
-  if (Number.isInteger(purchasedNo) && !revue) { projPatch.purchased_generation_no = newNo; projPatch.purchased_song_title = g.song_title || ''; }
+  // Marqueur A/B consommé à CHAQUE livraison (auto-guérison : un marqueur resté coché sur un cover bloqué
+  // ne peut pas « tenir » silencieusement la prochaine modif normale). La décision `candidate` a été lue plus haut.
+  projPatch.pending_ab_candidate = false;
+  if (Number.isInteger(purchasedNo) && !held) { projPatch.purchased_generation_no = newNo; projPatch.purchased_song_title = g.song_title || ''; }
   await fetch(`${api}/Projects/${projet.id}`, {
     method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ fields: projPatch })
@@ -142,7 +151,7 @@ async function livrerCover({ api, headers, projet, coverGen, audioUrl, songId })
 
   // 3b. Post-achat : l'ancienne version active devient « remplacée » (le cockpit voit clair quelle
   //     version est en ligne). Best-effort : ne bloque jamais la livraison.
-  if (Number.isInteger(purchasedNo) && !revue && purchasedNo !== newNo) {
+  if (Number.isInteger(purchasedNo) && !held && purchasedNo !== newNo) {
     try {
       const litOld = formulaLiteral(p.project);
       if (litOld !== null) {
@@ -158,15 +167,16 @@ async function livrerCover({ api, headers, projet, coverGen, audioUrl, songId })
     } catch (_) { /* la rétrogradation de l'ancienne version ne bloque jamais */ }
   }
 
-  // 4. Courriel « nouvelle version prête » (best-effort, voix de marque). En REVUE (#19) : PAS d'envoi ici,
-  //    c'est l'envoi de la réponse par l'équipe (ou le watchdog après délai) qui publie + annonce au client.
-  if (!revue) try {
+  // 4. Courriel « nouvelle version prête » (best-effort, voix de marque). En REVUE (#19) OU en candidate A/B
+  //    (jalon 3c) : PAS d'envoi ici. REVUE -> l'envoi de la réponse publie + annonce ; candidate -> c'est le
+  //    bouton « Envoyer » du cockpit (offrir_ab) qui promeut + envoie le courriel de choix au client.
+  if (!held) try {
     const to = await emailClient(api, headers, projet);
     const html = htmlNouvelleVersion(p, SITE);
     await envoyerCourriel(to, 'Votre nouvelle version est prête', html, projet.id);
   } catch (_) { /* le courriel ne bloque pas la livraison */ }
 
-  return { ok: true, generation_no: newNo, prete: revue };
+  return { ok: true, generation_no: newNo, prete: revue, candidate };
 }
 
 // Un cover est-il DÉJÀ en vol pour ce projet ? (Generation cover en audio_pending, récente.) Sert de

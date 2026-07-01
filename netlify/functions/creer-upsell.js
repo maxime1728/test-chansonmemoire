@@ -92,8 +92,8 @@ exports.handler = async (event) => {
     params.append('metadata[kind]', 'upsell');
     params.append('metadata[upsell_type]', type);
     if (clientEmail && clientEmail.includes('@')) params.append('customer_email', clientEmail);
-    params.append('success_url', `${SITE}/page-memoire?id=${encodeURIComponent(token)}&upsell_ok=1`);
-    params.append('cancel_url',  `${SITE}/page-memoire?id=${encodeURIComponent(token)}`);
+    params.append('success_url', `${SITE}/espace-client?id=${encodeURIComponent(token)}&upsell_ok=1`);
+    params.append('cancel_url',  `${SITE}/espace-client?id=${encodeURIComponent(token)}`);
 
     const rS = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',

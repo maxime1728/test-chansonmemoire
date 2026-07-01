@@ -87,7 +87,7 @@ async function construireContexts(projectIds, headers) {
           // Lien PAR PROJET : vendu -> page de livraison complète ; pré-achat -> page aperçu (jamais le lien complet).
           lien_page: !p.token ? ''
             : (p.commercial_status === 'purchased'
-                ? (p.page_url || `${SITE}/page-memoire?id=${encodeURIComponent(p.token)}`)
+                ? (p.page_url || `${SITE}/espace-client?id=${encodeURIComponent(p.token)}`)
                 : `${SITE}/apercu?id=${encodeURIComponent(p.token)}`)
         });
       }

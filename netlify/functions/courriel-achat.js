@@ -90,7 +90,7 @@ exports.handler = async (event) => {
       : [...new Set([clientEmail, stripeEmail].filter(valide))];   // achat -> les deux, dédupliqués
 
     // #8 : lien = ÉTAPE COURANTE (formule page_url, basée sur funnel_step). À l'achat -> page-chanson ;
-    // après acceptation -> page-memoire. Repli sur page-chanson si la formule n'est pas encore calculée.
+    // après acceptation -> espace-client. Repli sur page-chanson si la formule n'est pas encore calculée.
     const lien = projet.fields.page_url || `${SITE}/page-chanson?id=${encodeURIComponent(token)}`;
 
     let subject, html;
@@ -103,7 +103,7 @@ exports.handler = async (event) => {
         html = gabarit({
           intro: 'Merci, c’est confirmé.',
           corps: 'Pour créer votre vidéo souvenir, rendez-vous sur votre page : ajoutez vos photos (10 à 60), placez-les dans l’ordre souhaité, puis lancez la création. Nous en ferons un film tendre porté par votre chanson.',
-          lien: `${SITE}/page-memoire?id=${encodeURIComponent(token)}`
+          lien: `${SITE}/espace-client?id=${encodeURIComponent(token)}`
         });
       } else {
         subject = 'Votre complément est confirmé';

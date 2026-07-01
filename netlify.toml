@@ -103,6 +103,15 @@
 [functions."keepwarm-cron"]
   schedule = "*/5 * * * *"
 
+# Renommage page de livraison : page-memoire -> espace-client (page privée du client, non partageable).
+# 301 pour que TOUS les anciens liens (courriels déjà envoyés, QR des signets imprimés) restent valides.
+# La query ?id= est préservée automatiquement par Netlify.
+[[redirects]]
+  from = "/page-memoire"
+  to = "/espace-client"
+  status = 301
+  force = true
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
