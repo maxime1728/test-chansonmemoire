@@ -402,6 +402,8 @@
       (x.message ? '<div class="demande"><div class="label">Demande du client</div>' + esc(x.message) + '</div>' : '') +
       panneauAnalyse(x.analyse_ia) +
 
+      (x.audio_actuel ? '<div class="sectlabel">Ecouter la version actuelle</div><div class="regen"><audio controls preload="none" src="' + esc(x.audio_actuel) + '"></audio></div>' : '') +
+
       '<div class="sectlabel">Paroles &mdash; actuel | propose (editable)</div>' +
       champEditable('Actuel (en ligne)', x.paroles_actuelles, 'Propose (editable)', 'ta_paroles', parProp, 'dp_act') +
 
@@ -462,14 +464,20 @@
   function pollRegen(id){
     stopRegenPoll();
     if (!id) return;
-    var tries = 0;
+    var tries = 0, sawProd = false;
+    var baseAudio = (CUR && CUR.audio_actuel) || '';   // audio avant régé -> on detecte quand il change (flag OFF)
     regenPoll = setInterval(async function(){
       tries++;
-      if (tries > 40 || !CUR || CUR.id !== id) { stopRegenPoll(); return; }   // ~10 min max, ou item change
+      if (tries > 40 || !CUR || CUR.id !== id) { stopRegenPoll(); return; }   // ~8 min max, ou item change
       var d = await api('?id=' + encodeURIComponent(id));
-      var rg = d && d.detail && d.detail.regen;
-      if (rg && rg.statut === 'prête') { stopRegenPoll(); rechargerDetail(); toast('Nouvelle version prete a revoir.'); }
-    }, 15000);
+      var det = d && d.detail; if (!det) return;
+      var rg = det.regen;
+      if (rg && rg.statut === 'en_production') { sawProd = true; return; }
+      // Mode revue (flag ON) : la version attend en 'prête' -> on l'affiche (lecteur + paroles régé).
+      if (rg && rg.statut === 'prête') { stopRegenPoll(); rechargerDetail(); toast('Nouvelle version prete a revoir.'); return; }
+      // Auto-envoi (flag OFF) : la régé s'est publiee -> l'audio de la version actuelle a change -> on rafraichit.
+      if (sawProd && det.audio_actuel && det.audio_actuel !== baseAudio) { stopRegenPoll(); rechargerDetail(); toast('Nouvelle version en ligne.'); return; }
+    }, 12000);
   }
 
   // ── DICTIONNAIRE de prononciation (étape 4) : ajouter / éditer / (dés)activer / supprimer une entrée. ──
