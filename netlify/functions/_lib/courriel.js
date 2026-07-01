@@ -148,10 +148,16 @@ async function envoyerCourriel(opts) {
   if (opts.html != null) form.append('html', opts.html);
   if (opts.text != null) form.append('text', opts.text);
   if (opts.tracking) { form.append('o:tracking-opens', 'yes'); form.append('o:tracking-clicks', 'yes'); }
-  if (opts.headers) {
-    for (const k in opts.headers) {
-      if (opts.headers[k] != null) form.append('h:' + k, opts.headers[k]);
-    }
+  // Reply-To : les courriels « machine » (notifications@) ne se répondent pas à eux-mêmes. On renvoie les
+  // réponses des clients vers le SUPPORT HUMAIN (nathalie@, DÉJÀ routé vers le cockpit) : le client peut
+  // répondre à une notif sans que ça tombe dans le vide, et l'équipe répond avec l'identité Nathalie. Le
+  // support (déjà nathalie@) n'en a pas besoin. L'appelant peut fournir son propre Reply-To (respecté).
+  const enTetes = { ...(opts.headers || {}) };
+  if (opts.type !== 'support' && enTetes['Reply-To'] == null) {
+    enTetes['Reply-To'] = process.env.MAILGUN_REPLYTO_NOTIF || 'nathalie@chansonmemoire.ca';
+  }
+  for (const k in enTetes) {
+    if (enTetes[k] != null) form.append('h:' + k, enTetes[k]);
   }
   if (opts.attachment && opts.attachment.buffer) {
     form.append('attachment',
