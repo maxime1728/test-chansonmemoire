@@ -26,3 +26,54 @@ jobs:
 
       - name: Tests unitaires (node:test)
         run: node --test tests/*.test.js
+
+  # Fondations Supabase (plan v2 Phase 1) : types, contrat d'observabilité, dérive de
+  # schéma, MIGRATIONS DEPUIS ZÉRO sur un Postgres éphémère (bloquant), smoke test.
+  # Aucun secret ici : la base est jetable, créée dans le runner.
+  fondations-supabase:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cm_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/cm_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Dépendances
+        run: npm ci
+
+      - name: Types TypeScript (build cassé si désync avec le schéma)
+        run: npm run typecheck
+
+      - name: Contrat d'observabilité (wrapper obligatoire, zéro catch vide)
+        run: node scripts/verifier-wrapper.mjs
+
+      - name: Dérive schéma vs migrations (drizzle-kit check)
+        run: npm run db:check
+
+      - name: Tests unitaires TypeScript
+        run: npm run test:ts
+
+      - name: Migrations depuis ZÉRO sur Postgres éphémère (bloquant)
+        run: npm run db:migrate
+
+      - name: Preuve — tables créées (information_schema)
+        run: node scripts/lister-tables.mjs
+
+      - name: Smoke — les contraintes échouent FORT (doublon rejeté, FK, CHECK, audit, soft-delete)
+        run: node scripts/smoke-db.mjs

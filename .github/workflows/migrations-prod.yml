@@ -1,0 +1,55 @@
+name: Migrations Supabase (prod)
+
+# Applique les migrations sur la base Supabase de prod au merge sur main.
+# PROTECTION : le job tourne dans l'Environment GitHub « production-db » configuré avec
+# approbation manuelle (required reviewer = Maxime). Une migration ne s'auto-applique
+# JAMAIS sans clic humain. Zéro copier-coller SQL : la CI est le seul chemin vers la base.
+#
+# Secret requis dans l'Environment « production-db » :
+#   SUPABASE_DB_URL_DIRECT = connection string DIRECTE port 5432 (Supabase -> Settings ->
+#   Database -> "Direct connection"). C'est la connexion des MIGRATIONS.
+#   Le runtime (fonctions Netlify) utilise, lui, le POOLER TRANSACTION port 6543
+#   (SUPABASE_DB_URL dans Netlify). Jamais l'inverse.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'db/schema.ts'
+      - 'drizzle.config.ts'
+  workflow_dispatch:
+
+concurrency:
+  group: migrations-prod
+  cancel-in-progress: false
+
+jobs:
+  migrer:
+    runs-on: ubuntu-latest
+    environment: production-db
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DB_URL_DIRECT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Dépendances
+        run: npm ci
+
+      - name: Garde-fou — connexion DIRECTE exigée (jamais le pooler transaction)
+        run: |
+          node -e "
+            const u = process.env.DATABASE_URL || '';
+            if (!u) { console.error('Secret SUPABASE_DB_URL_DIRECT manquant dans l\'Environment production-db.'); process.exit(1); }
+            if (u.includes(':6543')) { console.error('ERREUR : pooler transaction détecté (port 6543). Les migrations exigent la connexion DIRECTE port 5432.'); process.exit(1); }
+            console.log('Connexion directe confirmée.');
+          "
+
+      - name: Appliquer les migrations (drizzle-kit migrate)
+        run: npm run db:migrate
+
+      - name: PREUVE — tables présentes dans Supabase (information_schema)
+        run: node scripts/lister-tables.mjs

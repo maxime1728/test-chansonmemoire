@@ -1,5 +1,12 @@
 # Runbook de migration Supabase — exécutable par Claude Code
 
+> ⚠️ **DOCUMENT SUPPLANTÉ (2026-07-02).** La source de vérité est
+> [`plan-migration-supabase-v2.md`](plan-migration-supabase-v2.md) (+ ses amendements).
+> En cas de conflit, le plan v2 GAGNE. En particulier : il y a **ZÉRO coexistence,
+> partout** (les mécanismes de double-écriture/parité des Phases 2, 4, 6 et 7
+> ci-dessous sont SUPPRIMÉS), et l'ordre des phases est celui du plan v2.
+> Ce runbook reste utile pour le détail des erreurs long terme et des preuves par phase.
+
 > Document d'exécution. Deux lecteurs :
 > - **Claude Code** exécute les tâches marquées **[CLAUDE]**.
 > - **Toi (Maxime)** ne fais QUE les tâches marquées **[TOI]** (regroupées en fin de doc).
