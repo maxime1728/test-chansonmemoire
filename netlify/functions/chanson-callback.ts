@@ -15,6 +15,7 @@ import { db, actif, schema } from './_lib/db';
 import { avecErreurs, type EvenementHttp } from './_lib/http';
 import { journaliser } from './_lib/journal';
 import { rehost } from './_lib/cloudinary-rehost';
+import { envoyerCourriel, gabarit } from './_lib/mailgun';
 
 interface CorpsSuno {
   code?: number | string;
@@ -90,7 +91,59 @@ export const handler = avecErreurs('chanson-callback', async (event: EvenementHt
     .where(eq(generations.id, gen.id));
 
   // 3. Projet -> preview_ready (les comptes sont une vue SQL, rien à recalculer).
+  //    L'état AVANT sert d'anti-doublon structurel pour le courriel (1re bascule seulement).
+  const { demandes, clients } = schema;
+  const [projetAvant] = await db()
+    .select({
+      id: projects.id,
+      token: projects.token,
+      funnelStep: projects.funnelStep,
+      commercialStatus: projects.commercialStatus,
+      clientId: projects.clientId,
+      deceasedName: projects.deceasedName,
+    })
+    .from(projects)
+    .where(eq(projects.id, gen.projectId))
+    .limit(1);
   await db().update(projects).set({ funnelStep: 'preview_ready' }).where(eq(projects.id, gen.projectId));
+
+  // 4. Demandes en génération -> prêtes (la boucle de révision aboutit).
+  await db()
+    .update(demandes)
+    .set({ etat: 'prete' })
+    .where(and(eq(demandes.projectId, gen.projectId), eq(demandes.etat, 'en_generation'), actif(demandes)));
+
+  // 5. Courriel « aperçu prêt » (nouveau funnel : c'est LE retour du client qui a quitté
+  //    l'attente). Pré-achat + PREMIÈRE bascule seulement. Best-effort : jamais bloquant.
+  if (projetAvant && projetAvant.commercialStatus === 'preview_only' && projetAvant.funnelStep !== 'preview_ready') {
+    try {
+      const [client] = await db()
+        .select({ email: clients.email })
+        .from(clients)
+        .where(eq(clients.id, projetAvant.clientId))
+        .limit(1);
+      const to = (client?.email || '').trim();
+      if (to.includes('@')) {
+        const titre = (gen.songTitle || '').trim();
+        const lien = `https://chansonmemoire.ca/apercu?id=${encodeURIComponent(projetAvant.token)}`;
+        const r = await envoyerCourriel({
+          type: 'apercu',
+          to,
+          subject: titre ? `Votre aperçu est prêt : « ${titre} »` : 'Votre aperçu est prêt',
+          html: gabarit({
+            intro: 'Votre aperçu est prêt.',
+            corps: `Vous pouvez écouter la chanson dès maintenant${titre ? `, « <strong>${titre.replace(/</g, '&lt;')}</strong> »` : ''}. Prenez le temps qu'il vous faut. Si vous souhaitez ajuster un mot ou un détail, dites-le nous, on s'en occupe.`,
+            lien,
+            cta: 'Écouter l’aperçu',
+          }),
+          projetId: projetAvant.id,
+        });
+        journaliser({ niveau: r.sent ? 'P3' : 'P2', fonction: 'chanson-callback', message: `courriel aperçu prêt: ${r.summary}` });
+      }
+    } catch (e) {
+      journaliser({ niveau: 'P2', fonction: 'chanson-callback', message: `courriel aperçu prêt échoué: ${e instanceof Error ? e.message : String(e)}` });
+    }
+  }
 
   journaliser({ niveau: 'P3', fonction: 'chanson-callback', message: `aperçu prêt (génération n°${gen.generationNo})` });
   return { statusCode: 200, body: JSON.stringify({ ok: true }) };

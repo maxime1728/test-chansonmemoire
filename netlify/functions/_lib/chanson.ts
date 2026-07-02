@@ -20,6 +20,27 @@ import { styleFor } from './style';
 import type { Generation, Project } from '../../../db/schema';
 
 export const PLAFOND_PROJET_PRE_ACHAT = 4;
+// Seuil de ROUTAGE des révisions client (décision Maxime 2026-07-02) : à partir de
+// 3 appels Suno déclenchés côté client sur le projet, plus d'auto : la demande part
+// en file manuelle avec le message « on te revient d'ici 24-48 h ».
+export const SEUIL_REVISION_EQUIPE = 3;
+
+// Appels Suno DÉCLENCHÉS CLIENT sur ce projet, pré-achat : toute chanson de la
+// famille song (pending inclus : un appel lancé a coûté), jamais l'équipe.
+export async function compterAppelsClientPre(projectId: string): Promise<number> {
+  const { generations } = schema;
+  const gens = await db()
+    .select({ type: generations.type, status: generations.status, postPurchase: generations.postPurchase, adminTriggered: generations.adminTriggered })
+    .from(generations)
+    .where(and(eq(generations.projectId, projectId), actif(generations)));
+  return gens.filter(
+    (g) =>
+      ['song', 'song_regeneration', 'cover'].includes(g.type) &&
+      ['audio_pending', 'audio_generated', 'validated'].includes(g.status) &&
+      !g.postPurchase &&
+      !g.adminTriggered,
+  ).length;
+}
 
 export type ResultatLancement =
   | { ok: true; taskId: string; generationNo: number }

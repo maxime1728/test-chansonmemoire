@@ -199,6 +199,39 @@ test('funnel v2 : parcours soumission -> lecture -> révision (base réelle)', {
     assert.match(r2.body ?? '', /already/, 'rejouer le callback = no-op explicite');
   });
 
+  await t.test('aperçu + routage révision : ≥3 appels client = file équipe (24-48 h), jamais d’auto', async () => {
+    const { handler: apercu } = await import('../netlify/functions/apercu');
+    const { handler: apercuRevision } = await import('../netlify/functions/apercu-revision');
+    const [p] = await sql`select id from projects where token = ${token}`;
+    // GET aperçu : la chanson du test précédent (audio_generated) est servie, réponse filtrée.
+    const rA = await apercu(evenement({ httpMethod: 'GET', queryStringParameters: { id: token } }), {});
+    assert.equal(rA.statusCode, 200, rA.body ?? '');
+    const corpsA = JSON.parse(rA.body ?? '{}');
+    assert.equal(corpsA.appels_utilises, 1);
+    assert.equal(corpsA.revision_equipe, false);
+    assert.ok(!(rA.body ?? '').includes('@'), 'jamais de courriel dans la réponse aperçu');
+    // Monte à 3 appels client -> la prochaine révision part en file manuelle.
+    await sql`insert into generations (project_id, generation_no, type, lyrics, song_title, status, suno_task_id)
+              values (${p!.id}, 3, 'song_regeneration', 'IT p3', 'IT-Titre', 'audio_generated', 'suno_it_2'),
+                     (${p!.id}, 4, 'song_regeneration', 'IT p4', 'IT-Titre', 'audio_pending', 'suno_it_3')`;
+    const rR = await apercuRevision(
+      evenement({ body: JSON.stringify({ token, modifications: 'Changer le refrain, parler du chalet.' }) }),
+      {},
+    );
+    assert.equal(rR.statusCode, 200, rR.body ?? '');
+    assert.equal(JSON.parse(rR.body ?? '{}').statut, 'equipe');
+    const [dem] = await sql`select etat, canal, demande_brute from demandes where project_id = ${p!.id} order by recue_at desc limit 1`;
+    assert.equal(dem?.etat, 'en_validation', 'demande en file manuelle');
+    assert.equal(dem?.canal, 'formulaire');
+    // Une demande active bloque les doublons.
+    const rDouble = await apercuRevision(
+      evenement({ body: JSON.stringify({ token, modifications: 'encore un retour' }) }),
+      {},
+    );
+    assert.equal(rDouble.statusCode, 409);
+    assert.equal(JSON.parse(rDouble.body ?? '{}').statut, 'deja_en_cours');
+  });
+
   await t.test('background : secret exigé (401), token validé (400), clé API absente = échec fort (500)', async () => {
     const sansSecret = await background(evenement({ body: JSON.stringify({ token, secret: 'mauvais' }) }), {});
     assert.equal(sansSecret.statusCode, 401);
