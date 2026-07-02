@@ -53,6 +53,7 @@ test('funnel v2 : parcours soumission -> lecture -> révision (base réelle)', {
   const { handler: projet } = await import('../netlify/functions/projet');
   const { handler: revision } = await import('../netlify/functions/revision-paroles');
   const { handler: background } = await import('../netlify/functions/survey-paroles-background');
+  const { handler: health } = await import('../netlify/functions/health');
   const { default: postgres } = await import('postgres');
   const sql = postgres(DB, { prepare: false, max: 1, onnotice: () => {} });
 
@@ -115,6 +116,28 @@ test('funnel v2 : parcours soumission -> lecture -> révision (base réelle)', {
     assert.equal(projets[0]?.n, 1, 'les deux projets pointent le même client');
   });
 
+  await t.test('reformulation : resoumission SANS paroles = réponses mises à jour (pas de doublon)', async () => {
+    const corps = JSON.parse(corpsSurvey(token, email));
+    corps.deceased_name = 'IT-Jean Reformulé';
+    corps.mood = 'Festive';
+    const r = await survey(evenement({ body: JSON.stringify(corps) }), {});
+    assert.equal(r.statusCode, 200);
+    const [p] = await sql`select deceased_name, mood from projects where token = ${token}`;
+    assert.equal(p?.deceased_name, 'IT-Jean Reformulé', 'les réponses sont mises à jour tant que les paroles n’existent pas');
+    assert.equal(p?.mood, 'Festive');
+    const n = await sql`select count(*)::int as n from projects where token = ${token}`;
+    assert.equal(n[0]?.n, 1, 'toujours un seul projet');
+  });
+
+  await t.test('/api/health : vert, migrations embarquées = migrations appliquées', async () => {
+    const r = await health(evenement({ httpMethod: 'GET' }), {});
+    assert.equal(r.statusCode, 200, r.body ?? '');
+    const corps = JSON.parse(r.body ?? '{}');
+    assert.equal(corps.ok, true);
+    const [a, b] = String(corps.migrations).split('/');
+    assert.equal(a, b, `garde-fou décalage code/schéma : ${corps.migrations}`);
+  });
+
   await t.test('GET /api/projet : réponse filtrée, jamais le courriel', async () => {
     const mauvais = await projet(evenement({ httpMethod: 'GET', queryStringParameters: { id: 'zzz' } }), {});
     assert.equal(mauvais.statusCode, 400);
@@ -123,7 +146,7 @@ test('funnel v2 : parcours soumission -> lecture -> révision (base réelle)', {
     const ok = await projet(evenement({ httpMethod: 'GET', queryStringParameters: { id: token } }), {});
     assert.equal(ok.statusCode, 200);
     const corps = JSON.parse(ok.body ?? '{}');
-    assert.equal(corps.prenom, 'IT-Jean Tremblay');
+    assert.equal(corps.prenom, 'IT-Jean Reformulé', 'reflète la reformulation précédente');
     assert.equal(corps.a_paroles, false);
     assert.equal(corps.generation_no, 0);
     assert.equal(corps.etape, 'survey_submitted');
