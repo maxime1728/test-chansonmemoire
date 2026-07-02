@@ -10,7 +10,7 @@
 // du sondage (données déjà sauvées), le client a explicitement demandé une action.
 import { and, eq } from 'drizzle-orm';
 import { db, actif, schema } from './_lib/db';
-import { avecErreurs, type EvenementHttp } from './_lib/http';
+import { avecErreurs, urlBaseDeploy, type EvenementHttp } from './_lib/http';
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MODIFS_MAX = 4000; // garde-fou taille (le champ client est un textarea court)
@@ -37,7 +37,7 @@ export const handler = avecErreurs('revision-paroles', async (event: EvenementHt
     .limit(1);
   if (!projet) return { statusCode: 404, body: JSON.stringify({ error: 'Introuvable' }) };
 
-  const base = process.env.URL || 'https://chansonmemoire.ca';
+  const base = urlBaseDeploy();
   const secret = process.env.GENERATE_LYRICS_SECRET || '';
   const r = await fetch(`${base}/.netlify/functions/survey-paroles-background`, {
     method: 'POST',

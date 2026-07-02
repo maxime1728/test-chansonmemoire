@@ -28,6 +28,8 @@ export interface EntreeJournal {
 }
 
 // Une seule ligne JSON par événement : filtrable dans les logs Netlify, lisible par une machine.
+// P1 = AUSSI capturé dans Sentry (best-effort, jamais bloquant) : un P1 qui ne vit que
+// dans les logs est un P1 que personne ne voit (leçon du bug d'URL de preview).
 export function journaliser(entree: EntreeJournal): void {
   const { niveau, fonction, message, ...extra } = entree;
   const ligne = JSON.stringify({
@@ -37,7 +39,16 @@ export function journaliser(entree: EntreeJournal): void {
     quand: new Date().toISOString(),
     ...extra,
   });
-  if (niveau === 'P1') console.error(ligne);
-  else if (niveau === 'P2') console.warn(ligne);
+  if (niveau === 'P1') {
+    console.error(ligne);
+    void (async () => {
+      try {
+        const { capture } = await import('./sentry');
+        await capture(new Error(`[P1 ${fonction}] ${nettoyer(message)}`), { fonction, ...extra });
+      } catch {
+        // Sentry indisponible : la ligne console.error ci-dessus reste la trace.
+      }
+    })();
+  } else if (niveau === 'P2') console.warn(ligne);
   else console.log(ligne);
 }

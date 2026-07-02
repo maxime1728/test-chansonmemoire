@@ -15,7 +15,7 @@
 // Idempotent : re-soumission du même token = no-op qui redéclenche seulement les paroles.
 import { and, eq } from 'drizzle-orm';
 import { db, actif, schema } from './_lib/db';
-import { avecErreurs, type EvenementHttp } from './_lib/http';
+import { avecErreurs, urlBaseDeploy, type EvenementHttp } from './_lib/http';
 import { journaliser } from './_lib/journal';
 import { envoyerLeadCapi } from './_lib/meta-capi';
 
@@ -50,7 +50,7 @@ function construireAttribution(d: Record<string, unknown>): Record<string, unkno
 
 // Fire-and-forget vers la fonction background (202 immédiat côté Netlify).
 async function declencherParoles(token: string): Promise<void> {
-  const base = process.env.URL || 'https://chansonmemoire.ca';
+  const base = urlBaseDeploy();
   const secret = process.env.GENERATE_LYRICS_SECRET || '';
   const r = await fetch(`${base}/.netlify/functions/survey-paroles-background`, {
     method: 'POST',

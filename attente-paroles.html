@@ -131,11 +131,18 @@
   }
 
   document.getElementById('btn-relancer').addEventListener('click',function(){
-    var b=this; b.disabled=true; b.textContent='Relance en cours…';
+    var b=this, texteP=document.querySelector('#patience p');
+    b.disabled=true; b.textContent='Relance en cours…';
     /* Retry idempotent : sans modifications, le serveur ne régénère que s’il n’y a pas
-       déjà des paroles valides. */
+       déjà des paroles valides. Échec = retour VISIBLE (jamais de silence). */
     fetch('/api/revision-paroles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token})})
-      .catch(function(){})
+      .then(function(r){
+        if(!r.ok&&r.status!==202) throw new Error('HTTP '+r.status);
+        texteP.textContent='C’est relancé. Les paroles arrivent d’ici une trentaine de secondes.';
+      })
+      .catch(function(){
+        texteP.textContent='La relance n’a pas fonctionné. Attends un instant puis réessaie ; si ça persiste, écris-nous et on s’en occupe.';
+      })
       .finally(function(){ setTimeout(function(){ b.disabled=false; b.textContent='Relancer l’écriture'; },8000); });
   });
 
