@@ -1,6 +1,10 @@
--- 0005 — Seed du catalogue de styles Suno, migré d'Airtable « Songs_Styles »
+-- 0005 — RLS + seed du catalogue de styles Suno, migré d'Airtable « Songs_Styles »
 -- (export MCP du 2026-07-02, 195 combinaisons Style × Ambiance × Cadeau/Mémoire).
 -- Idempotent : ON CONFLICT (contrainte combo) DO NOTHING.
+-- Règle maison (imposée par lister-tables en CI) : toute nouvelle table active RLS
+-- dans sa migration, zéro policy permissive (portée réelle : docs rls-portee.md).
+ALTER TABLE songs_styles ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
 INSERT INTO songs_styles (style_musical, ambiance, cadeau_memoire, prompt_complet) VALUES
   ($sst$Reggae$sst$, $sst$Optimiste$sst$, $sst$Mémoire$sst$, $sst$reggae, roots reggae, offbeat reggae guitar, bass-heavy, laid-back groove, memorial, tribute, deeply personal, natural voice, no autotune, hopeful reggae, medium tempo, major key, building arrangement, forward-looking vocal, positive message, no grief, Quebec French accent, Canadian French$sst$),
   ($sst$Jazz$sst$, $sst$Tendre$sst$, $sst$Mémoire$sst$, $sst$jazz, piano jazz, upright bass, soft brushed drums, intimate club feel, memorial, tribute, deeply personal, natural voice, no autotune, tender jazz ballad, slow tempo, major key, warm piano, close mic vocal, intimate, like speaking to someone beloved, Quebec French accent, Canadian French$sst$),
