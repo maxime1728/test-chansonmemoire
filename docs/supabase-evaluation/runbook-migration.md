@@ -8,11 +8,33 @@
 
 ## Observation qui allège tout le plan
 
-Le système .ca est **pré-lancement** et la base Airtable a été **purgée à zéro** (données de
-test). Donc ce n'est PAS une « migration de données » à haut risque : c'est un **démarrage
-propre** sur Supabase. On ne transporte pas de vraies commandes clients. `[Probable — à confirmer, voir Phase 0]`
-Conséquence : on peut bâtir Supabase à côté, valider, puis basculer, sans jamais mettre de
-données réelles en jeu. C'est le scénario le moins risqué qui existe.
+**CONFIRMÉ par Maxime (2026-07-01) : 0 donnée à transférer.** Le système .ca est pré-lancement,
+la base est vide. Donc ce n'est PAS une migration de données : c'est un **démarrage propre** sur
+Supabase.
+
+Conséquences majeures qui simplifient tout :
+- **Pas de coexistence, pas de double-écriture, pas de contrôle de parité.** (Ces mécanismes des
+  Phases 2-7 servaient à synchroniser des données existantes ; sans données, ils disparaissent.)
+- On **construit directement sur Supabase** par tranches verticales, puis on bascule. Le scénario
+  le moins risqué qui existe.
+- L'ordre n'est plus « le moins risqué d'abord » (pertinent avec des données) mais **« la valeur
+  d'abord »** : on livre le parcours qui te débloque en premier (le funnel pré-achat).
+
+## Intégration du nouveau design (Claude Design)
+
+Contexte Maxime : le **design du site a été refait** avec Claude Design. **Le post-achat est déjà
+intégré** ; il reste le **funnel AVANT l'achat** (accueil, souvenirs, révision, attente, aperçu).
+
+Comme on part de 0 donnée, on ne rebâtit pas une version Airtable du funnel pour la jeter ensuite :
+on construit le **funnel pré-achat nouveau design directement câblé sur Supabase**. Deux volets
+frontend :
+- **Post-achat (déjà fait, nouveau design)** : on **re-pointe seulement ses appels** vers les
+  nouvelles fonctions Supabase (pas de refonte visuelle).
+- **Pré-achat (à bâtir)** : pages nouveau design + câblage Supabase, d'un coup. C'est du greenfield,
+  donc rapide et propre.
+
+Cela réordonne le plan : la **tranche funnel** (backend + pages pré-achat + re-point post-achat)
+passe en priorité, avant l'admin et les analytics.
 
 ## Comment lire une phase
 
@@ -33,9 +55,8 @@ précédente a passé sa preuve. Tout est sur branches + PR (tu merges).
    pour que je les mette dans Netlify, OU les poser toi-même dans Netlify (Site settings →
    Environment variables). Recommandation : tu les poses toi-même (tu ne partages jamais un
    secret service_role dans un chat).
-3. Confirmer un point : **y a-t-il des données réelles à conserver** dans l'Airtable actuel
-   (vrais clients/achats), ou tout est test/purgé ? Ta réponse décide « démarrage propre »
-   (rien à migrer) vs « migration de données » (Phase 6 étendue).
+3. ~~Confirmer s'il y a des données réelles à conserver~~ → **RÉPONDU : 0 donnée.** Démarrage
+   propre, pas de migration de données. (Item retiré de ta checklist.)
 
 **[CLAUDE] :** rien tant que le projet Supabase n'existe pas. Une fois les secrets posés, je
 vérifie la connexion par une fonction de test.
@@ -236,7 +257,7 @@ retirer le code Airtable + les **derniers fallbacks Make**, garder les canaris p
 |---|---|---|---|
 | 1 | Phase 0 | Créer le projet Supabase (région Canada) | Oui |
 | 2 | Phase 0 | Poser 3 secrets Supabase dans Netlify | Oui |
-| 3 | Phase 0 | Confirmer : données réelles à garder ou tout test ? | Oui |
+| ~~3~~ | ~~Phase 0~~ | ~~Confirmer données~~ → **RÉPONDU : 0 donnée, démarrage propre** | — |
 | 4 | Phase 1 | Approuver le schéma en PR (je te l'explique) | Oui |
 | 5 | Phase 5 | Tester l'app avec Nathalie, remonter les blocages | Oui |
 | 6 | Phase 6 | Faire valider Loi 25 (rétention/effacement) par un pro | Oui |
