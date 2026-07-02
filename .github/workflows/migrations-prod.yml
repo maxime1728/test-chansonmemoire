@@ -28,6 +28,10 @@ concurrency:
   group: migrations-prod
   cancel-in-progress: false
 
+# Moindre privilège : le job lit le dépôt et applique le SQL via le secret, rien d'autre.
+permissions:
+  contents: read
+
 jobs:
   migrer:
     runs-on: ubuntu-latest

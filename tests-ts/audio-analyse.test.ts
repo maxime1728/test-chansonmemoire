@@ -46,6 +46,22 @@ test('buildAudioUrl : du_60 DANS la signature SHA-1 (même algorithme que lire-p
   delete process.env.CLOUDINARY_API_SECRET;
 });
 
+test('buildAudioUrl : CLOUDINARY_SIGN_ALGO=sha256 -> signature longue 32 caractères', () => {
+  process.env.CLOUDINARY_API_SECRET = 'secret-test';
+  process.env.CLOUDINARY_SIGN_ALGO = 'sha256';
+  const url = buildAudioUrl('https://res.cloudinary.com/demo/video/authenticated/cm_t1.mp3', 'du_60');
+  const sigAttendue = createHash('sha256')
+    .update('du_60/cm_t1.mp3' + 'secret-test')
+    .digest('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+    .slice(0, 32);
+  assert.equal(url, `https://res.cloudinary.com/demo/video/authenticated/s--${sigAttendue}--/du_60/cm_t1.mp3`);
+  delete process.env.CLOUDINARY_SIGN_ALGO;
+  delete process.env.CLOUDINARY_API_SECRET;
+});
+
 test('buildAudioUrl : asset public (anciens tests) = URL non signée avec transformation', () => {
   const url = buildAudioUrl('https://res.cloudinary.com/demo/video/upload/cm_t2.mp3', 'du_60');
   assert.equal(url, 'https://res.cloudinary.com/demo/video/upload/du_60/cm_t2.mp3');
