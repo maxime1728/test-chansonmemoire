@@ -13,7 +13,7 @@
 //
 // Anti-bot : token UUID v4 exigé (généré par le formulaire), sinon 400 sec.
 // Idempotent : re-soumission du même token = no-op qui redéclenche seulement les paroles.
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db, actif, schema } from './_lib/db';
 import { avecErreurs, urlBaseDeploy, type EvenementHttp } from './_lib/http';
 import { journaliser } from './_lib/journal';
@@ -80,7 +80,7 @@ export const handler = avecErreurs('survey', async (event: EvenementHttp) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Courriel requis' }) };
   }
   const canari = d.canari === true;
-  const { clients, projects } = schema;
+  const { clients, projects, generations } = schema;
 
   const { cree } = await db().transaction(async (tx) => {
     // 1. Client — upsert PAR CONTRAINTE (citext unique) : consent_date et
@@ -95,14 +95,42 @@ export const handler = avecErreurs('survey', async (event: EvenementHttp) => {
       clientId = c?.id ?? null;
     }
 
-    // 2. Projet — même token déjà soumis = idempotent (aucune double création possible,
-    //    token UNIQUE ; on ne retouche pas le projet existant).
+    // 2. Projet — même token déjà soumis :
+    //    - avec des paroles valides -> idempotent (les ajustements passent par la révision) ;
+    //    - SANS paroles et avant achat -> REFORMULATION : on met à jour les réponses
+    //      (bouton « Reformuler mes réponses » de la page d'attente), puis on relance.
     const [existant] = await tx
-      .select({ id: projects.id })
+      .select({ id: projects.id, commercialStatus: projects.commercialStatus })
       .from(projects)
       .where(and(eq(projects.token, token), actif(projects)))
       .limit(1);
-    if (existant) return { cree: false };
+    if (existant) {
+      const [g] = await tx
+        .select({ lyrics: generations.lyrics })
+        .from(generations)
+        .where(and(eq(generations.projectId, existant.id), actif(generations)))
+        .orderBy(desc(generations.generationNo))
+        .limit(1);
+      const parolesValides =
+        !!g?.lyrics && !!String(g.lyrics).trim() && !String(g.lyrics).includes('"invalid_input"');
+      if (parolesValides || existant.commercialStatus !== 'preview_only') return { cree: false };
+      await tx
+        .update(projects)
+        .set({
+          deceasedName: texte(d.deceased_name),
+          relationship: texte(d.relationship),
+          musicStyle: texte(d.music_style),
+          voice: texte(d.voice),
+          mood: texte(d.mood),
+          language: texte(d.language) || 'fr-CA',
+          songType: texte(d.song_type) === 'cadeau' ? 'cadeau' : 'hommage',
+          whatMadeUnique: texte(d.what_made_unique),
+          memories: texte(d.memories),
+          memoryToKeep: texte(d.memory_to_keep),
+        })
+        .where(eq(projects.id, existant.id));
+      return { cree: false };
+    }
 
     if (!clientId) {
       // Un projet exige un client (FK NOT NULL) : sans courriel valide, la soumission
