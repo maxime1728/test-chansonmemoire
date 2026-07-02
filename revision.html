@@ -59,7 +59,8 @@
   @media (hover:hover){ .chip:hover{border-color:var(--accent)} }
   textarea{
     width:100%;background:#FAF7F3;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px;
-    font:500 13.5px/1.55 'Work Sans';color:var(--ink);outline:none;resize:vertical;min-height:84px;
+    /* 16px MINIMUM : sous 16px, iOS Safari zoome au focus et la page se décentre latéralement. */
+    font:500 16px/1.55 'Work Sans';color:var(--ink);outline:none;resize:vertical;min-height:84px;
   }
   textarea:focus{border-color:var(--accent)}
   .indice{font:500 12px 'Work Sans';color:var(--muted);margin:10px 0 0}
