@@ -13,10 +13,11 @@
 //
 // Anti-bot : token UUID v4 exigé (généré par le formulaire), sinon 400 sec.
 // Idempotent : re-soumission du même token = no-op qui redéclenche seulement les paroles.
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db, actif, schema } from './_lib/db';
 import { avecErreurs, type EvenementHttp } from './_lib/http';
 import { journaliser } from './_lib/journal';
+import { envoyerLeadCapi } from './_lib/meta-capi';
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CTRL = /[\x00-\x1F\x7F]+/g; // caractères de contrôle ASCII -> remplacés par une espace
@@ -81,7 +82,7 @@ export const handler = avecErreurs('survey', async (event: EvenementHttp) => {
   const canari = d.canari === true;
   const { clients, projects } = schema;
 
-  await db().transaction(async (tx) => {
+  const { cree } = await db().transaction(async (tx) => {
     // 1. Client — upsert PAR CONTRAINTE (citext unique) : consent_date et
     //    first_contact_date d'un client existant ne sont JAMAIS écrasés.
     let clientId: string | null = null;
@@ -101,7 +102,7 @@ export const handler = avecErreurs('survey', async (event: EvenementHttp) => {
       .from(projects)
       .where(and(eq(projects.token, token), actif(projects)))
       .limit(1);
-    if (existant) return;
+    if (existant) return { cree: false };
 
     if (!clientId) {
       // Un projet exige un client (FK NOT NULL) : sans courriel valide, la soumission
@@ -111,7 +112,7 @@ export const handler = avecErreurs('survey', async (event: EvenementHttp) => {
 
     await tx.insert(projects).values({
       token,
-      clientId,
+      clientId: clientId,
       deceasedName: texte(d.deceased_name),
       relationship: texte(d.relationship),
       musicStyle: texte(d.music_style),
@@ -127,6 +128,7 @@ export const handler = avecErreurs('survey', async (event: EvenementHttp) => {
       cgvAccepteesAt: new Date().toISOString(), // preuve : CGV acceptées à la soumission (timestamp serveur)
       attribution: construireAttribution(d),
     });
+    return { cree: true };
   });
 
   // 3. Paroles EN ARRIÈRE-PLAN (le client ne bloque jamais ~20 s). Échec de déclenchement =
@@ -143,6 +145,29 @@ export const handler = avecErreurs('survey', async (event: EvenementHttp) => {
         message: `déclenchement des paroles échoué: ${e instanceof Error ? e.message : String(e)}`,
       });
     }
+  }
+
+  // 4. Lead CAPI serveur — SEULEMENT à la création (idempotence structurelle : une
+  //    création = un Lead ; dédup navigateur via event_id = sha256(token.lead)).
+  //    Best-effort : n'affecte jamais la réponse au client. Jamais pour le canari.
+  if (cree && !canari) {
+    const ip = (event.headers['x-nf-client-connection-ip'] || event.headers['x-forwarded-for'] || '')
+      .split(',')[0]!
+      .trim();
+    const resultat = await envoyerLeadCapi({
+      token,
+      email,
+      fbclid: texte(d.fbclid),
+      fbc: texte(d.fbc),
+      fbp: texte(d.fbp),
+      ip,
+      ua: event.headers['user-agent'] || '',
+    });
+    journaliser({
+      niveau: resultat.sent || resultat.summary.startsWith('capi-off') || resultat.summary === 'skip-interne' ? 'P3' : 'P2',
+      fonction: 'survey',
+      message: `lead CAPI: ${resultat.summary}`,
+    });
   }
 
   return {
