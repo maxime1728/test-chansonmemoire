@@ -6,2088 +6,406 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <script src="/js/cm-token.js"></script>
-<title>Ton aperçu · Chanson Mémoire</title>
-<script src="/js/cm-name.js"></script>
-<script>
-/* ── PARAMÈTRES URL — exécuté en premier ── */
-(function() {
-  var p = new URLSearchParams(window.location.search);
-  window._CM = {
-    nom:    (window.cmName ? cmName(p.get('name')) : p.get('name')) || '',
-    taskid: p.get('taskid')  || '',
-    id:     (window.CM_TOKEN || p.get('id')) || '',   /* token UUID (réserve cm-token.js), clé de régénération */
-    mp3:    p.get('preview1')|| ''
-  };
-  /* Loi 25 — on NE garde PAS de PII dans l'URL : dès le chargement, on nettoie la barre d'adresse
-     pour ne laisser que le token (?id=). Le nom est gardé EN MÉMOIRE (perso ci-dessous) mais ne
-     persiste plus dans l'historique / le presse-papier / un partage de lien. L'email n'est plus
-     lu du tout (creer-checkout va le chercher côté serveur sur le Client lié). */
-  if (window._CM.id) {
-    /* cm-token.js a deja retire ?id (si la reserve sessionStorage a reussi). Ici on retire le RESTE de la
-       PII (name/taskid/preview1/email) SANS toucher au statut de ?id -> en navigation privee le token reste
-       dans l'URL et le refresh continue de marcher. */
-    try { var _u = new URL(location.href); ['name','taskid','preview1','email'].forEach(function(k){ _u.searchParams.delete(k); }); history.replaceState({}, '', _u.pathname + (_u.search || '') + (_u.hash || '')); } catch (e) {}
-  }
-  /* Titre de l'onglet personnalisé */
-  if (window._CM.nom) {
-    document.title = 'Aperçu pour ' + window._CM.nom + ' · Chanson Mémoire';
-  }
-})();
-
-/* ── SUIVI FUNNEL (best-effort, ne casse jamais l'UX) ──
-   Envoie un événement de parcours à /api/suivi-funnel. sendBeacon survit à la navigation
-   (utile pour checkout_started juste avant la redirection Stripe). */
-/* Pixel Meta + events : gérés par cm-pixel.js (partagé, chargé en defer en bas de page).
-   On passe par window.cmTrack(event, evtKey, token) -> plus de pixel inline ici (évite le doublon
-   de loader fbq et le PageView sans eventID qui court-circuitait le CAPI). */
-
-window._cmFunnel = function(evt) {
-  try {
-    var t = (window._CM && window._CM.id) || '';
-    if (!t) return;                                  /* pas de token => aperçu legacy, on ne track pas */
-    var payload = JSON.stringify({ token: t, event: evt });
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon('/api/suivi-funnel', new Blob([payload], { type: 'application/json' }));
-    } else {
-      fetch('/api/suivi-funnel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(function(){});
-    }
-    if (window.cmTrack) {
-      if (evt === 'preview_played') window.cmTrack('PreviewPlayed', 'preview_played', t);
-      else if (evt === 'checkout_started') window.cmTrack('InitiateCheckout', 'checkout_started', t);
-    }
-  } catch (e) {}
-};
-</script>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=Mulish:wght@400;500;600;700;800&family=Sora:wght@400;600&display=swap" rel="stylesheet">
-<!-- Icones : sprite SVG inline (voir #cm-icons en bas de body). Remplace Font Awesome (allégé + non bloquant). -->
-
-<style>
-/* ════════════════════════════════════════════
-   PALETTE & TOKENS
-════════════════════════════════════════════ */
-:root {
-  --cm-plum-dark:  #5C2D4A;
-  --cm-plum-mid:   #8B4A6E;
-  --cm-mauve:      #C98BB0;
-  --cm-gold:       #C4963A;
-  --cm-gold-light: #E8C97A;
-  --cm-off-white:  #F5F0E8;
-  --cm-white:      #fff;
-  --cm-bg:         #F8F4F0;
-  --cm-text:       #2E1A28;
-  --cm-text-sub:   #7A6070;
-  --cm-border-w:   2.5px;
-}
-
-/* ════════════════════════════════════════════
-   RESET & BASE
-════════════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-.cm-ic { width: 1em; height: 1em; vertical-align: -0.125em; flex-shrink: 0; }
-
-html { scroll-behavior: smooth; overflow-x: hidden; }
-
-body {
-  font-family: 'Mulish', sans-serif;
-  background: var(--cm-bg);
-  color: var(--cm-text);
-  min-height: 100vh;
-  overflow-x: hidden;
-  padding-bottom: 100px;
-}
-
-/* ════════════════════════════════════════════
-   HEADER LOGO / MARQUE
-════════════════════════════════════════════ */
-.cm-header {
-  text-align: center;
-  padding: 32px 20px 0;
-}
-.cm-logo {
-  font-family: 'Newsreader', serif;
-  font-style: italic;
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--cm-plum-dark);
-  letter-spacing: 0.01em;
-}
-.cm-logo span {
-  color: var(--cm-gold);
-}
-
-/* ════════════════════════════════════════════
-   HERO — MESSAGE D'ACCUEIL
-════════════════════════════════════════════ */
-.cm-hero {
-  text-align: center;
-  padding: 36px 24px 12px;
-  max-width: 540px;
-  margin: 0 auto;
-}
-.cm-hero-eyebrow {
-  font-family: 'Mulish', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--cm-gold);
-  margin-bottom: 14px;
-}
-.cm-hero-title {
-  font-family: 'Newsreader', serif;
-  font-style: italic;
-  font-size: clamp(26px, 6vw, 34px);
-  font-weight: 400;
-  line-height: 1.3;
-  color: var(--cm-plum-dark);
-  margin-bottom: 16px;
-}
-.cm-hero-sub {
-  font-family: 'Mulish', sans-serif;
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--cm-text-sub);
-  max-width: 420px;
-  margin: 0 auto;
-}
-
-/* ════════════════════════════════════════════
-   DIVIDER ORNEMENT
-════════════════════════════════════════════ */
-.cm-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 28px 24px;
-  max-width: 400px;
-  margin: 0 auto;
-}
-.cm-divider::before,
-.cm-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(92,45,74,0.20));
-}
-.cm-divider::after {
-  background: linear-gradient(to left, transparent, rgba(92,45,74,0.20));
-}
-.cm-divider-icon {
-  color: var(--cm-gold);
-  font-size: 13px;
-  opacity: 0.7;
-}
-
-/* ════════════════════════════════════════════
-   PLAYER — REPRIS DE TON CODE EXISTANT
-════════════════════════════════════════════ */
-@property --cm-border-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-#cm-player-root .cm-players-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 0;
-  padding: 0 20px;
-}
-#cm-player-root .cm-player-wrap {
-  display: flex;
-  justify-content: center;
-  font-family: 'Sora', sans-serif;
-  width: 100%;
-  max-width: 300px;
-}
-#cm-player-root .cm-player-box {
-  width: 100%;
-  padding: calc(24px + var(--cm-border-w));
-  border-radius: 24px;
-  background:
-    linear-gradient(var(--cm-white), var(--cm-white)) padding-box,
-    conic-gradient(
-      from var(--cm-border-angle),
-      #3D1A30             0%,
-      var(--cm-mauve)     22%,
-      #D4A030             40%,
-      #F5D878             50%,
-      #D4A030             60%,
-      var(--cm-mauve)     78%,
-      #3D1A30             100%
-    ) border-box;
-  border: 2.5px solid transparent;
-  animation: cm-spin-border 5s linear infinite;
-  text-align: center;
-  box-shadow:
-    0 0 0   2px rgba(0,0,0,0.08),
-    0 0 12px 4px rgba(0,0,0,0.18),
-    0 0 28px 10px rgba(0,0,0,0.13),
-    0 0 50px 20px rgba(0,0,0,0.07),
-    0 10px 36px rgba(92,45,74,0.10);
-}
-@keyframes cm-spin-border { to { --cm-border-angle: 360deg; } }
-
-@supports not (background: conic-gradient(from 1deg, red, red) border-box) {
-  #cm-player-root .cm-player-box {
-    background: var(--cm-white);
-    border: var(--cm-border-w) solid var(--cm-mauve);
-    position: relative; overflow: hidden;
-  }
-  #cm-player-root .cm-player-box::before {
-    content: ''; position: absolute; inset: -80px;
-    background: conic-gradient(var(--cm-plum-dark), var(--cm-mauve), var(--cm-gold-light), var(--cm-off-white), var(--cm-gold), var(--cm-mauve), var(--cm-plum-dark));
-    animation: cm-spin-pseudo 5s linear infinite; z-index: 0;
-  }
-  #cm-player-root .cm-player-box::after {
-    content: ''; position: absolute; inset: var(--cm-border-w);
-    background: var(--cm-white); border-radius: 22px; z-index: 1;
-  }
-  #cm-player-root .cm-player-box > * { position: relative; z-index: 2; }
-  @keyframes cm-spin-pseudo { to { transform: rotate(360deg); } }
-}
-
-#cm-player-root .cm-title {
-  font-size: 15px; font-weight: 600; letter-spacing: 0.1em;
-  color: var(--cm-plum-dark); text-transform: uppercase; margin-bottom: 14px;
-}
-#cm-player-root .cm-equalizer {
-  display: flex; justify-content: center; align-items: flex-end;
-  gap: 5px; height: 30px; margin-bottom: 14px; width: 100%;
-}
-#cm-player-root .cm-equalizer span {
-  width: 4px; height: 10px;
-  background: linear-gradient(to top, var(--cm-mauve), var(--cm-plum-dark));
-  border-radius: 3px; flex-shrink: 0;
-  animation: cm-wave 0.9s infinite ease-in-out; animation-play-state: paused;
-}
-#cm-player-root .cm-equalizer.active span { animation-play-state: running; }
-#cm-player-root .cm-equalizer span:nth-child(1) { animation-delay: 0s;    animation-duration: 0.85s; }
-#cm-player-root .cm-equalizer span:nth-child(2) { animation-delay: 0.12s; animation-duration: 1.05s; }
-#cm-player-root .cm-equalizer span:nth-child(3) { animation-delay: 0.25s; animation-duration: 0.75s; }
-#cm-player-root .cm-equalizer span:nth-child(4) { animation-delay: 0.07s; animation-duration: 1.15s; }
-#cm-player-root .cm-equalizer span:nth-child(5) { animation-delay: 0.40s; animation-duration: 0.70s; }
-#cm-player-root .cm-equalizer span:nth-child(6) { animation-delay: 0.18s; animation-duration: 1.00s; }
-#cm-player-root .cm-equalizer span:nth-child(7) { animation-delay: 0.33s; animation-duration: 0.90s; }
-#cm-player-root .cm-equalizer span:nth-child(8) { animation-delay: 0.05s; animation-duration: 0.80s; }
-#cm-player-root .cm-equalizer span:nth-child(9) { animation-delay: 0.50s; animation-duration: 0.95s; }
-@keyframes cm-wave { 0%,100% { height: 8px; } 50% { height: 26px; } }
-
-#cm-player-root .cm-play-btn {
-  width: 64px; height: 64px; border-radius: 50%; border: none;
-  background: linear-gradient(135deg, var(--cm-plum-mid), var(--cm-plum-dark));
-  color: white; font-size: 18px; cursor: pointer; margin: 12px 0;
-  transition: transform 0.25s, box-shadow 0.25s, background 0.25s;
-  box-shadow: 0 4px 16px rgba(92,45,74,0.28);
-}
-@media(hover:hover){ #cm-player-root .cm-play-btn:hover { background: linear-gradient(135deg, var(--cm-plum-dark), #3D1A30); transform: scale(1.08); box-shadow: 0 6px 24px rgba(92,45,74,0.40); } }
-#cm-player-root .cm-time {
-  display: flex; justify-content: space-between;
-  font-size: 11px; color: var(--cm-text-sub); margin: 10px 0;
-}
-#cm-player-root .cm-progress-wrap {
-  position: relative; width: 100%; height: 5px;
-  background: rgba(92,45,74,0.10); border-radius: 10px;
-}
-#cm-player-root .cm-progress-bar {
-  position: absolute; height: 100%; width: 0%;
-  background: linear-gradient(to right, var(--cm-plum-mid), var(--cm-gold));
-  border-radius: 10px;
-}
-#cm-player-root .cm-progress {
-  position: absolute; width: 100%; height: 20px;
-  top: -7px; left: 0; margin: 0; opacity: 0; cursor: pointer; z-index: 2;
-}
-#cm-player-root .cm-volume-wrap {
-  display: flex; align-items: center;
-  justify-content: center; gap: 12px; margin-top: 20px;
-}
-#cm-player-root .cm-mute-btn {
-  background: none; border: none; color: var(--cm-plum-mid);
-  font-size: 15px; cursor: pointer;
-  transition: opacity 0.2s, transform 0.2s; padding: 0;
-  display: flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px;
-}
-@media(hover:hover){ #cm-player-root .cm-mute-btn:hover { opacity: 0.7; transform: scale(1.1); } }
-#cm-player-root .cm-volume-slider-wrap {
-  position: relative; width: 90px; height: 4px;
-  background: rgba(92,45,74,0.12); border-radius: 10px;
-}
-#cm-player-root .cm-volume-bar {
-  position: absolute; height: 100%; width: 100%;
-  background: linear-gradient(to right, var(--cm-mauve), var(--cm-gold));
-  border-radius: 10px; transition: width 0.1s;
-}
-#cm-player-root .cm-volume {
-  position: absolute; width: 100%; height: 4px;
-  opacity: 0; cursor: pointer; top: 0; left: 0; margin: 0;
-}
-#cm-player-root .cm-ia-mention {
-  display: flex; align-items: center; justify-content: center;
-  gap: 6px; margin-top: 28px;
-  font-family: 'Sora', sans-serif; font-size: 11px;
-  color: var(--cm-text-sub); opacity: 0.80; letter-spacing: 0.01em;
-}
-#cm-player-root .cm-ia-mention svg { flex-shrink: 0; color: var(--cm-gold); }
-
-@media (prefers-reduced-motion: reduce) {
-  #cm-player-root .cm-player-box { animation: none; }
-  #cm-player-root .cm-equalizer span { animation: none; height: 14px; }
-}
-
-/* ── Sélecteur de versions (affiché s'il y a plus d'une version) ── */
-#cm-player-root .cm-version-picker { max-width: 300px; margin: 0 auto 18px; padding: 0 20px; }
-#cm-player-root .cm-version-picker-label {
-  display: block; text-align: center; font-family: 'Mulish', sans-serif;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--cm-gold); margin-bottom: 8px;
-}
-#cm-player-root .cm-version-select {
-  width: 100%; padding: 11px 36px 11px 14px; border-radius: 12px;
-  border: var(--cm-border-w) solid var(--cm-mauve);
-  background: var(--cm-white) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238B4A6E' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") no-repeat right 14px center;
-  color: var(--cm-text); font-family: 'Mulish', sans-serif; font-size: 14px; font-weight: 600;
-  cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;
-  text-align: center; text-align-last: center;
-}
-#cm-player-root .cm-version-select:focus { outline: none; border-color: var(--cm-plum-mid); }
-
-/* ════════════════════════════════════════════
-   PRICING BOX — REPRIS & INTÉGRÉ
-════════════════════════════════════════════ */
-.cm-pricing-section {
-  padding: 40px 20px 0;
-  max-width: 540px;
-  margin: 0 auto;
-}
-
-#cm-pricing-root {
-  --cm-border-static: linear-gradient(
-    135deg,
-    #C4963A 0%, #E8C97A 30%, #C98BB0 55%, #E8C97A 75%, #C4963A 100%
-  );
-  width: 100%;
-  font-family: 'Mulish', sans-serif;
-}
-#cm-pricing-root * { box-sizing: border-box; }
-
-#cm-pricing-root .cm-card {
-  width: 100%; padding: 28px 26px; border-radius: 24px;
-  background:
-    linear-gradient(var(--cm-off-white), var(--cm-off-white)) padding-box,
-    var(--cm-border-static) border-box;
-  border: var(--cm-border-w) solid transparent;
-  box-shadow:
-    0 0 0   2px rgba(0,0,0,0.06),
-    0 0 14px 4px rgba(196,150,58,0.20),
-    0 0 32px 10px rgba(196,150,58,0.10),
-    0 8px 28px rgba(92,45,74,0.10);
-}
-#cm-pricing-root .cm-version-label {
-  text-align: center; font-family: 'Mulish', sans-serif;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.10em;
-  text-transform: uppercase; color: var(--cm-gold); margin-bottom: 10px;
-}
-#cm-pricing-root .cm-price-block { text-align: center; margin-bottom: 20px; }
-#cm-pricing-root .cm-price {
-  font-family: 'Mulish', sans-serif; font-weight: 700;
-  font-size: 20px; color: var(--cm-text-sub);
-}
-#cm-pricing-root .cm-price-meta {
-  display: block; font-size: 11px; color: var(--cm-text-sub);
-  margin-top: 2px; opacity: .8;
-}
-#cm-pricing-root .cm-value { list-style: none; margin: 0 0 20px; padding: 0; }
-#cm-pricing-root .cm-value li {
-  display: flex; align-items: flex-start; gap: 11px;
-  font-size: 15px; line-height: 1.45; color: var(--cm-text);
-  padding: 12px 0; border-bottom: 1px solid rgba(92,45,74,0.10);
-}
-#cm-pricing-root .cm-value li:last-child { border-bottom: none; }
-#cm-pricing-root .cm-spark { color: var(--cm-gold); font-size: 14px; line-height: 1.5; flex-shrink: 0; }
-#cm-pricing-root .cm-anchor {
-  font-family: 'Newsreader', serif; font-style: italic;
-  font-size: 17px; font-weight: 600; line-height: 1.55;
-  color: var(--cm-plum-dark); text-align: center;
-  margin: 0 0 22px; -webkit-text-fill-color: var(--cm-plum-dark);
-}
-
-@property --cm-btn-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-#cm-pricing-root .cm-btn-wrap {
-  padding: 1.5px; border-radius: 999px;
-  background: conic-gradient(
-    from var(--cm-btn-angle),
-    var(--cm-plum-dark)  0%, var(--cm-mauve) 25%,
-    var(--cm-gold)       45%, var(--cm-gold-light) 50%,
-    var(--cm-gold)       55%, var(--cm-mauve) 75%, var(--cm-plum-dark) 100%
-  );
-  animation: cm-btn-spin 4s linear infinite; margin-bottom: 0;
-}
-@keyframes cm-btn-spin { to { --cm-btn-angle: 360deg; } }
-@media (prefers-reduced-motion: reduce) { #cm-pricing-root .cm-btn-wrap { animation: none; } }
-
-#cm-pricing-root .stripe-btn {
-  font-family: 'Mulish', sans-serif; background: var(--cm-plum-mid);
-  color: #fff; border: none; border-radius: 999px;
-  padding: 18px 42px; font-size: 17px; font-weight: 700;
-  cursor: pointer; transition: all 0.25s ease; width: 100%; display: block;
-}
-@media(hover:hover){ #cm-pricing-root .stripe-btn:hover { background: var(--cm-plum-dark); } }
-#cm-pricing-root .stripe-btn:active { transform: scale(0.98); }
-
-/* (Sélecteur de version retiré — remplacé par le popup de confirmation #cm-buy-overlay au clic acheter.) */
-
-/* Order bumps (cases indépendantes, au-dessus du bouton payer) */
-#cm-pricing-root .cm-bumps { display: flex; flex-direction: column; gap: 10px; margin: 0 0 18px; text-align: left; }
-#cm-pricing-root .cm-bump {
-  display: flex; align-items: flex-start; gap: 11px; cursor: pointer;
-  font-family: 'Mulish', sans-serif; font-size: 14px; line-height: 1.4; color: var(--cm-text);
-  padding: 12px 14px; border: 1.5px solid rgba(92,45,74,0.18); border-radius: 12px; background: var(--cm-white);
-}
-@media(hover:hover){ #cm-pricing-root .cm-bump:hover { border-color: var(--cm-mauve); } }
-#cm-pricing-root .cm-bump input { margin-top: 1px; width: 18px; height: 18px; accent-color: var(--cm-plum-dark); flex-shrink: 0; cursor: pointer; }
-#cm-pricing-root .cm-bump-price { color: var(--cm-plum-dark); font-weight: 700; white-space: nowrap; }
-#cm-pricing-root .cm-bump-desc { display: block; font-size: 12px; color: var(--cm-text-sub); margin-top: 3px; }
-
-#cm-pricing-root .cm-trust {
-  display: flex; flex-wrap: wrap; align-items: center;
-  justify-content: center; gap: 6px; margin-top: 16px;
-  font-size: 12px; color: var(--cm-text-sub);
-}
-#cm-pricing-root .cm-trust-item { display: inline-flex; align-items: center; gap: 4px; }
-#cm-pricing-root .cm-trust-item svg { color: var(--cm-gold); }
-#cm-pricing-root .cm-trust-sep { opacity: .4; }
-#cm-pricing-root .cm-spark-sm { font-size: 11px; color: var(--cm-gold); }
-
-/* ════════════════════════════════════════════
-   SECTION — CE QUI SE PASSE APRÈS L'ACHAT
-════════════════════════════════════════════ */
-.cm-section {
-  max-width: 540px;
-  margin: 0 auto;
-  padding: 48px 20px 0;
-}
-.cm-section-eyebrow {
-  font-family: 'Mulish', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--cm-gold);
-  text-align: center;
-  margin-bottom: 10px;
-}
-.cm-section-title {
-  font-family: 'Newsreader', serif;
-  font-style: italic;
-  font-size: clamp(20px, 5vw, 26px);
-  font-weight: 400;
-  color: var(--cm-plum-dark);
-  text-align: center;
-  line-height: 1.35;
-  margin-bottom: 32px;
-}
-
-/* Étapes */
-.cm-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  position: relative;
-}
-.cm-steps::before {
-  content: '';
-  position: absolute;
-  left: 21px;
-  top: 28px;
-  bottom: 28px;
-  width: 1px;
-  background: linear-gradient(to bottom, var(--cm-mauve), var(--cm-gold), var(--cm-mauve));
-  opacity: 0.35;
-}
-.cm-step {
-  display: flex;
-  gap: 18px;
-  align-items: flex-start;
-  padding: 0 0 28px;
-  position: relative;
-}
-.cm-step:last-child { padding-bottom: 0; }
-.cm-step-num {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--cm-plum-mid), var(--cm-plum-dark));
-  color: #fff;
-  font-family: 'Newsreader', serif;
-  font-size: 16px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 3px 12px rgba(92,45,74,0.25);
-  position: relative;
-  z-index: 1;
-}
-.cm-step-body {}
-.cm-step-label {
-  font-family: 'Mulish', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  color: var(--cm-gold);
-  margin-bottom: 4px;
-}
-.cm-step-title {
-  font-family: 'Mulish', sans-serif;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--cm-plum-dark);
-  margin-bottom: 4px;
-}
-.cm-step-desc {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--cm-text-sub);
-}
-
-/* ════════════════════════════════════════════
-   SECTION — GARANTIE
-════════════════════════════════════════════ */
-.cm-guarantee-box {
-  margin: 48px auto 0;
-  width: calc(100% - 40px);
-  max-width: 540px;
-  background: linear-gradient(135deg, var(--cm-plum-dark) 0%, #3D1A30 100%);
-  border-radius: 18px;
-  padding: 28px 26px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-.cm-guarantee-box::before {
-  content: '✦';
-  position: absolute;
-  top: -20px;
-  right: -10px;
-  font-size: 80px;
-  color: rgba(255,255,255,0.03);
-  pointer-events: none;
-}
-.cm-guarantee-icon {
-  font-size: 36px;
-  margin-bottom: 12px;
-}
-.cm-guarantee-title {
-  font-family: 'Newsreader', serif;
-  font-style: italic;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--cm-gold-light);
-  margin-bottom: 12px;
-  line-height: 1.3;
-}
-.cm-guarantee-text {
-  font-family: 'Mulish', sans-serif;
-  font-size: 14px;
-  line-height: 1.65;
-  color: rgba(255,255,255,0.80);
-}
-.cm-guarantee-text strong {
-  color: var(--cm-gold-light);
-  font-weight: 700;
-}
-
-/* ════════════════════════════════════════════
-   SECTION — TÉMOIGNAGES (clients réels)
-════════════════════════════════════════════ */
-.cm-testimonials {
-  max-width: 540px;
-  margin: 48px auto 0;
-  padding: 0 20px;
-}
-.cm-testimonial-card {
-  background: var(--cm-white);
-  border-radius: 16px;
-  padding: 22px 22px;
-  margin-bottom: 16px;
-  border: 1px solid rgba(92,45,74,0.10);
-  box-shadow: 0 2px 12px rgba(92,45,74,0.07);
-}
-.cm-testimonial-card:last-child { margin-bottom: 0; }
-.cm-stars {
-  color: var(--cm-gold);
-  font-size: 13px;
-  margin-bottom: 10px;
-  letter-spacing: 2px;
-}
-.cm-testimonial-text {
-  font-family: 'Newsreader', serif;
-  font-style: italic;
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--cm-text);
-  margin-bottom: 12px;
-}
-.cm-testimonial-author {
-  font-family: 'Mulish', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--cm-text-sub);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-.cm-testimonial-notice {
-  font-size: 10px;
-  color: var(--cm-text-sub);
-  opacity: 0.6;
-  text-align: center;
-  margin-top: 10px;
-  font-style: italic;
-}
-
-/* ════════════════════════════════════════════
-   SECTION — FAQ
-════════════════════════════════════════════ */
-.cm-faq {
-  max-width: 540px;
-  margin: 48px auto 0;
-  padding: 0 20px;
-}
-.cm-faq-item {
-  border-bottom: 1px solid rgba(92,45,74,0.12);
-  padding: 0;
-}
-.cm-faq-item:first-child { border-top: 1px solid rgba(92,45,74,0.12); }
-.cm-faq-btn {
-  width: 100%;
-  background: none;
-  border: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 0;
-  cursor: pointer;
-  text-align: left;
-  gap: 16px;
-}
-.cm-faq-question {
-  font-family: 'Mulish', sans-serif;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--cm-plum-dark);
-  line-height: 1.4;
-}
-.cm-faq-icon {
-  color: var(--cm-gold);
-  font-size: 14px;
-  flex-shrink: 0;
-  transition: transform 0.25s;
-}
-.cm-faq-item.open .cm-faq-icon { transform: rotate(45deg); }
-.cm-faq-answer {
-  font-family: 'Mulish', sans-serif;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--cm-text-sub);
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.35s ease, padding 0.25s;
-  padding-bottom: 0;
-}
-.cm-faq-item.open .cm-faq-answer {
-  max-height: 300px;
-  padding-bottom: 18px;
-}
-
-/* ════════════════════════════════════════════
-   SECTION STORYTELLING — POURQUOI ÇA COMPTE
-════════════════════════════════════════════ */
-.cm-story {
-  max-width: 540px;
-  margin: 48px auto 0;
-  padding: 0 20px;
-  text-align: center;
-}
-.cm-story-quote {
-  font-family: 'Newsreader', serif;
-  font-style: italic;
-  font-size: clamp(18px, 4.5vw, 22px);
-  line-height: 1.55;
-  color: var(--cm-plum-dark);
-  margin-bottom: 16px;
-  padding: 0 8px;
-}
-.cm-story-sub {
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--cm-text-sub);
-  max-width: 420px;
-  margin: 0 auto;
-}
-
-/* ════════════════════════════════════════════
-   CTA BOTTOM — RÉPÉTITION DU BOUTON
-════════════════════════════════════════════ */
-.cm-cta-bottom {
-  max-width: 540px;
-  margin: 48px auto 0;
-  padding: 0 20px;
-  text-align: center;
-}
-.cm-cta-bottom-pre {
-  font-family: 'Newsreader', serif;
-  font-style: italic;
-  font-size: 18px;
-  color: var(--cm-plum-dark);
-  margin-bottom: 20px;
-  line-height: 1.45;
-}
-
-@property --cm-btn2-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-.cm-btn-wrap-2 {
-  padding: 1.5px; border-radius: 999px;
-  background: conic-gradient(
-    from var(--cm-btn2-angle),
-    var(--cm-plum-dark) 0%, var(--cm-mauve) 25%,
-    var(--cm-gold) 45%, var(--cm-gold-light) 50%,
-    var(--cm-gold) 55%, var(--cm-mauve) 75%, var(--cm-plum-dark) 100%
-  );
-  animation: cm-btn2-spin 4s linear infinite;
-}
-@keyframes cm-btn2-spin { to { --cm-btn2-angle: 360deg; } }
-@media (prefers-reduced-motion: reduce) { .cm-btn-wrap-2 { animation: none; } }
-
-.stripe-btn-2 {
-  font-family: 'Mulish', sans-serif; background: var(--cm-plum-mid);
-  color: #fff; border: none; border-radius: 999px;
-  padding: 18px 42px; font-size: 17px; font-weight: 700;
-  cursor: pointer; transition: all 0.25s ease; width: 100%; display: block;
-}
-@media(hover:hover){ .stripe-btn-2:hover { background: var(--cm-plum-dark); } }
-.stripe-btn-2:active { transform: scale(0.98); }
-
-.cm-cta-legal {
-  font-size: 11px;
-  color: var(--cm-text-sub);
-  opacity: 0.7;
-  margin-top: 12px;
-}
-
-/* ════════════════════════════════════════════
-   STICKY DOCK
-════════════════════════════════════════════ */
-.cm-sticky {
-  --plum: #8b4a6e;
-  --plum-deep: #5c2d4a;
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
-  display: flex; justify-content: center;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-  background: rgba(245,241,248,.94); backdrop-filter: blur(8px);
-  border-top: 1px solid #e3dceb;
-  transform: translateY(120%); transition: transform .28s ease;
-  pointer-events: none;
-}
-.cm-sticky.show { transform: none; pointer-events: auto; }
-.cm-sticky-btn {
-  font-family: 'Mulish', system-ui, sans-serif;
-  display: flex; width: 100%; max-width: 440px;
-  align-items: center; justify-content: center;
-  background: var(--plum); color: #fff; text-decoration: none;
-  font-weight: 800; font-size: 1.04rem; padding: 15px 28px;
-  border-radius: 999px; box-shadow: 0 4px 14px rgba(46,34,56,.18);
-  transition: background .15s, transform .15s; cursor: pointer; border: none;
-}
-@media(hover:hover){ .cm-sticky-btn:hover { background: var(--plum-deep); transform: translateY(-1px); } }
-
-/* ════════════════════════════════════════════
-   FOOTER
-════════════════════════════════════════════ */
-.cm-footer {
-  max-width: 540px;
-  margin: 48px auto 0;
-  padding: 0 20px 40px;
-  text-align: center;
-  border-top: 1px solid rgba(92,45,74,0.10);
-  padding-top: 24px;
-}
-.cm-footer p {
-  font-size: 11px;
-  color: var(--cm-text-sub);
-  opacity: 0.6;
-  line-height: 1.7;
-}
-.cm-footer a {
-  color: var(--cm-text-sub);
-  text-decoration: underline;
-  opacity: 0.7;
-}
-
-/* ════════════════════════════════════════════
-   RÉGÉNÉRATION — 2 boutons + modal « autre style »
-════════════════════════════════════════════ */
-.cm-regen-actions { display: flex; flex-direction: column; gap: 10px; max-width: 340px; margin: 18px auto 0; text-align: center; }
-.cm-regen-btn {
-  border-radius: 999px; padding: 12px 22px; font: 600 15px/1.2 'Mulish', sans-serif; cursor: pointer;
-  border: 1.5px solid var(--cm-plum-dark); background: none; color: var(--cm-plum-dark);
-  transition: background .15s, color .15s;
-}
-@media(hover:hover){ .cm-regen-btn:hover { background: var(--cm-plum-dark); color: #fff; } }
-.cm-regen-btn-sec { border-color: var(--cm-mauve); color: var(--cm-plum-mid); }
-@media(hover:hover){ .cm-regen-btn-sec:hover { background: var(--cm-plum-mid); color: #fff; } }
-.cm-regen-note { font-size: 13px; color: var(--cm-text-sub); margin-top: 2px; }
-
-.cm-modal-overlay {
-  position: fixed; inset: 0; z-index: 100; display: none;
-  align-items: center; justify-content: center; padding: 20px;
-  background: rgba(46,26,40,0.55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
-}
-.cm-modal-overlay.show { display: flex; }
-.cm-modal {
-  position: relative; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto;
-  background: var(--cm-white); border-radius: 20px; padding: 28px 24px;
-  box-shadow: 0 12px 48px rgba(46,26,40,0.30); font-family: 'Mulish', sans-serif;
-}
-.cm-modal-close {
-  position: absolute; top: 10px; right: 16px; background: none; border: none;
-  font-size: 26px; line-height: 1; color: var(--cm-text-sub); cursor: pointer;
-}
-.cm-modal-title { font-family: 'Newsreader', serif; font-style: italic; font-size: 22px; color: var(--cm-plum-dark); margin-bottom: 6px; }
-.cm-modal-sub { font-size: 14px; line-height: 1.5; color: var(--cm-text-sub); margin-bottom: 8px; }
-.cm-modal-label {
-  display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
-  color: var(--cm-gold); margin: 16px 0 6px;
-}
-.cm-modal-opt { color: var(--cm-text-sub); font-weight: 600; text-transform: none; letter-spacing: 0; }
-.cm-modal-select {
-  width: 100%; padding: 11px 36px 11px 14px; border-radius: 12px;
-  border: var(--cm-border-w) solid var(--cm-mauve); background-color: var(--cm-white);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238B4A6E' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-  background-repeat: no-repeat; background-position: right 14px center;
-  color: var(--cm-text); font-family: 'Mulish', sans-serif; font-size: 16px; font-weight: 600;
-  cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none;
-}
-.cm-modal-select:focus { outline: none; border-color: var(--cm-plum-mid); }
-.cm-modal-input {
-  width: 100%; padding: 11px 14px; border-radius: 12px;
-  border: var(--cm-border-w) solid var(--cm-mauve); background: var(--cm-white);
-  color: var(--cm-text); font-family: 'Mulish', sans-serif; font-size: 16px; font-weight: 600;
-}
-.cm-modal-input:focus { outline: none; border-color: var(--cm-plum-mid); }
-.cm-modal-textarea {
-  width: 100%; padding: 12px 14px; border-radius: 12px;
-  border: var(--cm-border-w) solid var(--cm-mauve); background: var(--cm-white);
-  font-family: 'Mulish', sans-serif; font-size: 16px; color: var(--cm-text); resize: vertical;
-}
-.cm-modal-textarea:focus { outline: none; border-color: var(--cm-plum-mid); }
-.cm-modal-hint { font-size: 12px; line-height: 1.5; color: var(--cm-text-sub); margin: 8px 0 0; }
-.cm-modal-actions { display: flex; gap: 12px; margin-top: 22px; }
-.cm-modal-cancel, .cm-modal-confirm { flex: 1; border-radius: 999px; padding: 13px 18px; font: 700 15px/1 'Mulish', sans-serif; cursor: pointer; }
-.cm-modal-cancel { background: none; border: 1.5px solid var(--cm-mauve); color: var(--cm-plum-dark); }
-.cm-modal-confirm { background: var(--cm-plum-dark); border: none; color: #fff; }
-.cm-modal-confirm:disabled { opacity: 0.6; cursor: default; }
-.cm-modal-note { font-size: 12px; color: var(--cm-text-sub); margin-top: 12px; text-align: center; min-height: 1em; }
-/* Sélection de version + order bumps dans le popup d'achat */
-.cm-ver-opt { display:block; width:100%; margin-bottom:8px; padding:12px 16px; border-radius:14px; border:2px solid var(--cm-mauve); background:var(--cm-white); font:700 14px/1.3 'Mulish',sans-serif; color:var(--cm-text); cursor:pointer; text-align:left; transition:border-color .15s, background .15s; }
-.cm-ver-opt.selected { border-color:var(--cm-plum-dark); background:var(--cm-off-white); }
-.cm-buy-bumps-title { font:700 11px/1 'Mulish',sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--cm-text-sub); margin:16px 0 8px; }
-.cm-bump { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:1.5px solid var(--cm-mauve); border-radius:14px; margin-bottom:8px; cursor:pointer; background:var(--cm-white); }
-.cm-bump input { margin-top:2px; flex:none; width:18px; height:18px; accent-color:var(--cm-plum-dark); }
-.cm-bump span { font:600 14px/1.35 'Mulish',sans-serif; color:var(--cm-text); }
-.cm-bump small { display:block; font-weight:400; color:var(--cm-text-sub); margin-top:2px; }
-/* ════════ EFFETS (continuité avec l'accueil) ════════ */
-.cm-hero{position:relative;}
-.cm-hero::before{content:"";position:absolute;top:-24px;left:50%;width:560px;max-width:150%;height:320px;transform:translateX(-50%);z-index:-1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(232,201,122,.30),rgba(232,201,122,.06) 48%,transparent 72%);animation:cm-fx-breathe 7s ease-in-out infinite;will-change:transform,opacity;}
-@keyframes cm-fx-breathe{0%,100%{opacity:.55;transform:translateX(-50%) scale(.97);}50%{opacity:1;transform:translateX(-50%) scale(1.06);}}
-#cm-player-root .cm-play-btn{position:relative;}
-#cm-player-root .cm-play-btn::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid rgba(196,150,58,.45);animation:cm-fx-ring 2.6s ease-out infinite;pointer-events:none;}
-@keyframes cm-fx-ring{0%{transform:scale(.92);opacity:.65;}70%{opacity:0;}100%{transform:scale(1.5);opacity:0;}}
-.stripe-btn,.stripe-btn-2,.cm-sticky-btn{position:relative;overflow:hidden;}
-.stripe-btn::after,.stripe-btn-2::after,.cm-sticky-btn::after{content:"";position:absolute;top:0;left:-130%;width:55%;height:100%;background:linear-gradient(110deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-18deg);transition:left .6s;pointer-events:none;}
-@media(hover:hover){.stripe-btn:hover::after,.stripe-btn-2:hover::after,.cm-sticky-btn:hover::after{left:150%;}}
-@media (prefers-reduced-motion:reduce){.cm-hero::before{animation:none;opacity:.7;}#cm-player-root .cm-play-btn::after{display:none;}#cm-loader .cm-spin{animation-duration:1.4s;}}
-/* Roue de chargement — évite le flash hommage->cadeau (masquée dès que song_type est connu) */
-#cm-loader{position:fixed;inset:0;z-index:9999;background:var(--cm-bg);display:flex;align-items:center;justify-content:center;transition:opacity .45s ease;}
-#cm-loader.cm-hide{opacity:0;pointer-events:none;}
-#cm-loader .cm-spin{width:46px;height:46px;border-radius:50%;border:3px solid rgba(92,45,74,.15);border-top-color:var(--cm-gold);animation:cm-spin .8s linear infinite;}
-@keyframes cm-spin{to{transform:rotate(360deg);}}
-/* Apparition au scroll (bidirectionnelle = "vivant") */
-.cm-fx-reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease;}
-.cm-fx-reveal.cm-fx-in{opacity:1;transform:none;}
-@media (prefers-reduced-motion:reduce){.cm-fx-reveal{opacity:1;transform:none;transition:none;}}
-</style>
-<!-- Attribution Meta : rafraichit le last-touch si le client revient ici via une pub de reciblage. -->
-<!-- Sentry navigateur (erreurs JS), token/PII scrubbes avant envoi (cm-sentry.js). -->
+<title>Ton aperçu est prêt · Chanson Mémoire</title>
+<link rel="icon" type="image/png" href="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png">
+<!-- Design : funnel v2 (maquette « Aperçu de la chanson »), charte Newsreader + Work Sans.
+     Nouveau funnel (2026-07-02) : la RÉVISION vit ICI, débloquée après 40 s d'écoute.
+     Pipeline : demande -> analyse IA -> paroles PROPOSÉES -> le client APPROUVE -> nouvelle
+     chanson ; prononciation / plafond -> l'équipe (24-48 h). Audio signé 60 s (du_60). -->
 <script src="/js/cm-sentry.js"></script>
 <script src="/js/cm-attrib.js"></script>
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" sizes="48x48" href="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto,c_fill,w_48,h_48/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
-  <link rel="icon" type="image/png" sizes="96x96" href="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto,c_fill,w_96,h_96/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto,c_fill,w_180,h_180/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F3EE; --surface:#FDFBF8; --ink:#2B2530; --muted:#8A7F88; --line:#EAE2E6;
+    --accent:#7C6591; --accent-deep:#4A3855; --soft:#EFE7F0; --gold:#C79A4B;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;color:var(--ink);font-family:'Work Sans',system-ui,sans-serif;min-height:100vh;
+    background:
+      radial-gradient(420px 300px at 10% -40px, #EFE7F0 0%, rgba(239,231,240,0) 62%),
+      radial-gradient(420px 320px at 96% 0px, #F5EBE2 0%, rgba(245,235,226,0) 58%),
+      var(--bg);
+  }
+  .page{max-width:600px;margin:0 auto;padding:18px 22px 46px;display:flex;flex-direction:column;gap:16px}
+  .logo{display:flex;justify-content:center;padding:4px 0 2px}
+  .logo img{height:28px;width:auto}
+
+  .k{font:800 11px 'Work Sans';letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0}
+  h1{font-family:'Newsreader',serif;font-weight:600;font-size:26px;line-height:1.15;margin:8px 0 0}
+  h2{font-family:'Newsreader',serif;font-weight:600;font-size:21px;margin:8px 0 0}
+  .sous{font:500 14px/1.6 'Work Sans';color:var(--muted);margin:8px 0 0}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 10px 30px rgba(43,37,48,.05)}
+
+  /* ── Player (maquette : bouton rond + égaliseur + badge Aperçu · 1 min) ── */
+  .player{display:flex;align-items:center;gap:14px}
+  .btn-play{
+    width:52px;height:52px;border-radius:50%;background:var(--accent-deep);color:#fff;border:none;
+    display:flex;align-items:center;justify-content:center;font-size:17px;flex:none;cursor:pointer;
+    box-shadow:0 10px 22px rgba(74,56,85,.3);
+  }
+  @media (hover:hover){ .btn-play:hover{filter:brightness(1.08)} }
+  .player-infos{flex:1;min-width:0}
+  .player-titre{font-family:'Newsreader',serif;font-weight:600;font-size:18px;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge-apercu{display:inline-flex;align-items:center;gap:5px;background:var(--soft);border-radius:99px;padding:5px 11px;font:700 11px 'Work Sans';color:var(--accent)}
+  .temps{font:700 12px 'Work Sans';color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+  .piste{height:6px;border-radius:99px;background:var(--soft);overflow:hidden;margin-top:12px;cursor:pointer}
+  .barre{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-deep))}
+  .eq{display:flex;align-items:center;gap:3px;height:22px;margin-left:6px}
+  .eq span{width:3px;height:100%;border-radius:2px;background:var(--accent);transform:scaleY(.25);transform-origin:center}
+  @keyframes eqb{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
+  .joue .eq span{animation:eqb .85s ease-in-out infinite}
+  .joue .eq span:nth-child(2){animation-delay:.15s}
+  .joue .eq span:nth-child(3){animation-delay:.3s}
+  .joue .eq span:nth-child(4){animation-delay:.45s}
+
+  /* ── Paroles ── */
+  .strophe{font-family:'Newsreader',serif;font-size:16px;line-height:1.75;margin:0 0 14px;white-space:pre-line}
+  .strophe:last-child{margin-bottom:0}
+  .strophe.impaire{font-style:italic;color:#6B6470}
+
+  /* ── Révision (débloquée après 40 s d'écoute) ── */
+  .revision[hidden]{display:none}
+  .revision h2{font-size:20px}
+  textarea{
+    width:100%;background:#FAF7F3;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px;
+    font:500 16px/1.55 'Work Sans';color:var(--ink);outline:none;resize:vertical;min-height:88px;
+  }
+  textarea:focus{border-color:var(--accent)}
+  .btn-secondaire{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:12px;
+    background:#fff;border:1.5px solid var(--accent);color:var(--accent);border-radius:14px;padding:13px;
+    font:800 14px 'Work Sans';cursor:pointer;
+  }
+  @media (hover:hover){ .btn-secondaire:not([disabled]):hover{background:var(--soft)} }
+  .btn-secondaire[disabled]{opacity:.6;cursor:default}
+  .message{display:none;font:500 13px/1.55 'Work Sans';border-radius:12px;padding:10px 13px;margin-top:12px}
+  .message.show{display:block}
+  .message.erreur{background:#F9E9E7;border:1px solid #ECC8C2;color:#8C3B2E}
+  .message.info{background:var(--soft);border:1px solid var(--line);color:var(--accent-deep)}
+  .compteur-appels{font:500 12px 'Work Sans';color:var(--muted);margin:10px 0 0}
+
+  /* ── Achat ── */
+  .btn-principal{
+    display:block;width:100%;border:none;border-radius:16px;padding:17px 18px;cursor:pointer;text-align:center;
+    background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;
+    font:800 16px 'Work Sans';box-shadow:0 12px 28px rgba(74,56,85,.26);
+  }
+  @media (hover:hover){ .btn-principal:hover{filter:brightness(1.06)} }
+  .prix{font:500 12.5px 'Work Sans';color:var(--muted);text-align:center;margin:10px 0 0}
+  .badges{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:12px;font:700 11.5px 'Work Sans';color:var(--muted)}
+  .inclus{margin:14px 0 0;padding:0;list-style:none}
+  .inclus li{display:flex;gap:9px;align-items:flex-start;font:500 13.5px/1.5 'Work Sans';margin:7px 0}
+  .inclus li::before{content:'✦';color:var(--gold);flex:none}
+
+  .temoin{border-left:3px solid var(--soft);padding:2px 0 2px 14px;margin:14px 0 0}
+  .temoin p{font-family:'Newsreader',serif;font-style:italic;font-size:15px;line-height:1.6;margin:0}
+  .temoin span{display:block;font:700 12px 'Work Sans';color:var(--muted);margin-top:6px}
+  .citation{font-family:'Newsreader',serif;font-style:italic;font-weight:500;font-size:20px;line-height:1.4;text-align:center;margin:6px 0;color:var(--ink)}
+  .faq-item{border-top:1px solid var(--line);padding:13px 0 0;margin:13px 0 0}
+  .faq-item:first-of-type{border-top:none;margin-top:6px;padding-top:0}
+  .faq-q{font:700 14px 'Work Sans';margin:0}
+  .faq-a{font:500 13.5px/1.6 'Work Sans';color:var(--muted);margin:6px 0 0}
+
+  #ecran-probleme[hidden],#ecran-apercu[hidden]{display:none}
+  @keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+  .shim{height:13px;border-radius:6px;background:linear-gradient(90deg,#ECE4E0 25%,#F7F1EC 40%,#ECE4E0 60%);background-size:300% 100%;animation:shimmer 1.5s linear infinite;margin:10px 0}
+</style>
 </head>
 <body>
-<!-- Sprite d'icones SVG inline (remplace Font Awesome) -->
-<svg id="cm-icons" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <symbol id="ic-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z" fill="currentColor"/></symbol>
-  <symbol id="ic-pause" viewBox="0 0 24 24"><path d="M7 4h4v16H7zM13 4h4v16h-4z" fill="currentColor"/></symbol>
-  <symbol id="ic-volume-high" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M19 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-  <symbol id="ic-volume-low" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M16 9.5a3 3 0 0 1 0 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-  <symbol id="ic-volume-xmark" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9.5l-5 5M17 9.5l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-  <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-  <symbol id="ic-link-slash" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 7l10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-</svg>
-<div id="cm-loader" aria-hidden="true"><div class="cm-spin"></div></div>
+<div class="page">
+  <div class="logo"><img src="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire"></div>
 
-<!-- ══ LOGO ══════════════════════════════════════════ -->
-<header class="cm-header">
-  <img src="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire" style="height:46px;width:auto;display:inline-block;">
-</header>
-
-<!-- ══ HERO ══════════════════════════════════════════ -->
-<section class="cm-hero">
-  <div class="cm-hero-eyebrow">Ton aperçu est prêt</div>
-  <h1 class="cm-hero-title" id="cm-hero-title">Voici la chanson composée pour honorer sa mémoire</h1>
-  <p class="cm-hero-sub">Écoute l'aperçu d'une minute ci-dessous. La version complète (3 à 4 min.) te sera envoyée immédiatement après ton achat.</p>
-</section>
-
-<div class="cm-divider"><span class="cm-divider-icon">✦</span></div>
-
-<!-- ══ PLAYER ══════════════════════════════════════════ -->
-<div id="cm-player-root">
-  <!-- Sélecteur de versions — masqué tant qu'il n'y a qu'une version (rempli par lire-versions). -->
-  <div class="cm-version-picker" id="cm-version-picker" style="display:none;">
-    <label class="cm-version-picker-label" for="cm-version-select">Ta version</label>
-    <select class="cm-version-select" id="cm-version-select" aria-label="Choisir la version à écouter"></select>
+  <div id="ecran-charge">
+    <div class="card"><p class="k">Ton aperçu</p><div class="shim" style="width:60%"></div><div class="shim" style="width:88%"></div></div>
   </div>
-  <div class="cm-players-container">
-    <div class="cm-player-wrap" data-param="preview1">
-      <div class="cm-player-box">
-        <div class="cm-title">Aperçu · 1 min.</div>
-        <div class="cm-title-sub" style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--cm-gold);margin-top:-2px;margin-bottom:2px;">Aperçu</div>
-        <div class="cm-equalizer cm-eq">
-          <span></span><span></span><span></span>
-          <span></span><span></span><span></span>
-          <span></span><span></span><span></span>
-        </div>
-        <audio class="cm-audio"><source src="" type="audio/mpeg"></audio>
-        <button class="cm-play-btn" aria-label="Lire l'aperçu"><svg class="cm-ic" aria-hidden="true"><use href="#ic-play"></use></svg></button>
-        <div class="cm-time">
-          <span class="cm-current">0:00</span>
-          <span class="cm-total">0:00</span>
-        </div>
-        <div class="cm-progress-wrap">
-          <div class="cm-progress-bar"></div>
-          <input class="cm-progress" type="range" min="0" max="60" step="0.01" value="0">
-        </div>
-        <div class="cm-volume-wrap">
-          <button class="cm-mute-btn" aria-label="Couper / activer le son"><svg class="cm-ic" aria-hidden="true"><use href="#ic-volume-high"></use></svg></button>
-          <div class="cm-volume-slider-wrap">
-            <div class="cm-volume-bar"></div>
-            <input class="cm-volume" type="range" min="0" max="1" step="0.01" value="1">
-          </div>
-        </div>
-      </div>
+
+  <div id="ecran-probleme" hidden>
+    <div class="card">
+      <p class="k">Petit souci</p>
+      <p class="sous" id="probleme-texte">Ce lien ne correspond à aucun aperçu. Vérifie le lien reçu par courriel.</p>
     </div>
   </div>
 
-  <div class="cm-ia-mention">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
-    </svg>
-    Chanson créée par intelligence artificielle à partir des souvenirs que tu as partagés
-  </div>
-</div>
+  <div id="ecran-apercu" hidden>
+    <div>
+      <p class="k">Ton aperçu est prêt</p>
+      <h1>La chanson composée pour honorer sa mémoire</h1>
+      <p class="sous">Écoute ces 60 secondes. Si elle te touche, la version complète est à un clic.</p>
+    </div>
 
-<!-- ══ PRICING ══════════════════════════════════════════ -->
-<section class="cm-pricing-section">
-  <div id="cm-pricing-root">
-    <div class="cm-card">
-      <div class="cm-version-label">Chanson complète · 3–4 min.</div>
-      <div class="cm-price-block">
-        <span class="cm-price">139,97 $</span>
-        <span class="cm-price-meta">CAD · taxes en sus · paiement unique</span>
+    <!-- Player -->
+    <div class="card" id="carte-player">
+      <div class="player">
+        <button class="btn-play" id="btn-play" type="button" aria-label="Écouter l’aperçu">▶</button>
+        <div class="player-infos">
+          <p class="player-titre" id="titre-chanson"></p>
+          <span class="badge-apercu">Aperçu · 1 min</span>
+        </div>
+        <div class="eq" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <span class="temps" id="temps">0:00 / 1:00</span>
       </div>
-      <ul class="cm-value">
-        <li><span class="cm-spark">✦</span> <span id="cm-value-nom">Une chanson originale, composée uniquement pour honorer sa mémoire</span></li>
-        <li><span class="cm-spark">✦</span> <span id="cm-value-share">Une page privée à partager avec toute la famille, pour garder sa mémoire vivante</span></li>
-        <li><span class="cm-spark">✦</span> Fichier MP3 à télécharger et garder pour toujours</li>
-        <li><span class="cm-spark">✦</span> Qualité studio professionnelle</li>
-        <li><span class="cm-spark">✦</span> Révisions illimitées jusqu'à satisfaction, sans frais</li>
+      <div class="piste" id="piste-progres" aria-hidden="true"><div class="barre" id="barre-progres"></div></div>
+      <audio id="audio" preload="metadata"></audio>
+    </div>
+
+    <!-- Paroles -->
+    <div class="card">
+      <p class="k" style="margin-bottom:12px">Les paroles</p>
+      <div id="paroles"></div>
+    </div>
+
+    <!-- Révision : cachée tant que le client n'a pas écouté ~40 s (décision produit). -->
+    <div class="card revision" id="carte-revision" hidden>
+      <p class="k">Tes retours</p>
+      <h2>Quelque chose à ajuster ?</h2>
+      <p class="sous">Une correction, un autre style, un souvenir à ajouter… on s’en occupe. Décris ce que tu aimerais changer : les nouvelles paroles garderont tout ce qui fonctionne.</p>
+
+      <div id="rev-formulaire">
+        <textarea id="rev-texte" placeholder="Ex. : Mettre davantage l’accent sur ses dimanches dans la cuisine. Garder le refrain tel quel…"></textarea>
+        <button class="btn-secondaire" id="rev-envoyer" type="button">Envoyer ma demande</button>
+      </div>
+
+      <div id="rev-analyse" hidden>
+        <p class="message info show">On lit ta demande et on prépare les nouvelles paroles. Environ 30 secondes.</p>
+        <div class="shim" style="width:86%"></div><div class="shim" style="width:64%"></div>
+      </div>
+
+      <div id="rev-proposition" hidden>
+        <p class="message info show">Voici les paroles ajustées selon ta demande. Si elles te conviennent, on recrée la chanson avec.</p>
+        <div id="rev-paroles" style="margin-top:12px"></div>
+        <button class="btn-secondaire" id="rev-approuver" type="button">Approuver et recréer la chanson</button>
+        <p class="compteur-appels">Pas tout à fait ça ? Écris-nous à nathalie@chansonmemoire.ca, on ajuste avec toi.</p>
+      </div>
+
+      <div id="rev-equipe" hidden>
+        <p class="message info show">On a bien reçu ta demande. Notre équipe s’en occupe personnellement et te revient d’ici 24 à 48 h par courriel avec la chanson corrigée.</p>
+      </div>
+
+      <div class="message erreur" id="rev-erreur" role="alert"></div>
+      <p class="compteur-appels" id="compteur-appels" hidden></p>
+    </div>
+
+    <!-- Achat -->
+    <div class="card">
+      <p class="k">Chanson complète · 3–5 min</p>
+      <ul class="inclus">
+        <li>Une chanson originale et unique, composée spécifiquement pour honorer sa mémoire</li>
+        <li>Fichier MP3 téléchargeable, qualité studio professionnelle</li>
+        <li>Page privée à partager avec toute la famille</li>
+        <li>Révisions illimitées, jusqu’à ce qu’elle soit juste</li>
       </ul>
-      <p class="cm-anchor">Une œuvre sur mesure, sans les semaines d'attente ni la facture d'un compositeur professionnel.</p>
-      <!-- Choix de version : déplacé dans un POPUP de confirmation au clic « acheter » (si >1 version). -->
-
-      <!-- Order bumps : dans le POPUP de confirmation (#cm-buy-bumps, cases optionnelles) → line_items Stripe. -->
-
-      <div class="cm-btn-wrap">
-        <button id="stripeBtnPricing" class="stripe-btn">Obtenir la chanson complète</button>
-      </div>
-      <div class="cm-trust">
-        <span class="cm-trust-item">
-          <svg viewBox="0 0 24 24" width="13" height="13"><path fill="currentColor" d="M12 21s-7.5-4.9-10-9.3C.6 9.1 1.7 5.6 4.8 5.1 7 4.8 8.7 6.2 9.5 7.6 10.3 6.2 12 4.8 14.2 5.1c3.1.5 4.2 4 2.8 6.6C19.5 16.1 12 21 12 21z"/></svg>
-          Révisions illimitées
-        </span>
-        <span class="cm-trust-sep">·</span>
-        <span class="cm-trust-item">
-          <svg viewBox="0 0 24 24" width="13" height="13"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 0 1 6 0v3H9z"/></svg>
-          Paiement sécurisé Stripe
-        </span>
-        <span class="cm-trust-sep">·</span>
-        <span class="cm-trust-item"><span class="cm-spark cm-spark-sm">✦</span> Livraison immédiate</span>
-      </div>
+      <button class="btn-principal" id="btn-acheter" type="button" style="margin-top:16px">Obtenir la chanson complète</button>
+      <p class="prix">139,97 $ CAD · paiement unique · satisfait ou remboursé</p>
+      <div class="badges"><span>♥ Révisions illimitées</span><span>🔒 Paiement Stripe</span><span>✦ Livraison immédiate</span></div>
+      <div class="message info" id="achat-info"></div>
     </div>
-  </div>
-</section>
 
-<div class="cm-divider"><span class="cm-divider-icon">✦</span></div>
-
-<!-- ══ CE QUI SE PASSE APRÈS L'ACHAT ══════════════════ -->
-<section class="cm-section">
-  <div class="cm-section-eyebrow">Ce qui se passe ensuite</div>
-  <h2 class="cm-section-title">Ta chanson complète, entre tes mains en quelques minutes</h2>
-  <div class="cm-steps">
-    <div class="cm-step">
-      <div class="cm-step-num">1</div>
-      <div class="cm-step-body">
-        <div class="cm-step-label">Immédiatement</div>
-        <div class="cm-step-title">Tu reçois ta chanson complète</div>
-        <div class="cm-step-desc">Dès le paiement confirmé, un courriel t'est envoyé avec la chanson en version intégrale (3 à 4 minutes) et ton fichier MP3 à télécharger.</div>
-      </div>
+    <!-- Ce qui se passe ensuite -->
+    <div class="card">
+      <p class="k">Ce qui se passe ensuite</p>
+      <h2>Ta chanson complète, en 3 temps</h2>
+      <ul class="inclus">
+        <li><strong>Tu obtiens la version complète.</strong>&nbsp;3 à 5 minutes, en qualité studio, dès le paiement.</li>
+        <li><strong>Tu peux la faire ajuster.</strong>&nbsp;Révisions illimitées, sans frais, jusqu’à ce qu’elle soit juste.</li>
+        <li><strong>Tu la gardes et la partages.</strong>&nbsp;MP3 à télécharger + une page privée pour la famille.</li>
+      </ul>
     </div>
-    <div class="cm-step">
-      <div class="cm-step-num">2</div>
-      <div class="cm-step-body">
-        <div class="cm-step-label">Sur demande</div>
-        <div class="cm-step-title">Tu demandes des ajustements, si nécessaire</div>
-        <div class="cm-step-desc">La chanson ne te convient pas tout à fait ? Tu nous écris et on la retravaille, autant de fois qu'il le faut, sans frais.</div>
-      </div>
+
+    <!-- Témoignages -->
+    <div class="card">
+      <p class="k">Ce qu’en disent les familles</p>
+      <h2>Des mots, des larmes, des sourires</h2>
+      <div class="temoin"><p>« J’ai éclaté en sanglots, mais des larmes de gratitude. C’était elle, exactement ce qu’elle aurait dit si elle avait pu me parler une dernière fois. »</p><span>Marie-France L. · en hommage à sa mère</span></div>
+      <div class="temoin"><p>« Cette chanson m’a rendu quelque chose : sa voix dans les mots, ses habitudes dans les images. Je la joue chaque matin. »</p><span>Sophie C. · pour son mari</span></div>
+      <div class="temoin"><p>« On l’a jouée à la réunion de famille, un an après son décès. C’était beau, c’était vrai, c’était elle. »</p><span>Louise G. · réunion de famille</span></div>
     </div>
-    <div class="cm-step">
-      <div class="cm-step-num">3</div>
-      <div class="cm-step-body">
-        <div class="cm-step-label">Pour toujours</div>
-        <div class="cm-step-title" id="cm-step-share-title">Tu partages sa mémoire avec ceux qui comptent</div>
-        <div class="cm-step-desc">Ta page privée est accessible à toute la famille, à tout moment. Un endroit doux où retrouver sa voix, à ton rythme.</div>
-      </div>
+
+    <p class="citation">« Les mots qu’on n’a pas eu le temps de dire méritent d’être chantés. »</p>
+
+    <!-- FAQ -->
+    <div class="card">
+      <p class="k">Questions fréquentes</p>
+      <h2>Tout ce qu’il faut savoir</h2>
+      <div class="faq-item"><p class="faq-q">Quand est-ce que je reçois la chanson complète ?</p><p class="faq-a">Dès le paiement : la version complète est prête dans la même session, en qualité studio.</p></div>
+      <div class="faq-item"><p class="faq-q">Et si un détail ne me convient pas ?</p><p class="faq-a">Tu peux la faire ajuster, sans frais, jusqu’à ce qu’elle soit juste. Les demandes plus délicates passent par notre équipe.</p></div>
+      <div class="faq-item"><p class="faq-q">Qu’est-ce que je reçois exactement ?</p><p class="faq-a">Le fichier MP3 téléchargeable et une page privée à partager avec la famille. Paiement unique, sans abonnement.</p></div>
     </div>
-  </div>
-</section>
 
-<div class="cm-divider"><span class="cm-divider-icon">✦</span></div>
-
-<!-- ══ GARANTIE ══════════════════════════════════════════ -->
-<div class="cm-guarantee-box">
-  <div class="cm-guarantee-icon">🕊️</div>
-  <div class="cm-guarantee-title" id="cm-guarantee-title">Révisée jusqu'à ce qu'elle lui ressemble vraiment</div>
-  <p class="cm-guarantee-text">
-    Nous savons que cette chanson doit être juste. C'est pourquoi nous offrons des <strong>révisions illimitées, sans frais</strong>, jusqu'à ce que tu sentes qu'elle honore fidèlement sa mémoire.<br><br>
-    Tu n'as pas à accepter quelque chose qui ne te touche pas. On est là pour l'ajuster avec toi.
-  </p>
-</div>
-
-<div class="cm-divider"><span class="cm-divider-icon">✦</span></div>
-
-<!-- ══ STORYTELLING ══════════════════════════════════════ -->
-<section class="cm-story">
-  <p class="cm-story-quote">« Les mots qu'on n'a pas eu le temps de dire méritent d'être chantés. »</p>
-  <p class="cm-story-sub" id="cm-story-sub">Cette chanson est née des souvenirs que tu as partagés. Elle n'existe nulle part ailleurs. Elle ne ressemble à personne d'autre. Elle lui ressemble, à ce qu'il ou elle représentait pour toi.<br><br>Certaines familles la font jouer lors des funérailles. D'autres la partagent en souvenir d'anniversaire. D'autres encore l'écoutent seuls, les soirs où l'absence se fait plus lourde.<br><br>Il n'y a pas de bonne façon de garder quelqu'un vivant dans son cœur.</p>
-</section>
-
-<div class="cm-divider"><span class="cm-divider-icon">✦</span></div>
-
-<!-- ══ TÉMOIGNAGES ══════════════════════════════════════ -->
-<!-- Témoignages clients réels (fournis par Maxime). S'assurer du consentement écrit de chaque personne pour publier prénom + ville. -->
-<section class="cm-testimonials">
-  <div class="cm-section-eyebrow">Ce que des familles ont vécu</div>
-  <h2 class="cm-section-title" style="margin-bottom: 24px;">Des mots qu'on nous a partagés</h2>
-
-  <div class="cm-testimonial-card">
-    <div class="cm-stars">★★★★★</div>
-    <p class="cm-testimonial-text">« J'avais peur que ce soit générique. Mais quand j'ai rempli le formulaire avec tous ses petits détails, son café trop fort, son rire sonore, ses mauvaises blagues, la chanson les a tous mis dedans. C'est incroyable à quel point c'est personnalisé. »</p>
-    <div class="cm-testimonial-author">Isabelle B., Chicoutimi</div>
-  </div>
-
-  <div class="cm-testimonial-card">
-    <div class="cm-stars">★★★★★</div>
-    <p class="cm-testimonial-text">« On a joué la chanson à la réunion de famille un an après son décès. Même mes oncles qui retiennent toujours leurs larmes n'ont pas pu. C'était beau, c'était vrai, c'était elle. »</p>
-    <div class="cm-testimonial-author">Louise G., Québec</div>
-  </div>
-
-  <div class="cm-testimonial-card">
-    <div class="cm-stars">★★★★★</div>
-    <p class="cm-testimonial-text">« Cette chanson m'a rendu quelque chose : sa voix dans les mots, ses habitudes dans les images. Je la joue chaque matin. C'est ma façon de commencer la journée avec lui encore. »</p>
-    <div class="cm-testimonial-author">Sophie C., Laval</div>
-  </div>
-</section>
-
-<div class="cm-divider"><span class="cm-divider-icon">✦</span></div>
-
-<!-- ══ FAQ ══════════════════════════════════════════════ -->
-<section class="cm-faq">
-  <div class="cm-section-eyebrow">Questions fréquentes</div>
-  <h2 class="cm-section-title" style="margin-bottom: 24px;">Ce qu'on nous demande souvent</h2>
-
-  <div class="cm-faq-item">
-    <button class="cm-faq-btn">
-      <span class="cm-faq-question">Quand vais-je recevoir la chanson complète ?</span>
-      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
-    </button>
-    <div class="cm-faq-answer">Tout de suite après ton paiement. Tu reçois un courriel avec la version complète (3 à 4 minutes) et ton fichier MP3 à télécharger. Pense à vérifier tes indésirables si tu ne le vois pas dans les minutes qui suivent.</div>
-  </div>
-
-  <div class="cm-faq-item">
-    <button class="cm-faq-btn">
-      <span class="cm-faq-question">Puis-je demander des modifications ?</span>
-      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
-    </button>
-    <div class="cm-faq-answer">Oui, sans limite et sans frais. Si la chanson ne te touche pas comme tu l'espérais (une parole à ajuster, un ton à changer, un souvenir à intégrer autrement), tu nous écris et on la retravaille jusqu'à ce qu'elle soit juste pour toi.</div>
-  </div>
-
-  <div class="cm-faq-item">
-    <button class="cm-faq-btn">
-      <span class="cm-faq-question">La chanson est-elle créée par un humain ou par l'IA ?</span>
-      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
-    </button>
-    <div class="cm-faq-answer">Ta chanson est composée par intelligence artificielle à partir des souvenirs que tu as partagés dans le formulaire. Une personne de notre équipe veille sur la qualité à chaque étape, pour qu'elle honore vraiment la personne que tu aimes.</div>
-  </div>
-
-  <div class="cm-faq-item">
-    <button class="cm-faq-btn">
-      <span class="cm-faq-question">Est-ce que je peux la faire jouer lors de funérailles ou d'une cérémonie ?</span>
-      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
-    </button>
-    <div class="cm-faq-answer">Oui. La chanson t'appartient : tu peux la partager librement avec ta famille, la faire jouer lors d'une cérémonie, ou la garder pour toi. Le fichier MP3 est à toi pour toujours.</div>
-  </div>
-
-  <div class="cm-faq-item">
-    <button class="cm-faq-btn">
-      <span class="cm-faq-question">Le paiement est-il sécurisé ?</span>
-      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
-    </button>
-    <div class="cm-faq-answer">Oui. Le paiement est traité par Stripe, l'un des processeurs les plus sécurisés au monde. Tes informations financières ne nous sont jamais transmises directement.</div>
-  </div>
-
-  <div class="cm-faq-item">
-    <button class="cm-faq-btn">
-      <span class="cm-faq-question">Puis-je obtenir un remboursement ?</span>
-      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
-    </button>
-    <div class="cm-faq-answer">Comme chaque chanson est entièrement personnalisée, on n'offre pas de remboursement une fois la chanson livrée. Par contre, on la révise autant de fois qu'il le faut pour qu'elle te convienne pleinement. Voir nos <a href="/condition-de-vente">conditions de vente</a>.</div>
-  </div>
-
-  <div class="cm-faq-item">
-    <button class="cm-faq-btn">
-      <span class="cm-faq-question">Qu'est-ce qui est inclus pour 139,97 $ ?</span>
-      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
-    </button>
-    <div class="cm-faq-answer">Ta chanson complète (3 à 4 minutes), ton fichier MP3 à garder pour toujours, et les révisions jusqu'à ce qu'elle soit parfaite. Aucuns frais cachés, aucun abonnement.</div>
-  </div>
-
-  <div class="cm-faq-item">
-    <button class="cm-faq-btn">
-      <span class="cm-faq-question">C'est quoi la version instrumentale et la vidéo des paroles ?</span>
-      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
-    </button>
-    <div class="cm-faq-answer">Deux options facultatives. L'instrumentale, c'est la musique sans la voix (parfaite pour une cérémonie ou un fond sonore). La vidéo des paroles, c'est ta chanson avec les paroles à l'écran, idéale à partager. Tu les ajoutes seulement si tu le souhaites.</div>
-  </div>
-
-  <div class="cm-faq-item">
-    <button class="cm-faq-btn">
-      <span class="cm-faq-question">Et si la version complète me touche moins que l'aperçu ?</span>
-      <svg class="cm-ic cm-faq-icon" aria-hidden="true"><use href="#ic-plus"></use></svg>
-    </button>
-    <div class="cm-faq-answer">L'aperçu, c'est déjà ta chanson : la version complète, c'est la même, du début à la fin. Et si un détail clochait, on la révise sans frais jusqu'à ce qu'elle soit juste.</div>
-  </div>
-</section>
-
-<div class="cm-divider"><span class="cm-divider-icon">✦</span></div>
-
-<!-- ══ CTA BAS DE PAGE ══════════════════════════════════ -->
-<section class="cm-cta-bottom">
-  <p class="cm-cta-bottom-pre" id="cm-cta-pre">Sa mémoire mérite une chanson qui lui ressemble.</p>
-  <div class="cm-btn-wrap-2">
-    <button id="stripeBtnBottom" class="stripe-btn-2">Obtenir la chanson complète</button>
-  </div>
-  <p class="cm-cta-legal">139,97 $ CAD · taxes en sus · livraison immédiate · révisions illimitées</p>
-</section>
-
-<!-- ══ FOOTER ═══════════════════════════════════════════ -->
-<footer class="cm-footer">
-  <p>
-    © <span id="cm-year">2026</span> Chanson Mémoire, une marque de LabMarketing inc.<br>
-    <a href="/condition-de-vente">Conditions de vente</a> ·
-    <a href="/politique-de-remboursement">Politique de remboursement</a> ·
-    <a href="/politique-de-confidentialite">Politique de confidentialité</a>
-  </p>
-</footer>
-
-<!-- ══ STICKY DOCK ══════════════════════════════════════ -->
-<div class="cm-sticky" id="cmSticky" aria-hidden="true">
-  <button class="cm-sticky-btn" id="stripeBtnSticky">Obtenir la chanson complète</button>
-</div>
-
-<!-- ══ MODAL : CONFIRMER LA CHANSON + OPTIONS (order bumps) ══ -->
-<div class="cm-modal-overlay" id="cm-buy-overlay" aria-hidden="true">
-  <div class="cm-modal" role="dialog" aria-modal="true" aria-labelledby="cm-buy-modal-title">
-    <button type="button" class="cm-modal-close" id="cm-buy-close" aria-label="Fermer">&times;</button>
-    <div class="cm-modal-title" id="cm-buy-modal-title">Confirme ta chanson</div>
-    <p class="cm-modal-sub">Choisis la version à recevoir, puis ajoute des options si tu le souhaites.</p>
-    <div id="cm-buy-options"></div>
-    <div id="cm-buy-bumps"></div>
-    <button type="button" class="cm-modal-confirm" id="cm-buy-proceed" style="width:100%;margin-top:6px;">Procéder au paiement</button>
-    <p class="cm-modal-note" id="cm-buy-status" role="status" aria-live="polite"></p>
+    <button class="btn-principal" id="btn-acheter-2" type="button">Obtenir la chanson</button>
+    <p class="prix" style="margin-top:-6px">139,97 $ CAD · paiement unique · satisfait ou remboursé</p>
   </div>
 </div>
 
-<!-- ══ MODAL : ESSAYER UN AUTRE STYLE ════════════════════ -->
-<!-- ══ MODALE : Quelque chose à ajuster ? (point d'entrée unique) ══════════ -->
-<div class="cm-modal-overlay" id="cm-modif-overlay" aria-hidden="true">
-  <div class="cm-modal" role="dialog" aria-modal="true" aria-labelledby="cm-modif-title">
-    <button type="button" class="cm-modal-close" id="cm-modif-close" aria-label="Fermer">&times;</button>
-    <div class="cm-modal-title" id="cm-modif-title">Quelque chose à ajuster&nbsp;?</div>
-    <p class="cm-modal-sub">Dis-nous ce que tu veux changer, on s'en occupe.</p>
-
-    <div id="cm-modif-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px;">
-      <button type="button" class="cm-modif-chip" data-k="pron"     style="font:600 13px/1 'Mulish',sans-serif;padding:8px 13px;border-radius:999px;border:1.5px solid var(--cm-mauve);background:var(--cm-white);color:var(--cm-plum-mid);cursor:pointer;">Un mot mal prononcé</button>
-      <button type="button" class="cm-modif-chip" data-k="style"    style="font:600 13px/1 'Mulish',sans-serif;padding:8px 13px;border-radius:999px;border:1.5px solid var(--cm-mauve);background:var(--cm-white);color:var(--cm-plum-mid);cursor:pointer;">Le style ou la voix</button>
-      <button type="button" class="cm-modif-chip" data-k="souvenir" style="font:600 13px/1 'Mulish',sans-serif;padding:8px 13px;border-radius:999px;border:1.5px solid var(--cm-mauve);background:var(--cm-white);color:var(--cm-plum-mid);cursor:pointer;">Ajouter un souvenir</button>
-      <button type="button" class="cm-modif-chip" data-k="paroles"  style="font:600 13px/1 'Mulish',sans-serif;padding:8px 13px;border-radius:999px;border:1.5px solid var(--cm-mauve);background:var(--cm-white);color:var(--cm-plum-mid);cursor:pointer;">Un détail dans les paroles</button>
-    </div>
-
-    <div id="cm-modif-form">
-      <textarea class="cm-modal-textarea" id="cm-modif-texte" rows="3" placeholder="Décris ce que tu aimerais changer…"></textarea>
-      <p class="cm-modal-hint" id="cm-modif-hint">Choisis une option ci-dessus, ou écris-nous directement.</p>
-      <div class="cm-modal-actions">
-        <button type="button" class="cm-modal-cancel" id="cm-modif-cancel">Annuler</button>
-        <button type="button" class="cm-modal-confirm" id="cm-modif-send">Envoyer ma demande</button>
-      </div>
-    </div>
-
-    <div id="cm-modif-done" style="display:none;">
-      <p class="cm-modal-hint" style="font-size:14px;">Demande reçue ✓ On corrige et on te revient avec ta version d'ici <strong>24 à 48 h</strong>.<br><br>Surveille tes courriels indésirables au cas où.</p>
-      <div class="cm-modal-actions"><button type="button" class="cm-modal-confirm" id="cm-modif-ok">Parfait</button></div>
-    </div>
-
-    <p class="cm-modal-note" id="cm-modif-status" role="status" aria-live="polite"></p>
-  </div>
-</div>
-
-<div class="cm-modal-overlay" id="cm-style-overlay" aria-hidden="true">
-  <div class="cm-modal" role="dialog" aria-modal="true" aria-labelledby="cm-style-modal-title">
-    <button type="button" class="cm-modal-close" id="cm-style-close" aria-label="Fermer">&times;</button>
-    <div class="cm-modal-title" id="cm-style-modal-title">Essayer un autre style</div>
-    <p class="cm-modal-sub">Même personne, même chanson : on ajuste l'habillage musical.</p>
-
-    <div id="cm-style-form">
-    <label class="cm-modal-label" for="cm-style-musique">Style musical</label>
-    <select class="cm-modal-select" id="cm-style-musique"></select>
-
-    <label class="cm-modal-label" for="cm-style-voix">Voix</label>
-    <select class="cm-modal-select" id="cm-style-voix"></select>
-
-    <label class="cm-modal-label" for="cm-style-ambiance">Ambiance</label>
-    <select class="cm-modal-select" id="cm-style-ambiance"></select>
-
-    <label class="cm-modal-label" for="cm-style-souvenirs">Ajouter ou retirer un souvenir <span class="cm-modal-opt">(optionnel)</span></label>
-    <textarea class="cm-modal-textarea" id="cm-style-souvenirs" rows="3" placeholder="Ex. : ajoutez un mot sur ses étés au chalet, ou retirez la mention de la pêche."></textarea>
-    <p class="cm-modal-hint">Sans nouveau souvenir, on garde les mêmes paroles et on change seulement la musique. Avec un souvenir, on réécrit d'abord les paroles pour ton approbation.</p>
-
-    <div class="cm-modal-actions">
-      <button type="button" class="cm-modal-cancel" id="cm-style-cancel">Annuler</button>
-      <button type="button" class="cm-modal-confirm" id="cm-style-confirm">Créer cette version</button>
-    </div>
-    </div><!-- /#cm-style-form -->
-    <p class="cm-modal-note" id="cm-style-status" role="status" aria-live="polite"></p>
-
-    <!-- Popup au cap (plafond serveur atteint) : message chaleureux + box courriel + alerte -->
-    <div id="cm-cap-help" style="display:none;">
-      <p class="cm-modal-hint" id="cm-cap-msg">Tu as exploré plusieurs versions pour cette personne, c'est la limite ici. On aimerait t'aider à créer LA version qui lui ressemble : laisse-nous ton courriel et ce que tu voudrais, on t'accompagne avec plaisir.</p>
-      <label class="cm-modal-label" for="cm-cap-details">Ce que tu aimerais, en quelques mots <span class="cm-modal-opt">(optionnel)</span></label>
-      <textarea class="cm-modal-textarea" id="cm-cap-details" rows="3" placeholder="Dis-nous ce que tu voudrais ajuster ou ajouter, on s'en occupe."></textarea>
-      <label class="cm-modal-label" for="cm-cap-email">Ton courriel</label>
-      <input class="cm-modal-input" id="cm-cap-email" type="email" inputmode="email" placeholder="toi@exemple.ca">
-      <div class="cm-modal-actions">
-        <button type="button" class="cm-modal-confirm" id="cm-cap-send">On m'aide avec plaisir</button>
-      </div>
-      <p class="cm-modal-note" id="cm-cap-status" role="status" aria-live="polite"></p>
-    </div>
-  </div>
-</div>
-
-<!-- ══ MODALE : Erreur de prononciation ══════════════════ -->
-<div class="cm-modal-overlay" id="cm-pron-overlay" aria-hidden="true">
-  <div class="cm-modal" role="dialog" aria-modal="true" aria-labelledby="cm-pron-title">
-    <button type="button" class="cm-modal-close" id="cm-pron-close" aria-label="Fermer">&times;</button>
-    <div class="cm-modal-title" id="cm-pron-title">Erreur de prononciation</div>
-
-    <div id="cm-pron-form">
-      <label class="cm-modal-label" for="cm-pron-mot">Quel mot est mal prononcé ?</label>
-      <input class="cm-modal-input" id="cm-pron-mot" type="text" placeholder="Ex. : Ghislaine" maxlength="120">
-
-      <label class="cm-modal-label" for="cm-pron-comment">Comment ça devrait sonner ? <span class="cm-modal-opt">(optionnel)</span></label>
-      <textarea class="cm-modal-textarea" id="cm-pron-comment" rows="2" placeholder="Ex. : « Ghislaine » se dit « Jislaine ». Ou « juin » se dit « ju-un »."></textarea>
-
-      <label class="cm-modal-label" for="cm-pron-autre">Autre chose à ajouter ? <span class="cm-modal-opt">(optionnel)</span></label>
-      <textarea class="cm-modal-textarea" id="cm-pron-autre" rows="2" placeholder="Ex. : une erreur dans les paroles, un mot oublié, un détail à corriger…"></textarea>
-
-      <div class="cm-modal-actions">
-        <button type="button" class="cm-modal-cancel" id="cm-pron-cancel">Annuler</button>
-        <button type="button" class="cm-modal-confirm" id="cm-pron-send">Envoyer la correction</button>
-      </div>
-    </div><!-- /#cm-pron-form -->
-
-    <div id="cm-pron-done" style="display:none;">
-      <p class="cm-modal-hint" style="font-size:14px;">Merci ✓ Tu recevras ton lien avec l'aperçu corrigé d'ici <strong>24 à 48 h</strong>.<br><br>Surveille tes courriels indésirables au cas où, et n'hésite pas à nous écrire au besoin.</p>
-      <div class="cm-modal-actions">
-        <button type="button" class="cm-modal-confirm" id="cm-pron-ok">Parfait</button>
-      </div>
-    </div>
-    <p class="cm-modal-note" id="cm-pron-status" role="status" aria-live="polite"></p>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════
-     SCRIPTS
-═══════════════════════════════════════════════════════ -->
 <script>
-/* ── MODALES : focus piégé + Échap + focus restauré (a11y, partagé par les 3 popups) ── */
-window.cmModal = (function(){
-  var lastFocus = null, onKey = null;
-  function focusables(ov){
-    return [].filter.call(ov.querySelectorAll('button,select,input,textarea,a[href],[tabindex]'),
-      function(el){ return !el.disabled && el.offsetParent !== null; });
-  }
-  return {
-    open: function(ov, closeFn){
-      if (!ov) return;
-      lastFocus = document.activeElement;
-      var f = focusables(ov); if (f.length) f[0].focus();
-      onKey = function(e){
-        if (e.key === 'Escape') { if (closeFn) closeFn(); return; }
-        if (e.key === 'Tab') {
-          var ff = focusables(ov); if (!ff.length) return;
-          var first = ff[0], last = ff[ff.length - 1];
-          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-        }
-      };
-      document.addEventListener('keydown', onKey);
-    },
-    close: function(){
-      if (onKey) { document.removeEventListener('keydown', onKey); onKey = null; }
-      if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch(e){} }
-      lastFocus = null;
-    }
-  };
-})();
-
-/* ── Icônes SVG inline (remplace Font Awesome) ── */
-window.cmIcon = function(n){ return '<svg class="cm-ic" aria-hidden="true"><use href="#ic-'+n+'"></use></svg>'; };
-
-/* ── PLAYER ─────────────────────────────────────────── */
-(function() {
+(function(){
   'use strict';
-  const ROOT = document.getElementById('cm-player-root');
-  if (!ROOT) return;
-  const urlParams = new URLSearchParams(window.location.search);
-  const START_TIME = 0;
-  const END_TIME = 60;
-  const DURATION = END_TIME - START_TIME;
+  var UUID_V4=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  var token=((window.cmToken?window.cmToken():(new URLSearchParams(window.location.search).get('id')))||'').trim();
+  var ecrans={charge:document.getElementById('ecran-charge'),probleme:document.getElementById('ecran-probleme'),apercu:document.getElementById('ecran-apercu')};
+  function montrer(nom){for(var k in ecrans){ecrans[k].hidden=(k!==nom);}}
+  function echap(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  if(!UUID_V4.test(token)){ montrer('probleme'); return; }
 
-  ROOT.querySelectorAll('.cm-player-wrap').forEach(function(wrap) {
-    const param   = wrap.dataset.param || 'preview1';
-    const mp3Url  = urlParams.get(param);
-    const audio   = wrap.querySelector('.cm-audio');
-    const source  = audio.querySelector('source');
-    const btn     = wrap.querySelector('.cm-play-btn');
-    const eq      = wrap.querySelector('.cm-eq');
-    const progress= wrap.querySelector('.cm-progress');
-    const bar     = wrap.querySelector('.cm-progress-bar');
-    const current = wrap.querySelector('.cm-current');
-    const total   = wrap.querySelector('.cm-total');
-    const volInput= wrap.querySelector('.cm-volume');
-    const volBar  = wrap.querySelector('.cm-volume-bar');
-    const muteBtn = wrap.querySelector('.cm-mute-btn');
-    let lastVol = 1, isDragging = false;
+  var ECOUTE_REQUISE=40; /* secondes d’écoute avant de proposer la révision (décision Maxime) */
+  var etat={demande:null,ecoute:0,dernierT:null,revele:false,pollTimer:null};
 
-    function fmt(t) { var m=Math.floor(t/60),s=Math.floor(t%60); return m+':'+(s<10?'0'+s:s); }
-    function init() { audio.currentTime=START_TIME; progress.max=DURATION; total.innerText=fmt(DURATION); }
-    if (audio.readyState >= 1) init();
-    else audio.addEventListener('loadedmetadata', init);
-    audio.addEventListener('error', function() { total.innerText='Erreur'; btn.disabled=true; btn.style.opacity='0.5'; });
-
-    if (mp3Url) { source.src = mp3Url; audio.load(); }
-    else { wrap.style.opacity='0.5'; btn.disabled=true; btn.innerHTML=cmIcon('link-slash'); }
-
-    btn.addEventListener('click', function() {
-      if (!source.src) return;
-      if (audio.paused) {
-        audio.play().then(function() { btn.innerHTML=cmIcon('pause'); eq.classList.add('active'); if(window._cmFunnel && !window._cmPreviewPinged){ window._cmPreviewPinged=true; window._cmFunnel('preview_played'); } }).catch(function(e){console.error(e);});
-      } else { audio.pause(); btn.innerHTML=cmIcon('play'); eq.classList.remove('active'); }
-    });
-
-    audio.addEventListener('timeupdate', function() {
-      var rel = audio.currentTime - START_TIME;
-      if (audio.currentTime >= END_TIME) { audio.pause(); audio.currentTime=START_TIME; btn.innerHTML=cmIcon('play'); eq.classList.remove('active'); }
-      if (!isDragging) { var pct=(rel/DURATION)*100; progress.value=rel; bar.style.width=pct+'%'; current.innerText=fmt(rel); }
-    });
-
-    progress.addEventListener('mousedown', function(){ isDragging=true; });
-    progress.addEventListener('touchstart', function(){ isDragging=true; });
-    progress.addEventListener('mouseup', function(){ isDragging=false; });
-    progress.addEventListener('touchend', function(){ isDragging=false; });
-    progress.addEventListener('input', function() { var val=parseFloat(progress.value); audio.currentTime=val+START_TIME; bar.style.width=(val/DURATION)*100+'%'; current.innerText=fmt(val); });
-
-    function setVolIcon(v) { muteBtn.innerHTML = v==0 ? cmIcon('volume-xmark') : v<0.5 ? cmIcon('volume-low') : cmIcon('volume-high'); }
-    volInput.addEventListener('input', function() { var v=parseFloat(volInput.value); audio.volume=v; volBar.style.width=(v*100)+'%'; setVolIcon(v); });
-    muteBtn.addEventListener('click', function() {
-      if (audio.volume>0) { lastVol=audio.volume; audio.volume=0; volInput.value=0; volBar.style.width='0%'; setVolIcon(0); }
-      else { audio.volume=lastVol||1; volInput.value=audio.volume; volBar.style.width=(audio.volume*100)+'%'; setVolIcon(audio.volume); }
-    });
-  });
-})();
-
-/* ── CHARGE LES VERSIONS PAR TOKEN (lire-versions) ──────
-   La redirection arrive avec ?id=TOKEN. On recupere TOUTES les versions jouables du projet
-   (preview 60s signe cote serveur), on remplit le menu deroulant et on joue la version choisie.
-   La plus recente est selectionnee par defaut. Menu masque s'il n'y a qu'une version.
-   Compat legacy : si pas de token (?preview1=...), ce bloc ne fait rien et le lecteur charge preview1. */
-(function() {
-  var token = (window._CM && window._CM.id) || '';
-  if (!token) return;
-
-  var wrap   = document.querySelector('.cm-player-wrap');
-  if (!wrap) return;
-  var audio  = wrap.querySelector('.cm-audio');
-  var source = audio ? audio.querySelector('source') : null;
-  var btn    = wrap.querySelector('.cm-play-btn');
-  var picker = document.getElementById('cm-version-picker');
-  var select = document.getElementById('cm-version-select');
-
-  function loadInto(url) {
-    if (!source || !url) return;
-    try { if (audio) audio.pause(); } catch (e) {}
-    source.src = url; audio.load();
-    wrap.style.opacity = '1';
-    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = cmIcon('play'); }
-  }
-
-  function labelOf(ver) {
-    var bits = [];
-    if (ver.style)    bits.push(ver.style);
-    if (ver.ambiance) bits.push(ver.ambiance);
-    if (!bits.length && ver.titre) bits.push(ver.titre);   /* repli sur le titre tant que le style par version n'existe pas (Phase 2) */
-    return 'V' + ver.v + (bits.length ? ' · ' + bits.join(' · ') : '');
-  }
-
-  fetch('/api/lire-versions', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: token })
-  })
-  .then(function(r) { return r.ok ? r.json() : null; })
-  .then(function(d) {
-    /* ANTI-RACHAT / lien toujours à jour : si déjà acheté, l'aperçu (et son bouton d'achat) ne doit pas
-       s'afficher -> on renvoie à l'étape courante (page-chanson, ou espace-client si déjà accepté). */
-    if (d && d.commercial_status === 'purchased') {
-      location.replace('/' + (d.accepted ? 'espace-client' : 'page-chanson') + '?id=' + encodeURIComponent(token));
-      return;
-    }
-    if (d && window._CM) { window._CM.type = d.song_type || 'hommage'; if (window.cmPersonnaliser) window.cmPersonnaliser(); }
-    if (window.cmReady) window.cmReady();
-    if (!d || !Array.isArray(d.versions) || d.versions.length === 0) return;
-    var versions = d.versions;
-    var def = versions.length - 1;   /* la plus recente par defaut */
-
-    if (select && versions.length > 1) {
-      versions.forEach(function(ver, i) {
-        var opt = document.createElement('option');
-        opt.value = String(i);
-        opt.textContent = labelOf(ver);
-        select.appendChild(opt);
+  /* ── Chargement ── */
+  function charger(rappel){
+    fetch('/api/apercu?id='+encodeURIComponent(token),{headers:{accept:'application/json'}})
+      .then(function(r){
+        if(r.status===404){ montrer('probleme'); return null; }
+        if(r.status===409){
+          return r.json().then(function(x){
+            if(x.etape==='achete'){ window.location.href='/espace-client?id='+encodeURIComponent(token); }
+            else { window.location.href='/attente-paroles?id='+encodeURIComponent(token); }
+            return null;
+          });
+        }
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+      })
+      .then(function(p){ if(p){ if(rappel) rappel(p); else initialiser(p); } })
+      .catch(function(){
+        montrer('probleme');
+        document.getElementById('probleme-texte').textContent='Impossible de charger ton aperçu pour le moment. Réessaie dans un instant.';
       });
-      select.value = String(def);
-      select.addEventListener('change', function() {
-        var ver = versions[parseInt(select.value, 10)] || versions[def];
-        loadInto(ver.audio_url);
+  }
+
+  /* ── Player 60 s ── */
+  var audio=document.getElementById('audio'), btnPlay=document.getElementById('btn-play');
+  var carte=document.getElementById('carte-player');
+  function fmt(s){ s=Math.max(0,Math.floor(s||0)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+  function majTemps(){
+    var d=Math.min(audio.duration||60,60);
+    document.getElementById('temps').textContent=fmt(audio.currentTime)+' / '+fmt(d);
+    document.getElementById('barre-progres').style.width=Math.min(100,(audio.currentTime/(d||60))*100)+'%';
+  }
+  btnPlay.addEventListener('click',function(){
+    if(audio.paused){ audio.play().catch(function(){}); } else { audio.pause(); }
+  });
+  audio.addEventListener('play',function(){
+    btnPlay.textContent='❚❚'; carte.classList.add('joue'); etat.dernierT=audio.currentTime;
+    if(!etat.premierPlay){ etat.premierPlay=true; if(window.cmTrack) window.cmTrack('PreviewPlayed','preview_played',token); }
+  });
+  audio.addEventListener('pause',function(){ btnPlay.textContent='▶'; carte.classList.remove('joue'); etat.dernierT=null; });
+  audio.addEventListener('ended',function(){ btnPlay.textContent='▶'; carte.classList.remove('joue'); etat.dernierT=null; });
+  audio.addEventListener('timeupdate',function(){
+    majTemps();
+    /* Cumul d’écoute RÉELLE (pas d’avance rapide) : deltas positifs ≤ 1,5 s. */
+    if(etat.dernierT!==null){
+      var delta=audio.currentTime-etat.dernierT;
+      if(delta>0&&delta<1.5) etat.ecoute+=delta;
+      etat.dernierT=audio.currentTime;
+      if(!etat.revele&&etat.ecoute>=ECOUTE_REQUISE) revelerRevision();
+    }
+  });
+  document.getElementById('piste-progres').addEventListener('click',function(e){
+    var r=this.getBoundingClientRect();
+    var d=Math.min(audio.duration||60,60);
+    audio.currentTime=Math.max(0,Math.min(d-0.2,((e.clientX-r.left)/r.width)*d));
+  });
+
+  /* ── Révision : états ── */
+  var blocs={formulaire:document.getElementById('rev-formulaire'),analyse:document.getElementById('rev-analyse'),
+    proposition:document.getElementById('rev-proposition'),equipe:document.getElementById('rev-equipe')};
+  var revErr=document.getElementById('rev-erreur');
+  function blocRevision(nom){ for(var k in blocs){ blocs[k].hidden=(k!==nom); } revErr.classList.remove('show'); }
+  function revelerRevision(){ etat.revele=true; document.getElementById('carte-revision').hidden=false; }
+
+  function strophes(texte,conteneur){
+    var parts=String(texte||'').split(/\n\s*\n/).filter(function(s){return s.trim();});
+    document.getElementById(conteneur).innerHTML=parts.map(function(s,i){
+      return '<p class="strophe'+(i%2?' impaire':'')+'">'+echap(s.trim())+'</p>';
+    }).join('');
+  }
+
+  function appliquerDemande(d){
+    etat.demande=d||null;
+    if(!d){ blocRevision('formulaire'); return; }
+    revelerRevision(); /* une demande active = panneau visible, écoute ou pas */
+    if(d.etat==='recue'){ blocRevision('analyse'); sonderDemande(); }
+    else if(d.etat==='analysee_ia'&&d.paroles_proposees){ strophes(d.paroles_proposees,'rev-paroles'); blocRevision('proposition'); }
+    else if(d.etat==='en_validation'){ blocRevision('equipe'); }
+    else if(d.etat==='approuvee'||d.etat==='en_generation'){ window.location.href='/attente-paroles?id='+encodeURIComponent(token); }
+    else { blocRevision('formulaire'); }
+  }
+
+  function sonderDemande(){
+    if(etat.pollTimer) clearTimeout(etat.pollTimer);
+    etat.pollTimer=setTimeout(function(){
+      charger(function(p){ appliquerDemande(p.demande); if(p.demande&&p.demande.etat==='recue') sonderDemande(); });
+    },2500);
+  }
+
+  document.getElementById('rev-envoyer').addEventListener('click',function(){
+    var b=this, texte=document.getElementById('rev-texte').value.trim();
+    revErr.classList.remove('show');
+    if(texte.length<3){ revErr.textContent='Décris d’abord ce que tu aimerais changer.'; revErr.classList.add('show'); return; }
+    b.disabled=true; b.textContent='Envoi…';
+    fetch('/api/apercu-revision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,modifications:texte})})
+      .then(function(r){ return r.json().then(function(x){ return {status:r.status,x:x}; }); })
+      .then(function(res){
+        if(res.status===200&&res.x.statut==='equipe'){ blocRevision('equipe'); return; }
+        if((res.status===202&&res.x.statut==='analyse')||res.x.statut==='deja_en_cours'){ blocRevision('analyse'); sonderDemande(); return; }
+        throw new Error('HTTP '+res.status);
+      })
+      .catch(function(){
+        revErr.textContent='La demande n’est pas partie. Vérifie ta connexion puis réessaie.'; revErr.classList.add('show');
+      })
+      .finally(function(){ b.disabled=false; b.textContent='Envoyer ma demande'; });
+  });
+
+  document.getElementById('rev-approuver').addEventListener('click',function(){
+    var b=this; if(!etat.demande) return;
+    b.disabled=true; b.textContent='On recrée ta chanson…';
+    fetch('/api/apercu-approuver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,demande_id:etat.demande.id})})
+      .then(function(r){ return r.json().then(function(x){ return {status:r.status,x:x}; }); })
+      .then(function(res){
+        if(res.x.statut==='relance'){ window.location.href='/attente-paroles?id='+encodeURIComponent(token); return; }
+        if(res.x.statut==='equipe'){ blocRevision('equipe'); return; }
+        throw new Error('HTTP '+res.status);
+      })
+      .catch(function(){
+        revErr.textContent='La relance n’a pas fonctionné. Réessaie dans un instant.'; revErr.classList.add('show');
+        b.disabled=false; b.textContent='Approuver et recréer la chanson';
       });
-      if (picker) picker.style.display = 'block';
+  });
+
+  /* ── Achat : se branche à la prochaine étape du chantier (Stripe). ── */
+  function achatBientot(){
+    var m=document.getElementById('achat-info');
+    m.textContent='Le paiement se branche à la prochaine étape du chantier : ton aperçu et tes révisions sont sauvegardés.';
+    m.classList.add('show');
+    m.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  document.getElementById('btn-acheter').addEventListener('click',achatBientot);
+  document.getElementById('btn-acheter-2').addEventListener('click',achatBientot);
+
+  /* ── Init ── */
+  function initialiser(p){
+    document.getElementById('titre-chanson').textContent=p.titre||'Ta chanson';
+    strophes(p.paroles,'paroles');
+    if(p.audio_url) audio.src=p.audio_url;
+    if(p.revision_equipe){
+      var c=document.getElementById('compteur-appels');
+      c.hidden=false;
+      c.textContent='Les prochaines retouches passent par notre équipe (réponse en 24-48 h) : ta chanson mérite une oreille humaine.';
     }
-
-    var titleEl = wrap.querySelector('.cm-title');
-    if (titleEl && versions[def].titre) titleEl.textContent = versions[def].titre;   /* titre (depuis les détails) affiché avec l'aperçu */
-    loadInto(versions[def].audio_url);
-  })
-  .catch(function() {});
-})();
-
-/* ── PERSONNALISATION NOM + TYPE (hommage / cadeau) ──────────────────────
-   song_type vient de lire-versions (async) -> fonction globale ré-appelée quand
-   le type est connu. Par défaut = hommage (le HTML est déjà en hommage). */
-window.cmPersonnaliser = function() {
-  var nom    = (window._CM && window._CM.nom) ? window._CM.nom : '';
-  var cadeau = (window._CM && window._CM.type) === 'cadeau';
-  /* Securite : le nom vient de l'URL (?name=) -> on l'echappe avant toute injection innerHTML (anti-XSS). */
-  var esc = function(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
-  var strong = nom ? '<strong>' + esc(nom) + '</strong>' : '';
-  function setH(id, html){ var el = document.getElementById(id); if (el) el.innerHTML = html; }
-  function setT(id, txt){ var el = document.getElementById(id); if (el) el.textContent = txt; }
-
-  /* Hero */
-  if (cadeau) setH('cm-hero-title', nom ? 'Voici la chanson composée pour ' + strong : 'Voici sa chanson');
-  else if (nom) setH('cm-hero-title', 'Voici la chanson composée pour honorer la mémoire de ' + strong);
-
-  /* Valeur — ligne 1 */
-  if (cadeau) setH('cm-value-nom', nom ? 'Une chanson originale, composée uniquement pour ' + strong : 'Une chanson originale, rien que la sienne');
-  else if (nom) setH('cm-value-nom', 'Une chanson originale, composée uniquement pour honorer la mémoire de ' + strong);
-
-  /* Valeur — page à partager */
-  if (cadeau) setT('cm-value-share', 'Une page privée à partager avec ceux que tu aimes');
-
-  /* Étape « partage » */
-  if (cadeau) setT('cm-step-share-title', 'Tu la partages avec ceux qui comptent');
-
-  /* Récit */
-  if (cadeau) setH('cm-story-sub',
-    'Cette chanson est née des souvenirs que tu as partagés. Elle n\'existe nulle part ailleurs. Elle ne ressemble à personne d\'autre. Elle lui ressemble, à ce qu\'il ou elle représente pour toi.<br><br>' +
-    'Certains l\'offrent pour un anniversaire, un mariage, une fête. D\'autres juste pour faire plaisir, sans raison particulière.<br><br>' +
-    'Une chanson, c\'est une façon de dire ce qu\'on n\'ose pas toujours dire.');
-
-  /* Garantie (basée sur le prénom — identique hommage/cadeau) */
-  if (nom) setH('cm-guarantee-title', 'Révisée jusqu\'à ce qu\'elle ressemble vraiment à ' + strong);
-
-  /* CTA bas */
-  if (cadeau) setH('cm-cta-pre', nom ? strong + ' mérite une chanson qui lui ressemble.' : 'Offre-lui une chanson qui lui ressemble vraiment.');
-  else if (nom) setH('cm-cta-pre', 'La mémoire de ' + strong + ' mérite une chanson qui lui ressemble.');
-
-  /* Sticky (identique) */
-  if (nom) setT('stripeBtnSticky', 'Obtenir la chanson de ' + nom);
-};
-window.cmReady = function(){
-  var l = document.getElementById('cm-loader');
-  if (!l || l.classList.contains('cm-hide')) return;
-  l.classList.add('cm-hide');
-  setTimeout(function(){ if (l.parentNode) l.parentNode.removeChild(l); }, 480);
-};
-window.cmPersonnaliser();
-setTimeout(function(){ if (window.cmReady) window.cmReady(); }, 3000);  /* filet : ne jamais rester bloqué sur la roue */
-
-/* ── STRIPE — session Checkout serveur (version choisie) ──────────────
-   Remplace le Payment Link. Crée la session via /api/creer-checkout (prix fixé serveur,
-   version en metadata) puis redirige vers session.url. Un menu près du bouton choisit la version. */
-(function() {
-  var token = (window._CM && window._CM.id)    || '';
-  var busy = false;
-  var cachedVersions = null;   /* versions chargées une fois (réutilisées par le popup d'achat) */
-
-  /* Charge les versions une fois (réutilisé par le popup de confirmation). */
-  function loadVersions() {
-    if (cachedVersions) return Promise.resolve(cachedVersions);
-    if (!token) return Promise.resolve([]);
-    return fetch('/api/lire-versions', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token }) })
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(d){ cachedVersions = (d && Array.isArray(d.versions)) ? d.versions : []; return cachedVersions; })
-      .catch(function(){ return []; });
-  }
-  if (token) loadVersions();   /* préchauffe au chargement */
-
-  /* Lance la session Stripe pour une version précise. */
-  function cmReadLast(){ try{ return JSON.parse(localStorage.getItem('cm_last_touch') || '{}') || {}; }catch(e){ return {}; } }
-  function cmCookie(n){ var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)'); return m?m.pop():''; }
-  /* Erreur de paiement : message inline dans le popup (#cm-buy-status), plus de alert() bloquant. */
-  function buyErr(msg){
-    busy = false;
-    var st = document.getElementById('cm-buy-status'); if (st) st.textContent = msg;
-    var bp = document.getElementById('cm-buy-proceed'); if (bp) bp.disabled = false;
-  }
-  function startCheckout(genNo, bumps) {
-    if (!genNo) { buyErr("Le paiement n'a pas pu démarrer. Réessaie dans un instant."); return; }
-    /* last-touch courant : le creatif qui a (re)amene le client jusqu'a l'achat -> creer-checkout
-       met a jour last_utm_* + fbclid/fbc du Projet avant Stripe. Attribution de la CONVERSION
-       (clic le plus recent) -> la CAPI Purchase porte le bon clic meme pour les achats tardifs. */
-    var lt = cmReadLast();
-    fetch('/api/creer-checkout', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ token: token, generation_no: genNo, bumps: bumps || [], last_touch: {
-        utm_source: lt.utm_source||'', utm_medium: lt.utm_medium||'', utm_campaign: lt.utm_campaign||'',
-        utm_content: lt.utm_content||'', utm_term: lt.utm_term||'', landing_page: lt.landing_page||'', at: lt.at||'',
-        fbclid: lt.fbclid||'', fbc: cmCookie('_fbc')
-      }})
-    })
-    .then(function(r){ return r.json().then(function(d){ return { status: r.status, ok: r.ok, d: d }; }, function(){ return { status: r.status, ok: r.ok, d: null }; }); })
-    .then(function(res){
-      var d = res.d;
-      if (res.ok && d && d.url) { window.location.href = d.url; return; }   /* → Stripe Checkout */
-      /* Déjà acheté (ancien lien) : on n'affiche pas d'erreur, on renvoie à l'étape courante (anti-rachat). */
-      if (res.status === 409 && d && d.already_purchased) {
-        location.replace('/' + (d.accepted ? 'espace-client' : 'page-chanson') + '?id=' + encodeURIComponent(token));
-        return;
-      }
-      buyErr("Le paiement n'a pas pu démarrer. Réessaie dans un instant.");
-    })
-    .catch(function(){ buyErr("Le paiement n'a pas pu démarrer. Réessaie dans un instant."); });
+    appliquerDemande(p.demande);
+    montrer('apercu');
+    majTemps();
   }
 
-  /* Popup de confirmation : version (si >1) + order bumps optionnels → 1 seul checkout. */
-  var buyOverlay = document.getElementById('cm-buy-overlay');
-  var buyOptions = document.getElementById('cm-buy-options');
-  var buyBumps   = document.getElementById('cm-buy-bumps');
-  var buyProceed = document.getElementById('cm-buy-proceed');
-  var buyClose   = document.getElementById('cm-buy-close');
-  var selectedGen = null;
-
-  /* Order bumps proposés. Le produit principal reste le héros : ceux-ci sont optionnels, décochés, en dessous. */
-  var BUMPS = [
-    { key:'instrumental',     label:'Version instrumentale',     price:'19,99 $', desc:'La trame musicale seule, sans voix.' },
-    { key:'paroles_vivantes', label:'Paroles vivantes en vidéo', price:'13,99 $', desc:'Les paroles animées, à partager.' },
-    { key:'pdf_paroles',      label:'Paroles en PDF',            price:'7,99 $',  desc:'Une belle feuille de tes paroles, à imprimer ou à garder.' }
-  ];
-
-  function closeBuy(){ if (buyOverlay) { buyOverlay.classList.remove('show'); buyOverlay.setAttribute('aria-hidden','true'); } window.cmModal.close(); busy = false; }
-  if (buyClose)   buyClose.addEventListener('click', closeBuy);
-  if (buyOverlay) buyOverlay.addEventListener('click', function(e){ if (e.target === buyOverlay) closeBuy(); });
-
-  function openBuy(versions) {
-    if (!buyOverlay) { startCheckout(versions[versions.length - 1].generation_no, []); return; }
-    selectedGen = versions[versions.length - 1].generation_no;   /* défaut : dernière version */
-
-    /* Versions (sélection) — affichées seulement s'il y en a plus d'une. */
-    buyOptions.innerHTML = '';
-    if (versions.length > 1) {
-      versions.forEach(function(ver){
-        var bits = [ver.style, ver.ambiance].filter(Boolean);
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'cm-ver-opt';
-        b.textContent = 'V' + ver.v + (bits.length ? ' · ' + bits.join(' · ') : '');
-        if (ver.generation_no === selectedGen) b.classList.add('selected');
-        b.addEventListener('click', function(){
-          selectedGen = ver.generation_no;
-          [].forEach.call(buyOptions.children, function(c){ c.classList.remove('selected'); });
-          b.classList.add('selected');
-        });
-        buyOptions.appendChild(b);
-      });
-    }
-
-    /* Order bumps (optionnels, décochés). */
-    buyBumps.innerHTML = '';
-    var t = document.createElement('div'); t.className = 'cm-buy-bumps-title';
-    t.textContent = 'Ajoute à ta commande (optionnel)';
-    buyBumps.appendChild(t);
-    BUMPS.forEach(function(bp){
-      var lbl = document.createElement('label'); lbl.className = 'cm-bump';
-      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = bp.key;
-      var span = document.createElement('span');
-      span.innerHTML = bp.label + ' · +' + bp.price + '<small>' + bp.desc + '</small>';
-      lbl.appendChild(cb); lbl.appendChild(span);
-      buyBumps.appendChild(lbl);
-    });
-
-    buyOverlay.classList.add('show'); buyOverlay.setAttribute('aria-hidden','false');
-    window.cmModal.open(buyOverlay, closeBuy);
-  }
-
-  if (buyProceed) buyProceed.addEventListener('click', function(){
-    var bumps = [].map.call(buyBumps.querySelectorAll('input:checked'), function(cb){ return cb.value; });
-    /* On garde le popup ouvert avec un statut le temps de creer la session Stripe ; en cas d'echec
-       l'erreur s'affiche dans #cm-buy-status. En cas de succes, startCheckout redirige vers Stripe. */
-    var st = document.getElementById('cm-buy-status'); if (st) st.textContent = 'Redirection vers le paiement sécurisé…';
-    buyProceed.disabled = true;
-    startCheckout(selectedGen, bumps);
-  });
-
-  function goStripe() {
-    if (busy || !token) return;               /* aperçu legacy sans token : pas d'achat serveur */
-    busy = true;
-    if (window._cmFunnel) window._cmFunnel('checkout_started');   /* intention d'achat */
-    loadVersions().then(function(versions){
-      if (!versions || !versions.length) {
-        busy = false;
-        if (buyOverlay) { buyOverlay.classList.add('show'); buyOverlay.setAttribute('aria-hidden','false'); }
-        var st = document.getElementById('cm-buy-status'); if (st) st.textContent = "Le paiement n'a pas pu démarrer. Réessaie dans un instant.";
-        return;
-      }
-      openBuy(versions);   /* toujours : confirmation version + bumps → 1 seul checkout */
-    });
-  }
-
-  ['stripeBtnPricing', 'stripeBtnBottom', 'stripeBtnSticky'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.addEventListener('click', goStripe);
-  });
-})();
-
-/* ── RÉGÉNÉRER : 2 actions ───────────────────────────
-   (1) « Essayer un autre style » → popup in-page (style/voix/ambiance + souvenir optionnel),
-       MÊME personne / même projet. Sans nouveau souvenir : nouvelle chanson directe (mêmes
-       paroles, nouvelle musique). Avec souvenir : on réécrit d'abord les paroles → /revision.
-   (2) « Créer une chanson pour quelqu'un d'autre » → nouveau survey, NOUVEAU projet/token.
-   Plafond appliqué côté SERVEUR (fonction Netlify) ; ici, UX seulement. */
-(function() {
-  var token = (window._CM && window._CM.id) || '';
-  if (!token) return;                 /* aperçu legacy → on n'affiche rien */
-  var anchor = document.getElementById('cm-pricing-root');
-  if (!anchor) return;
-
-  /* Options EXACTES du survey (doivent matcher les single-selects Airtable). */
-  var STYLES = ['Pop','Country','R&B','Rock','Jazz','Acoustique','Douce Mélodie','Orchestre Gospel','Hip-Hop','Cinématographique','Latin / Salsa','Reggae','Électronique / Dance'];
-  var MOODS  = ['Émotionnelle','Tendre','Paisible','Inspirante','Reconnaissante','Festive','Optimiste','Mélancolique'];
-  var VOICES = ['Masculin','Féminin'];
-  var LANCER_CHANSON = '/api/lancer-chanson';   // fonction Netlify (robuste, JSON.stringify côté serveur)
-
-  /* Bouton « Essayer un autre style » placé SOUS le lecteur audio.
-     NOTE: « Créer une chanson pour quelqu'un d'autre » a été retiré d'ici pour ne pas nuire à
-     la conversion ; il sera déplacé sur la page finale de réception (voir mémoire cm-apercu-boutons). */
-  var actions = document.createElement('div');
-  actions.className = 'cm-regen-actions';
-  var bPron = document.createElement('button');
-  bPron.type = 'button'; bPron.className = 'cm-regen-btn cm-regen-btn-sec'; bPron.textContent = 'Erreur de prononciation';
-  var b1 = document.createElement('button');
-  b1.type = 'button'; b1.className = 'cm-regen-btn'; b1.textContent = 'Essayer un autre style';
-  var note = document.createElement('p');
-  note.className = 'cm-regen-note';
-  note.textContent = "Ajuste le style, la voix ou l'ambiance, ou bonifie un souvenir.";
-  actions.appendChild(bPron); actions.appendChild(b1); actions.appendChild(note);
-  var player = document.getElementById('cm-player-root');
-  if (player) player.parentNode.insertBefore(actions, player.nextSibling);
-  else anchor.parentNode.insertBefore(actions, anchor.nextSibling);
-
-  /* Modal. */
-  var overlay  = document.getElementById('cm-style-overlay');
-  var selMus   = document.getElementById('cm-style-musique');
-  var selVoix  = document.getElementById('cm-style-voix');
-  var selAmb   = document.getElementById('cm-style-ambiance');
-  var taSouv   = document.getElementById('cm-style-souvenirs');
-  var statusEl = document.getElementById('cm-style-status');
-  var btnConf  = document.getElementById('cm-style-confirm');
-
-  function fill(sel, arr) { arr.forEach(function(v){ var o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); }); }
-  if (selMus)  fill(selMus, STYLES);
-  if (selVoix) fill(selVoix, VOICES);
-  if (selAmb)  fill(selAmb, MOODS);
-
-  function setStatus(t){ if (statusEl) statusEl.textContent = t || ''; }
-  function openModal(){
-    if (!overlay) return;
-    setStatus(''); if (btnConf) btnConf.disabled = false;
-    var _f=document.getElementById('cm-style-form'); if(_f) _f.style.display='';
-    var _c=document.getElementById('cm-cap-help'); if(_c) _c.style.display='none';
-    overlay.classList.add('show'); overlay.setAttribute('aria-hidden','false');
-    window.cmModal.open(overlay, closeModal);
-    /* Pré-sélectionne les valeurs actuelles (lire-survey, lecture seule minimisée). */
-    fetch('/api/lire-survey', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token }) })
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(d){ if(!d) return;
-        if (d.style_musical && selMus)  selMus.value  = d.style_musical;
-        if (d.voix          && selVoix) selVoix.value = d.voix;
-        if (d.ambiance      && selAmb)  selAmb.value  = d.ambiance;
-      })
-      .catch(function(){});
-  }
-  function closeModal(){ if(!overlay) return; overlay.classList.remove('show'); overlay.setAttribute('aria-hidden','true'); window.cmModal.close(); }
-
-  b1.addEventListener('click', openModal);
-  /* (b2 « Créer une chanson pour quelqu'un d'autre » retiré de l'aperçu — ira sur la page finale.) */
-
-  /* ── Erreur de prononciation → courriel équipe (analyse IA) ; le client patiente 24-48 h. ── */
-  var pOv = document.getElementById('cm-pron-overlay');
-  function pOpen(){
-    if (!pOv) return;
-    var f=document.getElementById('cm-pron-form'), d=document.getElementById('cm-pron-done'), s=document.getElementById('cm-pron-status');
-    if (f) f.style.display=''; if (d) d.style.display='none'; if (s) s.textContent='';
-    var snd=document.getElementById('cm-pron-send'); if (snd) snd.disabled=false;
-    pOv.classList.add('show'); pOv.setAttribute('aria-hidden','false');
-    window.cmModal.open(pOv, pClose);
-  }
-  function pClose(){ if (!pOv) return; pOv.classList.remove('show'); pOv.setAttribute('aria-hidden','true'); window.cmModal.close(); }
-  bPron.addEventListener('click', pOpen);
-  var pCloseBtn=document.getElementById('cm-pron-close'), pCancel=document.getElementById('cm-pron-cancel'), pOk=document.getElementById('cm-pron-ok');
-  if (pCloseBtn) pCloseBtn.addEventListener('click', pClose);
-  if (pCancel)   pCancel.addEventListener('click', pClose);
-  if (pOk)       pOk.addEventListener('click', pClose);
-  if (pOv)       pOv.addEventListener('click', function(e){ if (e.target === pOv) pClose(); });
-  var pSend=document.getElementById('cm-pron-send');
-  if (pSend) pSend.addEventListener('click', function(){
-    var mot=(document.getElementById('cm-pron-mot').value || '').trim();
-    var comment=(document.getElementById('cm-pron-comment').value || '').trim();
-    var autre=(document.getElementById('cm-pron-autre').value || '').trim();
-    var s=document.getElementById('cm-pron-status');
-    if (!mot && !autre){ if (s) s.textContent='Indique le mot mal prononcé, ou écris-nous dans « Autre chose ».'; return; }
-    pSend.disabled=true; if (s) s.textContent='Un instant…';
-    fetch('/api/prononciation', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, mot: mot, indication: comment, autre: autre }) })
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(res){
-        if (res && res.ok){ var f=document.getElementById('cm-pron-form'), d=document.getElementById('cm-pron-done'); if (f) f.style.display='none'; if (d) d.style.display='block'; if (s) s.textContent=''; }
-        else { pSend.disabled=false; if (s) s.textContent='Un souci est survenu. Réessaye dans un instant.'; }
-      })
-      .catch(function(){ pSend.disabled=false; if (s) s.textContent='Un souci est survenu. Réessaye dans un instant.'; });
-  });
-
-  var closeBtn  = document.getElementById('cm-style-close');
-  var cancelBtn = document.getElementById('cm-style-cancel');
-  if (closeBtn)  closeBtn.addEventListener('click', closeModal);
-  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-  if (overlay)   overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
-
-  if (btnConf) btnConf.addEventListener('click', function(){
-    var music_style = selMus ? selMus.value : '';
-    var voice       = selVoix ? selVoix.value : '';
-    var mood        = selAmb ? selAmb.value : '';
-    var souvenirs   = (taSouv && taSouv.value || '').trim();
-    btnConf.disabled = true; setStatus('Un instant…');
-
-    /* 1. Applique le style choisi sur le Project (relu ensuite par C-gen). */
-    fetch('/api/essayer-style', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ token: token, music_style: music_style, mood: mood, voice: voice })
-    })
-    .then(function(rS){ if (!rS.ok) throw new Error('style');
-      if (souvenirs) {
-        /* 2a. Nouveau souvenir → réécrit les paroles (différentes) → /revision pour accepter. */
-        return fetch('/api/generate-lyrics', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ mode:'regenerate', token: token, modifications: souvenirs })
-        }).then(function(rL){ return rL.json().then(function(dL){
-          if (!rL.ok || !dL || !dL.paroles) throw new Error('lyrics');
-          window.location.href = '/revision?id=' + encodeURIComponent(token);
-        }); });
-      }
-      /* 2b. Sans nouveau souvenir → nouvelle chanson directe (mêmes paroles, nouvelle musique). */
-      return fetch(LANCER_CHANSON, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ token: token, mode:'song', post_purchase:false })
-      }).then(function(rG){ return rG.json().catch(function(){ return {}; }).then(function(dG){
-        if (dG && dG.status === 'plafond') {
-          showCapHelp(dG.message); return;
-        }
-        if (!rG.ok || !(dG && dG.ok)) throw new Error('launch');   // échec du lancement -> .catch (message + bouton réactivé)
-        window.location.href = '/attente-chanson?id=' + encodeURIComponent(token);
-      }); });
-    })
-    .catch(function(){ setStatus("Un souci est survenu. Réessayez dans un instant."); btnConf.disabled = false; });
-  });
-
-  /* ── Popup au cap (plafond serveur atteint) : message chaleureux + box courriel + alerte ── */
-  function showCapHelp(msg){
-    setStatus('');
-    var f=document.getElementById('cm-style-form'); if(f) f.style.display='none';
-    if (msg){ var m=document.getElementById('cm-cap-msg'); if(m) m.textContent=msg; }
-    var c=document.getElementById('cm-cap-help'); if(c) c.style.display='block';
-  }
-  var capSend=document.getElementById('cm-cap-send'), capEmail=document.getElementById('cm-cap-email'), capDetails=document.getElementById('cm-cap-details'), capStatus=document.getElementById('cm-cap-status');
-  if (capSend) capSend.addEventListener('click', function(){
-    var email=(capEmail && capEmail.value || '').trim();
-    if (!email || email.indexOf('@') < 1){ if(capStatus) capStatus.textContent='Entrez un courriel valide.'; return; }
-    var details=(capDetails && capDetails.value || '').trim();
-    capSend.disabled=true; if(capStatus) capStatus.textContent='Un instant…';
-    fetch('/api/aide-plafond', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, email: email, details: details }) })
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(res){
-        if (res && res.ok){
-          if(capEmail) capEmail.style.display='none';
-          if(capDetails) capDetails.style.display='none';
-          capSend.style.display='none';
-          var labs=document.querySelectorAll('#cm-cap-help .cm-modal-label'); for(var i=0;i<labs.length;i++) labs[i].style.display='none';
-          if(capStatus) capStatus.textContent='Merci ✓ On a bien reçu ta demande. On t’écrit très bientôt pour t’aider à créer ta version.';
-        }
-        else { capSend.disabled=false; if(capStatus) capStatus.textContent='Un souci est survenu. Réessayez.'; }
-      })
-      .catch(function(){ capSend.disabled=false; if(capStatus) capStatus.textContent='Un souci est survenu. Réessayez.'; });
-  });
-})();
-
-/* ── POINT D'ENTRÉE UNIQUE des modifications (modale unifiée) ───────────
-   Additif : ne touche PAS aux modales existantes (style / prononciation).
-   Masque les 2 anciens boutons, pose un bouton unique, et route :
-   - puce « style/voix »        -> clique le bouton style existant (menus déroulants)
-   - texte libre -> /api/demander-modif-client (analyse + règle de priorité) :
-       route 'cover'        -> /revision?mode=cover (validation des paroles)
-       route 'regen'        -> ouvre les menus de style
-       route 'prononciation'-> /api/prononciation (l'équipe te revient) */
-(function(){
-  var token = (window._CM && window._CM.id) || '';
-  if (!token) return;
-  var oldActions = document.querySelector('.cm-regen-actions');
-  if (!oldActions) return;
-  var bStyle = oldActions.querySelector('.cm-regen-btn:not(.cm-regen-btn-sec)');   // « Essayer un autre style »
-  var bPron  = oldActions.querySelector('.cm-regen-btn-sec');                       // « Erreur de prononciation »
-
-  /* Masque les 2 anciens boutons, insère le bouton unique au même endroit. */
-  oldActions.style.display = 'none';
-  var actions = document.createElement('div');
-  actions.className = 'cm-regen-actions';
-  var bOpen = document.createElement('button');
-  bOpen.type = 'button'; bOpen.className = 'cm-regen-btn'; bOpen.textContent = 'Quelque chose à ajuster ?';
-  var note = document.createElement('p');
-  note.className = 'cm-regen-note';
-  note.textContent = "Une correction, un autre style, un souvenir à ajouter… on s'en occupe.";
-  actions.appendChild(bOpen); actions.appendChild(note);
-  oldActions.parentNode.insertBefore(actions, oldActions);
-
-  var ov = document.getElementById('cm-modif-overlay');
-  var ta = document.getElementById('cm-modif-texte');
-  var hint = document.getElementById('cm-modif-hint');
-  var statusEl = document.getElementById('cm-modif-status');
-  var send = document.getElementById('cm-modif-send');
-  var chips = ov ? ov.querySelectorAll('.cm-modif-chip') : [];
-
-  /* #16 : brouillon non envoyé (par token) ; #6 : overlay de chargement plein écran. */
-  var DRAFT_KEY = 'cm_modif_draft_' + token;
-  function saveDraft(){ try { localStorage.setItem(DRAFT_KEY, (ta && ta.value) || ''); } catch(_){} }
-  function clearDraft(){ try { localStorage.removeItem(DRAFT_KEY); } catch(_){} }
-  var loadOv = null;
-  function showLoad(){
-    if(!loadOv){
-      var st = document.createElement('style'); st.textContent = '@keyframes cmModifSpin{to{transform:rotate(360deg);}}'; document.head.appendChild(st);
-      loadOv = document.createElement('div');
-      loadOv.id = 'cm-modif-loading';
-      loadOv.style.cssText = 'position:fixed;inset:0;z-index:1100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:var(--cm-bg,#FBF7F2);text-align:center;padding:24px;';
-      loadOv.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;border:3px solid var(--cm-mauve,#C98BB0);border-top-color:var(--cm-plum-dark,#5C2D4A);animation:cmModifSpin .8s linear infinite;"></div><p style="font-family:\'Mulish\',sans-serif;font-size:16px;color:var(--cm-text-sub,#7A6070);max-width:340px;line-height:1.5;">Un instant, on prépare tes paroles corrigées…</p>';
-      document.body.appendChild(loadOv);
-    }
-    loadOv.style.display = 'flex';
-  }
-  function hideLoad(){ if(loadOv) loadOv.style.display = 'none'; }
-
-  var CFG = {
-    pron:     { ph:"Quel mot, et comment ça devrait sonner ? Ex. : « Ghislaine » se dit « Jislaine ».", hint:"On vérifie la prononciation et on te revient." },
-    souvenir: { ph:"Raconte le souvenir à ajouter. Ex. : ses étés au chalet avec les petits-enfants.", hint:"On réécrit les paroles, tu les valides, puis on régénère." },
-    paroles:  { ph:"Quel détail corriger ? Ex. : elle est née en 1948, pas 1949.", hint:"On te montre les paroles corrigées à valider, puis on régénère." }
-  };
-
-  function styleChip(c, on){
-    c.style.background  = on ? 'var(--cm-plum-dark)' : 'var(--cm-white)';
-    c.style.color       = on ? '#fff' : 'var(--cm-plum-mid)';
-    c.style.borderColor = on ? 'var(--cm-plum-dark)' : 'var(--cm-mauve)';
-  }
-  function setActive(k){
-    chips.forEach(function(c){ styleChip(c, c.dataset.k === k); });
-    var cfg = CFG[k] || {};
-    if (ta)   ta.setAttribute('placeholder', cfg.ph || 'Décris ce que tu aimerais changer…');
-    if (hint && cfg.hint) hint.textContent = cfg.hint;
-  }
-
-  function openModal(){
-    if (!ov) return;
-    var f = document.getElementById('cm-modif-form'), d = document.getElementById('cm-modif-done');
-    if (f) f.style.display = ''; if (d) d.style.display = 'none';
-    if (statusEl) statusEl.textContent = ''; if (send) send.disabled = false;
-    try { if (ta) ta.value = localStorage.getItem(DRAFT_KEY) || ''; } catch(_){}   // #16 : restaure le brouillon non envoyé
-    ov.classList.add('show'); ov.setAttribute('aria-hidden','false');
-    if (window.cmModal) window.cmModal.open(ov, closeModal);
-  }
-  function closeModal(){ if (!ov) return; ov.classList.remove('show'); ov.setAttribute('aria-hidden','true'); if (window.cmModal) window.cmModal.close(); }
-  bOpen.addEventListener('click', openModal);
-
-  chips.forEach(function(c){ styleChip(c, false); c.addEventListener('click', function(){
-    if (c.dataset.k === 'style'){ closeModal(); if (bStyle) bStyle.click(); return; }   // style = menus existants
-    setActive(c.dataset.k);
-    if (ta) ta.focus();
-  }); });
-
-  var cl = document.getElementById('cm-modif-close'), ca = document.getElementById('cm-modif-cancel'), ok = document.getElementById('cm-modif-ok');
-  if (cl) cl.addEventListener('click', closeModal);
-  if (ca) ca.addEventListener('click', closeModal);
-  if (ok) ok.addEventListener('click', closeModal);
-  if (ov) ov.addEventListener('click', function(e){ if (e.target === ov) closeModal(); });
-
-  if (ta) ta.addEventListener('input', saveDraft);   // #16 : garde le brouillon non envoyé
-  if (send) send.addEventListener('click', function(){
-    var texte = (ta && ta.value || '').trim();
-    if (!texte){ if (statusEl) statusEl.textContent = 'Décris en quelques mots ce que tu veux ajuster.'; if (ta) ta.focus(); return; }
-    send.disabled = true; if (statusEl) statusEl.textContent = 'Un instant, on prépare ta demande…';
-    showLoad();   // #6 : overlay de chargement plein écran pendant l'analyse
-    fetch('/api/demander-modif-client', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, action: 'analyser', texte: texte }) })
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(res){
-        if (!res || !res.ok) throw new Error('ko');
-        if (res.route === 'busy'){
-          hideLoad();
-          if (statusEl) statusEl.textContent = 'Ta version précédente se prépare encore, laisse-lui un petit instant puis réessaie.';
-          send.disabled = false; return;   // #16 : pas envoyé -> on garde le brouillon
-        }
-        if (res.route === 'cover'){
-          clearDraft();   // #16 : demande partie en proposition -> on vide le brouillon
-          try { sessionStorage.setItem('cm_cover_' + token, JSON.stringify({ lyrics: res.lyrics || '', titre: res.titre || '' })); } catch (_) {}
-          window.location.href = '/revision?id=' + encodeURIComponent(token) + '&mode=cover';
-          return;   // l'overlay de chargement reste affiché pendant la bascule vers /revision
-        }
-        if (res.route === 'regen'){
-          hideLoad();
-          if (statusEl) statusEl.textContent = 'Pour changer le style, choisis-le dans la liste.';
-          closeModal(); if (bStyle) bStyle.click(); return;
-        }
-        if (res.route === 'nouvelle_chanson'){
-          /* chanson complètement neuve (pas une retouche) : le serveur a déjà alerté l'équipe. */
-          hideLoad(); clearDraft();
-          var fN=document.getElementById('cm-modif-form'), dN=document.getElementById('cm-modif-done');
-          if (fN) fN.style.display='none';
-          if (dN){ dN.innerHTML = 'Ça ressemble à une <strong>nouvelle chanson</strong>, pas à une retouche de celle-ci. On a bien reçu ta demande et on te revient très vite.<br><br>Tu peux aussi en commander une nouvelle sur <a href="https://chansonmemoire.ca" style="color:#5C2D4A;">chansonmemoire.ca</a>.'; dN.style.display='block'; }
-          if (statusEl) statusEl.textContent='';
-          return;
-        }
-        /* prononciation : enregistre la demande (texte) pour l'équipe, message « on te revient ». */
-        return fetch('/api/prononciation', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, mot:'', indication:'', autre: texte }) })
-          .then(function(){ hideLoad(); clearDraft(); var f=document.getElementById('cm-modif-form'), d=document.getElementById('cm-modif-done'); if (f) f.style.display='none'; if (d) d.style.display='block'; if (statusEl) statusEl.textContent=''; });
-      })
-      .catch(function(){ hideLoad(); send.disabled = false; if (statusEl) statusEl.textContent = 'Un souci est survenu. Réessaie dans un instant.'; });
-  });
-})();
-
-/* ── Annee dynamique du footer (defaut 2026 si JS off) ── */
-(function(){ var y=document.getElementById('cm-year'); if(y) y.textContent=new Date().getFullYear(); })();
-
-/* ── FAQ accordion ──────────────────────────────────── */
-document.querySelectorAll('.cm-faq-btn').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    var item = btn.closest('.cm-faq-item');
-    var wasOpen = item.classList.contains('open');
-    document.querySelectorAll('.cm-faq-item.open').forEach(function(i){ i.classList.remove('open'); });
-    if (!wasOpen) item.classList.add('open');
-  });
-});
-
-/* ── STICKY dock ────────────────────────────────────── */
-(function() {
-  var dock = document.getElementById('cmSticky');
-  document.body.style.paddingBottom = '84px';
-  var seuil = (window.innerWidth <= 600) ? 150 : 400;   /* mobile : apparaît dès qu'on dépasse le lecteur + les 2 boutons */
-  function toggle() {
-    if (window.scrollY > seuil) { dock.classList.add('show'); dock.setAttribute('aria-hidden','false'); }
-    else { dock.classList.remove('show'); dock.setAttribute('aria-hidden','true'); }
-  }
-  window.addEventListener('scroll', toggle, {passive: true});
-  toggle();
-})();
-
-/* ── Apparition au scroll (IntersectionObserver, bidirectionnel = "vivant") ── */
-(function(){
-  if (matchMedia('(prefers-reduced-motion:reduce)').matches) return;
-  if (!('IntersectionObserver' in window)) return;
-  var targets = document.querySelectorAll('.cm-story, .cm-faq-item, .cm-step-body, .cm-cta-bottom');
-  if (!targets.length) return;
-  targets.forEach(function(t){ t.classList.add('cm-fx-reveal'); });
-  var io = new IntersectionObserver(function(entries){
-    entries.forEach(function(e){
-      if (e.isIntersecting) e.target.classList.add('cm-fx-in');
-      else e.target.classList.remove('cm-fx-in');
-    });
-  }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
-  targets.forEach(function(t){ io.observe(t); });
+  window.addEventListener('pagehide',function(){ if(etat.pollTimer) clearTimeout(etat.pollTimer); });
+  charger();
 })();
 </script>
-
-  <script src="/js/cm-pixel.js" defer></script>
+<script src="/js/cm-pixel.js" defer></script>
 </body>
 </html>
