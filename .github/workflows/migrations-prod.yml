@@ -35,23 +35,17 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.SUPABASE_DB_URL_DIRECT }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: Dépendances
         run: npm ci
 
-      - name: Garde-fou — connexion DIRECTE exigée (jamais le pooler transaction)
-        run: |
-          node -e "
-            const u = process.env.DATABASE_URL || '';
-            if (!u) { console.error('Secret SUPABASE_DB_URL_DIRECT manquant dans l\'Environment production-db.'); process.exit(1); }
-            if (u.includes(':6543')) { console.error('ERREUR : pooler transaction détecté (port 6543). Les migrations exigent la connexion DIRECTE port 5432.'); process.exit(1); }
-            console.log('Connexion directe confirmée.');
-          "
+      - name: Garde-fou — connexion de migration valide (port 5432, jamais 6543)
+        run: node scripts/verifier-url-migration.mjs
 
       - name: Appliquer les migrations (drizzle-kit migrate)
         run: npm run db:migrate
