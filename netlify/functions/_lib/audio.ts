@@ -25,19 +25,31 @@ export function parseCloudinary(url: string | null | undefined): AssetCloudinary
 }
 
 // transformation = 'du_60' (aperçu 60 s) ou '' (chanson complète, après achat seulement).
+//
+// ALGORITHME DE SIGNATURE (alerte CodeQL js/weak-cryptographic-algorithm, assumée) :
+// SHA-1 est le schéma de signature d'URL de LIVRAISON de Cloudinary (signature courte
+// 8 caractères), utilisé par TOUT le système actuel (lire-projet, lire-versions,
+// cloudinary-rehost…). Ce n'est pas un choix de crypto maison : c'est le format que
+// Cloudinary valide pour les assets déjà en prod. Risque réel faible : le secret ne
+// quitte jamais le serveur, aucune forge hors-ligne possible, et l'enjeu est la
+// distinction aperçu 60 s / chanson complète.
+// CHEMIN DE SORTIE : Cloudinary supporte SHA-256 (« long URL signature », 32 car.).
+// Poser CLOUDINARY_SIGN_ALGO=sha256 APRÈS avoir activé ce réglage dans le compte
+// Cloudinary (sinon les URLs signées seraient refusées) : bascule sans redéploiement.
 export function buildAudioUrl(stored: string | null | undefined, transformation: string): string {
   const p = parseCloudinary(stored);
   if (!p) return '';
   const tf = transformation ? transformation + '/' : '';
   if (p.type === 'authenticated' && process.env.CLOUDINARY_API_SECRET) {
+    const sha256 = process.env.CLOUDINARY_SIGN_ALGO === 'sha256';
     const toSign = tf + p.publicId + p.ext;
-    const sig = createHash('sha1')
+    const sig = createHash(sha256 ? 'sha256' : 'sha1')
       .update(toSign + process.env.CLOUDINARY_API_SECRET)
       .digest('base64')
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '')
-      .slice(0, 8);
+      .slice(0, sha256 ? 32 : 8);
     return `https://res.cloudinary.com/${p.cloud}/video/authenticated/s--${sig}--/${tf}${p.publicId}${p.ext}`;
   }
   return `https://res.cloudinary.com/${p.cloud}/video/upload/${tf}${p.publicId}${p.ext}`;
