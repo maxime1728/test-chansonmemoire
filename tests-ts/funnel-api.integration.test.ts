@@ -241,4 +241,52 @@ test('funnel v2 : parcours soumission -> lecture -> révision (base réelle)', {
     const sansCle = await background(evenement({ body: JSON.stringify({ token, secret: 'secret-ci' }) }), {});
     assert.equal(sansCle.statusCode, 500, 'clé manquante = P1 + 500, jamais un succès silencieux');
   });
+
+  await t.test('achat Stripe : transaction complète, version achetée tracée, bumps, idempotence + reprise', async () => {
+    const { enregistrerEvent, marquerEventTraite, traiterSessionPayee } = await import('../netlify/functions/_lib/stripe');
+    const [p] = await sql`select id from projects where token = ${token}`;
+    // Idempotence par contrainte : nouveau -> (échec ->) reprise -> traité -> no-op.
+    assert.equal(await enregistrerEvent('evt_it_1', 'checkout.session.completed'), 'nouveau');
+    await marquerEventTraite('evt_it_1', 'panne simulée');
+    assert.equal(await enregistrerEvent('evt_it_1', 'checkout.session.completed'), 'reprise', 'échec précédent = on retente');
+    await marquerEventTraite('evt_it_1');
+    assert.equal(await enregistrerEvent('evt_it_1', 'checkout.session.completed'), 'deja_traite');
+
+    const sess = {
+      id: 'cs_it_1',
+      payment_status: 'paid',
+      payment_intent: 'pi_it_1',
+      client_reference_id: token,
+      amount_total: 16195, // 139,97 + bumps
+      customer_details: { email },
+      metadata: { generation_no: '2', bumps: 'instrumental,pdf_paroles,inconnu' },
+    };
+    const r1 = await traiterSessionPayee(sess);
+    assert.equal(r1.ok, true);
+    assert.equal(r1.detail, 'achat');
+    const [proj] = await sql`select commercial_status, funnel_step, amount, purchased_generation_no, stripe_payment_intent from projects where id = ${p!.id}`;
+    assert.equal(proj?.commercial_status, 'purchased');
+    assert.equal(proj?.funnel_step, 'purchased');
+    assert.equal(String(proj?.amount), '161.95', 'cents entiers -> numeric, jamais parseFloat');
+    assert.equal(proj?.purchased_generation_no, 2, 'on SAIT quelle version a été achetée');
+    const bumps = await sql`select type from upsells where project_id = ${p!.id} order by type`;
+    assert.deepEqual(bumps.map((b) => b.type), ['instrumental', 'pdf_paroles'], 'clé inconnue filtrée (anti-tamper)');
+    // Rejouer la même session = no-op (stripe_payment_intent déjà posé).
+    const r2 = await traiterSessionPayee(sess);
+    assert.equal(r2.detail, 'deja-traite');
+    const n = await sql`select count(*)::int as n from upsells where project_id = ${p!.id}`;
+    assert.equal(n[0]?.n, 2, 'aucun doublon de bump au rejeu');
+  });
+
+  await t.test('checkout : projet déjà acheté = 409 anti-rachat (sans appel réseau)', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_fake';
+    try {
+      const { handler: checkout } = await import('../netlify/functions/checkout');
+      const r = await checkout(evenement({ body: JSON.stringify({ token }) }), {});
+      assert.equal(r.statusCode, 409);
+      assert.match(r.body ?? '', /already_purchased/);
+    } finally {
+      delete process.env.STRIPE_SECRET_KEY;
+    }
+  });
 });

@@ -242,8 +242,10 @@ export const upsells = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    // Valeurs réelles du code : video_memoire, lyrics_pdf, instrumental, paroles_vivantes,
-    // signet, plaque_indoor, plaque_outdoor. CHECK (extensible) plutôt qu'enum.
+    // Valeurs RÉELLES du code (clés bumps/metadata Stripe legacy) : video_memoire,
+    // pdf_paroles, instrumental, paroles_vivantes, signet, plaque_indoor,
+    // plaque_outdoor. CHECK (extensible) plutôt qu'enum. (« lyrics_pdf » du schema.sql
+    // d'évaluation était FAUX : attrapé par le test d'intégration achat.)
     type: text('type').notNull(),
     price: numeric('price', { precision: 10, scale: 2 }),
     status: upsellStatusEnum('status').notNull().default('purchased'),
@@ -260,7 +262,7 @@ export const upsells = pgTable(
     check('upsells_price_positif', sql`${t.price} is null or ${t.price} >= 0`),
     check(
       'upsells_type_valide',
-      sql`${t.type} in ('video_memoire', 'lyrics_pdf', 'instrumental', 'paroles_vivantes', 'signet', 'plaque_indoor', 'plaque_outdoor')`,
+      sql`${t.type} in ('video_memoire', 'pdf_paroles', 'instrumental', 'paroles_vivantes', 'signet', 'plaque_indoor', 'plaque_outdoor')`,
     ),
   ],
 );

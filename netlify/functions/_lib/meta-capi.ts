@@ -50,6 +50,47 @@ export function eventIdLead(token: string): string {
   return sha256Meta(`${token}.lead`);
 }
 
+// Purchase CAPI (dédup pixel : event_id = sha256(token.purchase), valeur en CAD).
+export async function envoyerPurchaseCapi(p: {
+  token: string;
+  email?: string;
+  montant: number;
+  ip?: string;
+  ua?: string;
+}): Promise<ResultatCapi> {
+  const CAPI_TOKEN = process.env.META_CAPI_TOKEN;
+  const CAPI_DATASET = process.env.META_DATASET_ID;
+  if (!CAPI_TOKEN || !CAPI_DATASET) return { sent: false, summary: 'capi-off (env manquante)' };
+  if (p.email && estCourrielInterne(p.email)) return { sent: false, summary: 'skip-interne' };
+  const user_data: Record<string, unknown> = {};
+  if (p.email && p.email.includes('@')) user_data.em = [sha256Meta(p.email)];
+  if (p.ip) user_data.client_ip_address = p.ip;
+  if (p.ua) user_data.client_user_agent = p.ua;
+  const payload = {
+    data: [
+      {
+        event_name: 'Purchase',
+        event_time: Math.floor(Date.now() / 1000),
+        action_source: 'website',
+        event_id: sha256Meta(`${p.token}.purchase`),
+        event_source_url: 'https://chansonmemoire.ca/espace-client', // SANS token
+        user_data,
+        custom_data: { currency: 'CAD', value: p.montant },
+      },
+    ],
+  };
+  try {
+    const resp = await fetch(
+      `https://graph.facebook.com/v21.0/${CAPI_DATASET}/events?access_token=${encodeURIComponent(CAPI_TOKEN)}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) },
+    );
+    const txt = await resp.text().catch(() => '');
+    return { sent: resp.ok, summary: `${resp.status} ${String(txt).slice(0, 300)}` };
+  } catch (e) {
+    return { sent: false, summary: 'fetch-error ' + (e instanceof Error ? e.message : String(e)) };
+  }
+}
+
 export async function envoyerLeadCapi(p: ParamsLead): Promise<ResultatCapi> {
   const CAPI_TOKEN = process.env.META_CAPI_TOKEN;
   const CAPI_DATASET = process.env.META_DATASET_ID;

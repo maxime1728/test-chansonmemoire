@@ -43,6 +43,13 @@
       "when": 1782996858240,
       "tag": "0005_seed_songs_styles",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783000420468,
+      "tag": "0006_upsell_type_pdf_paroles",
+      "breakpoints": true
     }
   ]
 }
