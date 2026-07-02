@@ -1,0 +1,2 @@
+ALTER TABLE "upsells" DROP CONSTRAINT "upsells_type_valide";--> statement-breakpoint
+ALTER TABLE "upsells" ADD CONSTRAINT "upsells_type_valide" CHECK ("upsells"."type" in ('video_memoire', 'pdf_paroles', 'instrumental', 'paroles_vivantes', 'signet', 'plaque_indoor', 'plaque_outdoor'));
