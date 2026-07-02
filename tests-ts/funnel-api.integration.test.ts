@@ -161,6 +161,77 @@ test('funnel v2 : parcours soumission -> lecture -> révision (base réelle)', {
     assert.equal(echec.statusCode, 500, 'URL background inaccessible -> 500 explicite, pas une attente infinie');
   });
 
+  await t.test('chanson auto : sans SUNO_API_KEY, relance = échec propre P1, AUCUNE ligne chanson', async () => {
+    process.env.ANTHROPIC_API_KEY = 'fake-inutilisee'; // le chemin retry ne parle jamais à Anthropic
+    delete process.env.SUNO_API_KEY;
+    const [p] = await sql`select id from projects where token = ${token}`;
+    assert.ok(p, 'projet présent');
+    await sql`insert into generations (project_id, generation_no, type, lyrics, song_title, status)
+              values (${p!.id}, 1, 'lyrics', ${'[Verse]\nLigne un\nLigne deux'}, 'IT-Titre', 'lyrics_generated')`;
+    const r = await background(evenement({ body: JSON.stringify({ token, secret: 'secret-ci' }) }), {});
+    assert.equal(r.statusCode, 200, r.body ?? '');
+    const chansons = await sql`select count(*)::int as n from generations where project_id = ${p!.id} and type in ('song','song_regeneration','cover')`;
+    assert.equal(chansons[0]?.n, 0, 'aucune chanson créée sans clé Suno (échec journalisé, pas silencieux)');
+  });
+
+  await t.test('callback chanson : match par suno_task_id UNIQUE -> audio_generated + preview_ready, idempotent', async () => {
+    const { handler: callback } = await import('../netlify/functions/chanson-callback');
+    const [p] = await sql`select id from projects where token = ${token}`;
+    await sql`insert into generations (project_id, generation_no, type, lyrics, song_title, status, suno_task_id)
+              values (${p!.id}, 2, 'song', 'IT paroles', 'IT-Titre', 'audio_pending', 'suno_it_1')`;
+    const corpsSuno = JSON.stringify({
+      code: 200,
+      data: {
+        task_id: 'suno_it_1',
+        callbackType: 'complete',
+        data: [{ id: 'clip_a', audio_url: 'https://cdn.exemple/a.mp3' }, { id: 'clip_b', audio_url: 'https://cdn.exemple/b.mp3' }],
+      },
+    });
+    const r1 = await callback(evenement({ body: corpsSuno }), {});
+    assert.equal(r1.statusCode, 200);
+    const [g] = await sql`select status, cloudinary_audio_url, song_id from generations where suno_task_id = 'suno_it_1'`;
+    assert.equal(g?.status, 'audio_generated');
+    assert.equal(g?.song_id, 'clip_b', 'piste retenue = data[1] (comportement C-cb historique)');
+    assert.equal(g?.cloudinary_audio_url, 'https://cdn.exemple/b.mp3', 'repli URL Suno quand Cloudinary absent (CI)');
+    const [proj] = await sql`select funnel_step from projects where id = ${p!.id}`;
+    assert.equal(proj?.funnel_step, 'preview_ready');
+    const r2 = await callback(evenement({ body: corpsSuno }), {});
+    assert.match(r2.body ?? '', /already/, 'rejouer le callback = no-op explicite');
+  });
+
+  await t.test('aperçu + routage révision : ≥3 appels client = file équipe (24-48 h), jamais d’auto', async () => {
+    const { handler: apercu } = await import('../netlify/functions/apercu');
+    const { handler: apercuRevision } = await import('../netlify/functions/apercu-revision');
+    const [p] = await sql`select id from projects where token = ${token}`;
+    // GET aperçu : la chanson du test précédent (audio_generated) est servie, réponse filtrée.
+    const rA = await apercu(evenement({ httpMethod: 'GET', queryStringParameters: { id: token } }), {});
+    assert.equal(rA.statusCode, 200, rA.body ?? '');
+    const corpsA = JSON.parse(rA.body ?? '{}');
+    assert.equal(corpsA.appels_utilises, 1);
+    assert.equal(corpsA.revision_equipe, false);
+    assert.ok(!(rA.body ?? '').includes('@'), 'jamais de courriel dans la réponse aperçu');
+    // Monte à 3 appels client -> la prochaine révision part en file manuelle.
+    await sql`insert into generations (project_id, generation_no, type, lyrics, song_title, status, suno_task_id)
+              values (${p!.id}, 3, 'song_regeneration', 'IT p3', 'IT-Titre', 'audio_generated', 'suno_it_2'),
+                     (${p!.id}, 4, 'song_regeneration', 'IT p4', 'IT-Titre', 'audio_pending', 'suno_it_3')`;
+    const rR = await apercuRevision(
+      evenement({ body: JSON.stringify({ token, modifications: 'Changer le refrain, parler du chalet.' }) }),
+      {},
+    );
+    assert.equal(rR.statusCode, 200, rR.body ?? '');
+    assert.equal(JSON.parse(rR.body ?? '{}').statut, 'equipe');
+    const [dem] = await sql`select etat, canal, demande_brute from demandes where project_id = ${p!.id} order by recue_at desc limit 1`;
+    assert.equal(dem?.etat, 'en_validation', 'demande en file manuelle');
+    assert.equal(dem?.canal, 'formulaire');
+    // Une demande active bloque les doublons.
+    const rDouble = await apercuRevision(
+      evenement({ body: JSON.stringify({ token, modifications: 'encore un retour' }) }),
+      {},
+    );
+    assert.equal(rDouble.statusCode, 409);
+    assert.equal(JSON.parse(rDouble.body ?? '{}').statut, 'deja_en_cours');
+  });
+
   await t.test('background : secret exigé (401), token validé (400), clé API absente = échec fort (500)', async () => {
     const sansSecret = await background(evenement({ body: JSON.stringify({ token, secret: 'mauvais' }) }), {});
     assert.equal(sansSecret.statusCode, 401);

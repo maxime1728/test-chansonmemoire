@@ -556,6 +556,28 @@ export const inscriptionsSequences = pgTable(
   ],
 );
 
+// =============================================================================
+// SONGS_STYLES — catalogue curé des prompts de style Suno (Style × Ambiance ×
+// Cadeau/Mémoire -> prompt riche). Migré d'Airtable « Songs_Styles » (seed 0005) :
+// la chaîne de génération v2 n'a AUCUNE dépendance Airtable. Écrits en accent
+// québécois ; l'accent est adapté à la langue au moment de l'envoi (_lib/style.ts).
+// =============================================================================
+export const songsStyles = pgTable(
+  'songs_styles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    styleMusical: text('style_musical').notNull(),
+    ambiance: text('ambiance').notNull(),
+    cadeauMemoire: text('cadeau_memoire').notNull(),
+    promptComplet: text('prompt_complet').notNull(),
+    ...horodatage(),
+  },
+  (t) => [
+    unique('songs_styles_combo_unq').on(t.styleMusical, t.ambiance, t.cadeauMemoire),
+    check('songs_styles_type_valide', sql`${t.cadeauMemoire} in ('Cadeau', 'Mémoire')`),
+  ],
+);
+
 // ── Types TypeScript générés depuis le schéma (source unique de vérité) ─────
 export type Client = typeof clients.$inferSelect;
 export type NouveauClient = typeof clients.$inferInsert;
