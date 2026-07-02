@@ -7,6 +7,11 @@ on:
   push:
     branches-ignore: [main]
 
+# Moindre privilège (alerte CodeQL actions/missing-workflow-permissions) :
+# la CI ne fait que LIRE le dépôt.
+permissions:
+  contents: read
+
 jobs:
   verifier:
     runs-on: ubuntu-latest
