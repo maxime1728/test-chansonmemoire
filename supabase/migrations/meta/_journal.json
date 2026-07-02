@@ -29,6 +29,20 @@
       "when": 1782980044322,
       "tag": "0003_generations_suggestions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782996856833,
+      "tag": "0004_songs_styles",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782996858240,
+      "tag": "0005_seed_songs_styles",
+      "breakpoints": true
     }
   ]
 }

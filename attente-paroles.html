@@ -101,8 +101,8 @@
   /* Bloc « difficulté » après 60 s sans paroles OU 4 réponses serveur en erreur.
      Un seul vocabulaire (retour Maxime) : difficulté à écrire, relancer ou reformuler.
      Relances BORNÉES à 3, ensuite on invite à nous écrire (jamais de boucle infinie). */
-  var INTERVALLE=2500, DIFFICULTE_APRES=60000, RELANCES_MAX=3;
-  var debut=Date.now(), echecsServeur=0, relances=0, arret=false;
+  var INTERVALLE=2500, DIFFICULTE_APRES=60000, DIFFICULTE_CHANSON=300000, RELANCES_MAX=3;
+  var debut=Date.now(), echecsServeur=0, relances=0, arret=false, enPhaseChanson=false;
   var elTexte=document.getElementById('patience-texte');
   var btnRelancer=document.getElementById('btn-relancer');
 
@@ -123,8 +123,15 @@
         if(p.statut_commercial && p.statut_commercial!=='preview_only'){
           arret=true; window.location.href='/espace-client?id='+encodeURIComponent(token); return;
         }
-        if(p.a_paroles){ arret=true; window.location.href='/revision?id='+encodeURIComponent(token); return; }
-        if(Date.now()-debut>DIFFICULTE_APRES) montrerDifficulte();
+        /* Aperçu prêt = fin de l’attente. */
+        if(p.etape==='preview_ready'){ arret=true; window.location.href='/apercu?id='+encodeURIComponent(token); return; }
+        /* Phase 2 : les paroles existent, la CHANSON se crée (nouveau funnel : zéro clic). */
+        if(p.a_paroles && !enPhaseChanson){
+          enPhaseChanson=true; debut=Date.now(); /* nouveau budget de patience pour la chanson */
+          document.getElementById('titre').textContent='On crée ta chanson…';
+          document.getElementById('sous').innerHTML='Les paroles sont prêtes : la musique s’enregistre.<br>Environ 2 à 3 minutes.';
+        }
+        if(Date.now()-debut>(enPhaseChanson?DIFFICULTE_CHANSON:DIFFICULTE_APRES)) montrerDifficulte();
       })
       .catch(function(){
         echecsServeur++;

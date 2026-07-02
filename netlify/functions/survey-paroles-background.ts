@@ -13,6 +13,7 @@ import { db, actif, schema } from './_lib/db';
 import { avecErreurs, type EvenementHttp } from './_lib/http';
 import { journaliser } from './_lib/journal';
 import { callAnthropic, normSuggestions, parseModel } from './_lib/anthropic';
+import { lancerChansonAuto } from './_lib/chanson';
 import {
   PROMPT_VERSION,
   langOf,
@@ -65,8 +66,27 @@ export const handler = avecErreurs('survey-paroles-background', async (event: Ev
   const parolesValides = (g: typeof derniere) =>
     !!g && !!g.lyrics && !!String(g.lyrics).trim() && !String(g.lyrics).includes('"invalid_input"');
 
-  // CRÉATION/RETRY : si des paroles valides existent déjà, no-op (idempotent).
-  if (!modifications && parolesValides(derniere)) return { statusCode: 200, body: '{}' };
+  // Nouveau funnel (décision 2026-07-02) : la CHANSON part automatiquement dès que
+  // les paroles existent, aucun clic. Idempotent : jamais deux chansons pré-achat en route.
+  const chansonDejaEnRoute = async (): Promise<boolean> => {
+    const toutes = await db()
+      .select({ type: generations.type, status: generations.status, postPurchase: generations.postPurchase })
+      .from(generations)
+      .where(and(eq(generations.projectId, projet.id), actif(generations)));
+    return toutes.some(
+      (g) =>
+        ['song', 'song_regeneration', 'cover'].includes(g.type) &&
+        ['audio_pending', 'audio_generated', 'validated'].includes(g.status) &&
+        !g.postPurchase,
+    );
+  };
+
+  // CRÉATION/RETRY : paroles valides déjà là = pas de nouvelles paroles ; mais si la
+  // CHANSON n'est pas partie (échec précédent), la relance idempotente la (re)lance ici.
+  if (!modifications && parolesValides(derniere)) {
+    if (!(await chansonDejaEnRoute())) await lancerChansonAuto(projet);
+    return { statusCode: 200, body: '{}' };
+  }
 
   const lang = langOf(projet.language);
   const estCadeau = projet.songType === 'cadeau';
@@ -130,5 +150,16 @@ export const handler = avecErreurs('survey-paroles-background', async (event: Ev
   }
 
   await db().update(projects).set({ funnelStep: 'lyrics_generated' }).where(eq(projects.id, projet.id));
+
+  // CRÉATION : enchaîner la chanson immédiatement (nouveau funnel, aucun clic).
+  // RÉGÉNÉRATION (modifications) : PAS de chanson ici — les paroles ajustées seront
+  // APPROUVÉES par le client sur l'aperçu avant toute relance (décision Maxime).
+  if (!modifications) {
+    const lancement = await lancerChansonAuto(projet);
+    if (!lancement.ok && lancement.raison !== 'plafond') {
+      // Échec déjà journalisé P1 dans _lib/chanson ; l'attente offrira « Relancer ».
+      return { statusCode: 502, body: '{}' };
+    }
+  }
   return { statusCode: 200, body: '{}' };
 });
