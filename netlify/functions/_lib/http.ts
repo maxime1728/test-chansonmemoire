@@ -27,6 +27,20 @@ export interface ReponseHttp {
 
 export type Gestionnaire = (event: EvenementHttp, context: unknown) => Promise<ReponseHttp>;
 
+// URL de base du DÉPLOIEMENT COURANT pour les auto-appels de fonctions.
+// ⚠️ Piège Netlify (bug réel attrapé en Deploy Preview) : process.env.URL pointe
+// TOUJOURS vers la prod, même dans une preview. Une fonction preview qui s'auto-appelle
+// via URL frappe la prod, où le nouveau code n'existe pas encore -> 404 silencieux.
+// DEPLOY_PRIME_URL (preview/branche) puis DEPLOY_URL (déploiement exact) règlent ça.
+export function urlBaseDeploy(): string {
+  return (
+    process.env.DEPLOY_PRIME_URL ||
+    process.env.DEPLOY_URL ||
+    process.env.URL ||
+    'https://chansonmemoire.ca'
+  );
+}
+
 interface Options {
   // Gravité d'un échec de CETTE fonction (défaut P1 : dans le doute, on crie).
   niveauEchec?: Niveau;

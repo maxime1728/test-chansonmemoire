@@ -476,6 +476,7 @@ exports.parseModel = parseModel;
 exports.callAnthropic = callAnthropic;
 exports.langOf = langOf;
 exports.systemCreate = systemCreate;
+exports.systemRegenerate = systemRegenerate;   // exposé pour le test d'égalité avec _lib/prompts/paroles.ts
 exports.systemCreateGift = systemCreateGift;
 exports.normSuggestions = normSuggestions;
 exports.findProjectByToken = findProjectByToken;

@@ -1,570 +1,278 @@
 <!DOCTYPE html>
 <html lang="fr-CA">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex, nofollow" />
-  <meta name="referrer" content="no-referrer" />
-  <script src="/js/cm-token.js"></script>
-  <title>Tes paroles · Chanson Mémoire</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" sizes="48x48" href="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto,c_fill,w_48,h_48/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png" />
-  <link rel="icon" type="image/png" sizes="96x96" href="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto,c_fill,w_96,h_96/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto,c_fill,w_180,h_180/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { overflow-x: hidden; }
-    :root {
-      --papier:#F5F0EA; --papier-alt:#EDE6DC; --mauve:#7B5EA7; --mauve-doux:#A688C8;
-      --mauve-pale:#E8DFF5; --encre:#2C2035; --encre-doux:#6B5A7E; --or:#C4A882; --blanc:#FDFAF6;
-    }
-    html { scroll-behavior: smooth; }
-    body { background:var(--papier); color:var(--encre); font-family:'Inter',sans-serif; font-size:15px; line-height:1.6; min-height:100vh; }
-    header { background:var(--blanc); border-bottom:1px solid var(--papier-alt); padding:20px 24px; display:flex; align-items:center; gap:12px; }
-    .logo-mark { width:32px; height:32px; background:var(--mauve); border-radius:50%; display:flex; align-items:center; justify-content:center; }
-    .logo-mark svg { width:16px; height:16px; fill:white; }
-    .logo-text { font-family:'Cormorant Garamond',serif; font-size:18px; color:var(--encre); letter-spacing:0.02em; }
-    .etapes { background:var(--blanc); border-bottom:1px solid var(--papier-alt); padding:14px 24px; display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; color:var(--encre-doux); letter-spacing:0.05em; }
-    .etape { display:flex; align-items:center; gap:6px; opacity:0.45; }
-    .etape.active { opacity:1; color:var(--mauve); font-weight:500; }
-    .etape.done { opacity:0.7; }
-    .etape-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
-    .etape-sep { color:var(--papier-alt); font-size:14px; }
-    main { max-width:720px; margin:0 auto; padding:48px 24px 80px; }
-    #etat-chargement { text-align:center; padding:80px 0; }
-    .spinner { width:48px; height:48px; border:2px solid var(--mauve-pale); border-top-color:var(--mauve); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 28px; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    .chargement-titre { font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:300; color:var(--encre); margin-bottom:10px; }
-    .chargement-sous { font-size:14px; color:var(--encre-doux); font-weight:300; }
-    #etat-erreur { display:none; text-align:center; padding:60px 0; }
-    .erreur-icone { font-size:40px; margin-bottom:20px; }
-    .erreur-titre { font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--encre); margin-bottom:10px; }
-    .erreur-msg { font-size:14px; color:var(--encre-doux); margin-bottom:28px; }
-    .btn-reessayer { background:var(--mauve); color:white; border:none; padding:12px 28px; border-radius:6px; font-family:'Inter',sans-serif; font-size:14px; cursor:pointer; }
-    @media(hover:hover){ .btn-reessayer:hover { background:#6A4E96; } }
-    #contenu { display:none; }
-    .titre-chanson { font-family:'Cormorant Garamond',serif; font-size:13px; color:var(--or); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; }
-    .intro-titre { font-family:'Cormorant Garamond',serif; font-size:34px; font-weight:300; color:var(--encre); line-height:1.25; margin-bottom:6px; }
-    .intro-titre em { font-style:italic; color:var(--mauve); }
-    .intro-sous { font-size:14px; color:var(--encre-doux); font-weight:300; margin-bottom:20px; line-height:1.7; }
-    /* Message d'importance */
-    .avis-important { background:rgba(196,168,130,0.12); border:1px solid rgba(196,168,130,0.4); border-radius:10px; padding:14px 18px; font-size:13.5px; color:var(--encre-doux); line-height:1.6; margin-bottom:32px; }
-    .avis-important strong { color:var(--encre); font-weight:600; }
-    .carte-paroles { background:var(--blanc); border:1px solid var(--papier-alt); border-radius:12px; overflow:hidden; margin-bottom:36px; }
-    .carte-paroles-header { background:var(--mauve-pale); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #D8CEE8; }
-    .carte-paroles-label { font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--mauve); font-weight:500; }
-    .nom-chanson { font-family:'Cormorant Garamond',serif; font-size:15px; font-style:italic; color:var(--encre-doux); }
-    .paroles-texte { padding:28px 32px; font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:300; line-height:1.9; color:var(--encre); white-space:pre-wrap; }
-    .lecture-seule-note { padding:10px 24px; font-size:11px; color:var(--encre-doux); background:var(--papier); border-top:1px solid var(--papier-alt); font-style:italic; }
-    .section-modifs { background:var(--blanc); border:1px solid var(--papier-alt); border-radius:12px; overflow:hidden; margin-bottom:24px; }
-    .modifs-header { padding:20px 24px 0; }
-    .modifs-label { font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--or); font-weight:500; margin-bottom:8px; }
-    .modifs-titre { font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--encre); margin-bottom:6px; }
-    .modifs-description { font-size:13.5px; color:var(--encre-doux); font-weight:300; line-height:1.65; margin-bottom:20px; }
-    .modifs-exemples { background:var(--mauve-pale); border-top:1px solid #D8CEE8; border-bottom:1px solid #D8CEE8; padding:16px 24px; }
-    .exemples-titre { font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--mauve); font-weight:500; margin-bottom:12px; }
-    .exemples-liste { list-style:none; display:flex; flex-direction:column; gap:8px; }
-    /* Pistes en bullet points texte (lecture seule, pas des boutons) */
-    .exemple-chip {
-      position:relative; padding-left:18px; font-size:13.5px; color:var(--encre-doux);
-      line-height:1.5; white-space:normal; word-break:break-word;
-    }
-    .exemple-chip::before {
-      content:'•'; position:absolute; left:2px; top:0; color:var(--mauve); font-size:15px; line-height:1.4;
-    }
-    .exemple-chip.vide { color:#B8A8C8; font-style:italic; }
-    .exemple-chip.vide::before { color:#B8A8C8; }
-    /* Ajustements rapides : 2 boutons fixes cliquables (injectent une consigne dans le champ) */
-    .modifs-rapides { padding:16px 24px 0; }
-    .rapides-boutons { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
-    .chip-rapide {
-      background:var(--mauve-pale); color:var(--mauve); border:1px solid #D8CEE8;
-      border-radius:999px; padding:9px 16px; font-family:'Inter',sans-serif; font-size:13px;
-      font-weight:500; cursor:pointer; transition:background 0.18s, color 0.18s, transform 0.1s;
-    }
-    @media(hover:hover){ .chip-rapide:hover { background:var(--mauve); color:#fff; border-color:var(--mauve); } }
-    .chip-rapide:active { transform:scale(0.97); }
-    .modifs-champ { padding:20px 24px; }
-    textarea#modifications { width:100%; min-height:120px; padding:16px; border:1.5px solid var(--papier-alt); border-radius:8px; font-family:'Inter',sans-serif; font-size:16px; color:var(--encre); background:var(--papier); resize:vertical; outline:none; line-height:1.6; }
-    textarea#modifications::placeholder { color:#B8A8C8; font-style:italic; }
-    textarea#modifications:focus { border-color:var(--mauve-doux); background:var(--blanc); }
-    .champ-hint { font-size:12px; color:var(--encre-doux); margin-top:8px; font-weight:300; }
-    .btn-regen { width:100%; background:white; color:var(--mauve); border:1.5px solid var(--mauve); padding:14px 24px; border-radius:10px; font-family:'Inter',sans-serif; font-size:15px; font-weight:600; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:4px; }
-    @media(hover:hover){ .btn-regen:hover { background:var(--mauve-pale); } }
-    .btn-regen:disabled { opacity:0.5; cursor:not-allowed; }
-    .btn-confirmer { width:100%; background:var(--mauve); color:white; border:none; padding:16px 24px; border-radius:10px; font-family:'Cormorant Garamond',serif; font-size:20px; cursor:pointer; transition:background 0.2s, transform 0.1s; display:flex; align-items:center; justify-content:center; gap:10px; }
-    @media(hover:hover){ .btn-confirmer:hover { background:#6A4E96; } }
-    .btn-confirmer:active { transform:scale(0.99); }
-    .btn-sous-note { text-align:center; font-size:12px; color:var(--encre-doux); margin-top:10px; margin-bottom:8px; font-weight:300; }
-    /* POPUP */
-    .overlay { display:none; position:fixed; inset:0; background:rgba(44,32,53,0.55); z-index:50; align-items:center; justify-content:center; padding:20px; }
-    .overlay.show { display:flex; }
-    .popup { background:var(--blanc); border-radius:16px; max-width:420px; width:100%; padding:32px 28px; text-align:center; box-shadow:0 20px 60px rgba(44,32,53,0.3); }
-    .popup-titre { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:300; color:var(--encre); margin-bottom:12px; }
-    .popup-texte { font-size:14px; color:var(--encre-doux); line-height:1.7; margin-bottom:26px; }
-    .popup-texte strong { color:var(--encre); }
-    .popup-actions { display:flex; flex-direction:column; gap:10px; }
-    .popup-oui { background:var(--mauve); color:white; border:none; padding:15px; border-radius:10px; font-family:'Inter',sans-serif; font-size:15px; font-weight:600; cursor:pointer; }
-    @media(hover:hover){ .popup-oui:hover { background:#6A4E96; } }
-    .popup-non { background:none; color:var(--encre-doux); border:1px solid var(--papier-alt); padding:13px; border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; cursor:pointer; }
-    @media(hover:hover){ .popup-non:hover { border-color:var(--mauve-doux); color:var(--mauve); } }
-    #etat-soumission { display:none; text-align:center; padding:60px 0; }
-    .soumission-icone { width:64px; height:64px; background:var(--mauve-pale); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; }
-    .soumission-icone svg { width:28px; height:28px; stroke:var(--mauve); }
-    .soumission-titre { font-family:'Cormorant Garamond',serif; font-size:28px; font-weight:300; color:var(--encre); margin-bottom:10px; }
-    .soumission-sous { font-size:14px; color:var(--encre-doux); font-weight:300; line-height:1.7; max-width:400px; margin:0 auto; }
-    @media (max-width:600px) { main { padding:32px 16px 60px; } .intro-titre { font-size:26px; } .paroles-texte { padding:20px; font-size:15px; } }
-  </style>
-<!-- Sentry navigateur (erreurs JS), token/PII scrubbes avant envoi (cm-sentry.js). -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<script src="/js/cm-token.js"></script>
+<title>Tes paroles · Chanson Mémoire</title>
+<link rel="icon" type="image/png" href="https://res.cloudinary.com/dznxfzsdt/image/upload/v1750366857/Sans_titre_Logo_1_ykaidx.png">
+<!-- Design : funnel v2 (maquette « Révision des paroles »), charte Newsreader + Work Sans.
+     Charge GET /api/projet ; régénération via POST /api/revision-paroles (asynchrone),
+     puis sonde generation_no jusqu’aux nouvelles paroles. -->
 <script src="/js/cm-sentry.js"></script>
+<script src="/js/cm-attrib.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F3EE; --surface:#FDFBF8; --ink:#2B2530; --muted:#8A7F88; --line:#EAE2E6;
+    --accent:#7C6591; --accent-deep:#4A3855; --soft:#EFE7F0;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;color:var(--ink);font-family:'Work Sans',system-ui,sans-serif;min-height:100vh;
+    background:
+      radial-gradient(420px 300px at 10% -40px, #EFE7F0 0%, rgba(239,231,240,0) 62%),
+      radial-gradient(420px 320px at 96% 0px, #F5EBE2 0%, rgba(245,235,226,0) 58%),
+      var(--bg);
+  }
+  .page{max-width:600px;margin:0 auto;padding:20px 22px 44px;display:flex;flex-direction:column;gap:16px}
+  .logo{display:flex;justify-content:center;padding:4px 0 2px}
+  .logo img{height:24px;width:auto}
+
+  .k{font:800 11px 'Work Sans';letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0}
+  .k.souligne{position:relative;display:inline-block;padding-bottom:6px}
+  .k.souligne::after{content:"";position:absolute;left:0;bottom:0;width:30px;height:2px;background:var(--accent)}
+  h1{font-family:'Newsreader',serif;font-weight:600;font-size:27px;margin:6px 0 0}
+  .pour{font:500 14px 'Work Sans';color:var(--muted);margin:4px 0 0}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 10px 30px rgba(43,37,48,.05)}
+  .strophe{font-family:'Newsreader',serif;font-size:16.5px;line-height:1.75;margin:0 0 16px;white-space:pre-line}
+  .strophe:last-child{margin-bottom:0}
+  .strophe.impaire{font-style:italic;color:#6B6470}
+
+  .retours-tete{padding:0 0 14px}
+  .retours-tete h3{font-family:'Newsreader',serif;font-weight:600;font-size:20px;margin:8px 0 0}
+  .retours-tete p{font:500 13px/1.55 'Work Sans';color:var(--muted);margin:8px 0 0}
+  .pistes{background:var(--soft);margin:0 -18px;padding:15px 18px}
+  .pistes .pk{font:800 10px 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+  .pistes .item{display:flex;gap:10px;align-items:flex-start;margin:0 0 9px}
+  .pistes .item:last-child{margin-bottom:0}
+  .pistes .item span:first-child{color:var(--accent);line-height:1.4}
+  .pistes .item span:last-child{font:500 13.5px/1.45 'Work Sans';color:#4A4550}
+  .ajuste{padding:15px 0 0}
+  .chips{display:flex;flex-wrap:wrap;gap:9px}
+  .chip{border:1.5px solid var(--line);border-radius:99px;padding:7px 13px;font:700 12px 'Work Sans';color:var(--accent);background:var(--soft);cursor:pointer}
+  @media (hover:hover){ .chip:hover{border-color:var(--accent)} }
+  textarea{
+    width:100%;background:#FAF7F3;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px;
+    font:500 13.5px/1.55 'Work Sans';color:var(--ink);outline:none;resize:vertical;min-height:84px;
+  }
+  textarea:focus{border-color:var(--accent)}
+  .indice{font:500 12px 'Work Sans';color:var(--muted);margin:10px 0 0}
+  .btn-secondaire{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;
+    background:#fff;border:1.5px solid var(--accent);color:var(--accent);border-radius:14px;padding:13px;
+    font:800 14px 'Work Sans';cursor:pointer;
+  }
+  @media (hover:hover){ .btn-secondaire:not([disabled]):hover{background:var(--soft)} }
+  .btn-secondaire[disabled]{opacity:.6;cursor:default}
+
+  .orn{display:flex;align-items:center;gap:12px;margin:4px 0}
+  .orn i{flex:1;height:1px;background:var(--line)}
+  .orn s{color:#B9A8C9;font-size:11px;font-style:normal}
+  .btn-principal{
+    display:block;width:100%;border:none;border-radius:16px;padding:16px 18px;cursor:pointer;text-align:center;
+    background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;
+    font:700 16px 'Work Sans';box-shadow:0 12px 28px rgba(74,56,85,.24);
+  }
+  @media (hover:hover){ .btn-principal:not([disabled]):hover{filter:brightness(1.06)} }
+  .btn-principal[disabled]{opacity:.6;cursor:default}
+
+  .message{display:none;font:500 13px/1.5 'Work Sans';border-radius:12px;padding:10px 13px}
+  .message.show{display:block}
+  .message.erreur{background:#F9E9E7;border:1px solid #ECC8C2;color:#8C3B2E}
+  .message.info{background:var(--soft);border:1px solid var(--line);color:var(--accent-deep)}
+
+  @keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+  .shim{height:13px;border-radius:6px;background:linear-gradient(90deg,#ECE4E0 25%,#F7F1EC 40%,#ECE4E0 60%);background-size:300% 100%;animation:shimmer 1.5s linear infinite;margin:10px 0}
+  #ecran-charge .card{display:flex;flex-direction:column}
+</style>
 </head>
 <body>
+<div class="page">
+  <div class="logo"><img src="https://res.cloudinary.com/dznxfzsdt/image/upload/v1750366857/Sans_titre_Logo_1_ykaidx.png" alt="Chanson Mémoire"></div>
 
-  <header>
-    <img src="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire" style="height:40px;width:auto;display:block;">
-  </header>
-
-  <div class="etapes">
-    <div class="etape done"><div class="etape-dot"></div> Tes souvenirs</div>
-    <div class="etape-sep">›</div>
-    <div class="etape active"><div class="etape-dot"></div> Tes paroles</div>
-    <div class="etape-sep">›</div>
-    <div class="etape"><div class="etape-dot"></div> Création</div>
-  </div>
-
-  <main>
-    <!-- CHARGEMENT / ATTENTE (polling) -->
-    <div id="etat-chargement">
-      <div class="spinner"></div>
-      <div class="chargement-titre">Votre texte personnalisé est en cours de rédaction.</div>
-      <div class="chargement-sous">Cela prend environ 30 secondes.<br>Cette page se mettra à jour automatiquement.</div>
-    </div>
-
-    <!-- ERREUR -->
-    <div id="etat-erreur">
-      <div class="erreur-icone">✦</div>
-      <div class="erreur-titre">Quelque chose s'est passé</div>
-      <div class="erreur-msg" id="erreur-detail">Une erreur inattendue est survenue.</div>
-      <button class="btn-reessayer" onclick="reessayer()">Réessayer</button>
-    </div>
-
-    <!-- CONTENU -->
-    <div id="contenu">
-      <div class="titre-chanson">Tes paroles personnalisées</div>
-      <h1 class="intro-titre">Voici <em id="titre-chanson-affiche"></em></h1>
-      <p class="intro-sous">Prends le temps de relire ces paroles attentivement.</p>
-
-      <div class="avis-important">
-        <strong>Ces paroles façonneront ta chanson.</strong> Tu peux les ajuster autant de fois que nécessaire ici. Une fois la chanson créée, des ajustements restent possibles, mais plus limités, c'est donc le meilleur moment pour tout perfectionner.
-      </div>
-
-      <!-- PAROLES (lecture seule) -->
-      <div class="carte-paroles">
-        <div class="carte-paroles-header">
-          <span class="carte-paroles-label">Paroles générées</span>
-          <span class="nom-chanson" id="nom-chanson-header"></span>
-        </div>
-        <div class="paroles-texte" id="paroles-affichees"></div>
-        <div class="lecture-seule-note">Pour modifier, décris tes changements dans l'encadré ci-dessous : les paroles seront réécrites selon tes demandes.</div>
-      </div>
-
-      <!-- MODIFICATIONS -->
-      <div class="section-modifs">
-        <div class="modifs-header">
-          <div class="modifs-label">Tes retours</div>
-          <h2 class="modifs-titre">Souhaites-tu ajuster quelque chose ?</h2>
-          <p class="modifs-description">Décris ce que tu aimerais ajouter, retirer ou reformuler. Les nouvelles paroles garderont tout ce qui fonctionne et n'appliqueront que tes changements.</p>
-        </div>
-        <div class="modifs-exemples">
-          <div class="exemples-titre">Quelques pistes, inspirées de tes réponses</div>
-          <ul class="exemples-liste" id="liste-suggestions">
-            <li class="exemple-chip vide">Les suggestions apparaîtront ici…</li>
-          </ul>
-        </div>
-        <div class="modifs-rapides">
-          <div class="exemples-titre">Ajustements rapides</div>
-          <div class="rapides-boutons">
-            <button type="button" class="chip-rapide" onclick="ajustementRapide('allonger')">＋ Allonger les paroles</button>
-            <button type="button" class="chip-rapide" onclick="ajustementRapide('raccourcir')">－ Raccourcir les paroles</button>
-          </div>
-        </div>
-        <div class="modifs-champ">
-          <textarea id="modifications" aria-label="Tes demandes de modifications aux paroles" placeholder="Ex. : Mettre davantage l'accent sur ses dimanches dans la cuisine. Garder le refrain tel quel…"></textarea>
-          <div class="champ-hint">Sois aussi précis que possible : chaque détail aide à personnaliser davantage.</div>
-        </div>
-        <div class="modifs-champ" style="padding-top:0;">
-          <button class="btn-regen" id="btn-regen" onclick="regenerer()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-            Régénérer mes paroles
-          </button>
-          <div id="regen-erreur" class="champ-hint" role="alert" style="display:none;color:#c0392b;margin-top:10px;"></div>
-        </div>
-      </div>
-
-      <button class="btn-confirmer" id="btn-confirmer" onclick="ouvrirPopup()">
-        Ces paroles sont parfaites
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </button>
-      <div class="btn-sous-note">La création de la chanson démarrera à partir de ces paroles.</div>
-      <div id="confirm-erreur" role="alert" style="display:none;color:#c0392b;text-align:center;margin-top:10px;font-size:13px;"></div>
-    </div>
-
-    <!-- SOUMISSION CONFIRMÉE -->
-    <div id="etat-soumission">
-      <div class="soumission-icone"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-      <div class="soumission-titre">Merci. Ta chanson est en création.</div>
-      <div class="soumission-sous">Tu seras redirigé dans un instant vers la page de suivi.</div>
-    </div>
-  </main>
-
-  <!-- POPUP DE CONFIRMATION -->
-  <div class="overlay" id="overlay">
-    <div class="popup" role="dialog" aria-modal="true" aria-labelledby="popup-titre">
-      <h2 class="popup-titre" id="popup-titre">Confirmer ces paroles ?</h2>
-      <div class="popup-texte">Ta chanson sera créée à partir de <strong>ces paroles exactes</strong>. Après cette étape, les ajustements deviennent plus limités. Es-tu prêt·e à continuer ?</div>
-      <div class="popup-actions">
-        <button class="popup-oui" onclick="confirmerProd()">Oui, créer ma chanson</button>
-        <button class="popup-non" onclick="fermerPopup()">Pas encore, je veux relire</button>
-      </div>
+  <!-- État chargement -->
+  <div id="ecran-charge">
+    <div class="card" aria-label="Chargement des paroles">
+      <p class="k">Tes paroles</p>
+      <div class="shim" style="width:60%"></div><div class="shim" style="width:92%"></div>
+      <div class="shim" style="width:84%"></div><div class="shim" style="width:70%"></div>
     </div>
   </div>
 
-  <script>
-    'use strict';
+  <!-- État erreur lien -->
+  <div id="ecran-probleme" hidden>
+    <div class="card">
+      <p class="k">Petit souci</p>
+      <p style="font:500 14px/1.6 'Work Sans';color:var(--muted);margin:10px 0 14px" id="probleme-texte">Ce lien ne correspond à aucun projet. Vérifie le lien reçu, ou recommence le questionnaire.</p>
+      <button class="btn-principal" type="button" onclick="window.location.href='/souvenirs'">Recommencer</button>
+    </div>
+  </div>
 
-    /* ── CONFIG ── */
-    const URL_ATTENTE     = '/attente-chanson';
-    /* Confirmation des paroles -> /api/lancer-chanson (fonction Netlify, robuste : payload Suno
-       construit côté serveur via JSON.stringify). */
-    const LANCER_CHANSON  = '/api/lancer-chanson';
+  <!-- État normal -->
+  <div id="ecran-paroles" hidden>
+    <div>
+      <p class="k souligne">Tes paroles</p>
+      <h1 id="titre-chanson"></h1>
+      <p class="pour" id="pour"></p>
+    </div>
 
-    const token = (window.cmToken ? window.cmToken() : new URLSearchParams(location.search).get('id'));
-    const IS_COVER = new URLSearchParams(location.search).get('mode') === 'cover';   /* correction de paroles depuis l'aperçu (mélodie gardée) */
+    <div class="card" id="carte-paroles">
+      <p class="k" style="margin-bottom:14px">Paroles</p>
+      <div id="paroles"></div>
+    </div>
 
-    /* ── Polling + auto-relance (chargement initial) ──
-       Fenêtre de 2 min. Voie normale : la génération de paroles en arrière-plan écrit les paroles
-       (~15-20s) → on sonde. Si rien après le délai de grâce → on RELANCE generate-lyrics, plusieurs
-       fois au besoin, jusqu'à 2 min. Le mode retry est anti-doublon (renvoie les paroles si elles
-       arrivent entre-temps, sinon (re)génère). Au bout des 2 min sans succès → « Réessayer » manuel. */
-    const POLL_INTERVAL = 5000;
-    const BUDGET_MS     = 120000;  /* 2 minutes — fenêtre totale avant le message manuel */
-    const GRACE_MS      = 30000;   /* ~30s : on laisse la voie normale (génération en arrière-plan) finir avant de relancer */
-    const STATUTS_PRETS = ['lyrics_generated', 'audio_generated', 'validated'];
-    let pollTimer = null, fini = false, debut = 0;
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="retours-tete" style="padding:18px 18px 14px">
+        <p class="k">Tes retours</p>
+        <h3>Souhaites-tu ajuster quelque chose ?</h3>
+        <p>Décris ce que tu aimerais ajouter, retirer ou reformuler. Les nouvelles paroles garderont tout ce qui fonctionne et n’appliqueront que tes changements.</p>
+      </div>
+      <div class="pistes" id="pistes" style="margin:0" hidden>
+        <p class="pk">Quelques pistes, inspirées de tes réponses</p>
+        <div id="pistes-items"></div>
+      </div>
+      <div class="ajuste" style="padding:15px 18px 18px">
+        <p class="pk" style="font:800 10px 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 10px">Ajustements rapides</p>
+        <div class="chips">
+          <button class="chip" type="button" data-texte="Allonge un peu les paroles.">+ Allonger les paroles</button>
+          <button class="chip" type="button" data-texte="Raccourcis un peu les paroles.">− Raccourcir les paroles</button>
+        </div>
+        <textarea id="modifs" placeholder="Ex. : Mettre davantage l’accent sur ses dimanches dans la cuisine. Garder le refrain tel quel…"></textarea>
+        <p class="indice">Sois aussi précis que possible : chaque détail aide à personnaliser davantage.</p>
+        <div class="message erreur" id="msg-erreur" role="alert"></div>
+        <div class="message info" id="msg-info" role="status"></div>
+        <button class="btn-secondaire" id="btn-regenerer" type="button"><span aria-hidden="true">↻</span>Régénérer mes paroles</button>
+      </div>
+    </div>
 
-    function el(id){ return document.getElementById(id); }
-    function setTexte(id,t){ var n=el(id); if(n) n.textContent=t; }
-    function montrer(id){
-      ['etat-chargement','etat-erreur','contenu','etat-soumission'].forEach(function(i){
-        var n=el(i); if(n) n.style.display=(i===id?'block':'none');
-      });
-    }
+    <div class="orn" aria-hidden="true"><i></i><s>✦</s><i></i></div>
+    <button class="btn-principal" id="btn-parfaites" type="button">Ces paroles sont parfaites →</button>
+  </div>
+</div>
 
-    /* ── Affichage paroles + suggestions ── */
-    function rendreSuggestions(sugg){
-      var ul = el('liste-suggestions');
-      if(!ul) return;
-      var bloc = ul.closest('.modifs-exemples');   // le bloc mauve « Quelques pistes… »
-      ul.innerHTML = '';
-      var arr = [];
-      try { arr = (typeof sugg === 'string') ? JSON.parse(sugg||'[]') : (sugg||[]); } catch(e){ arr = []; }
-      if(!arr.length){
-        // Aucune suggestion (ex. 1re génération) -> on cache complètement le bloc.
-        if(bloc) bloc.style.display = 'none';
-        return;
-      }
-      if(bloc) bloc.style.display = '';   // des suggestions -> on affiche le bloc
-      arr.forEach(function(s){
-        var li=document.createElement('li');
-        li.className='exemple-chip';   // non cliquable : pure inspiration
-        li.textContent=s;
-        ul.appendChild(li);
-      });
-    }
+<script>
+(function(){
+  'use strict';
+  var UUID_V4=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  /* cm-token.js a déjà mis le token en réserve et nettoyé l’URL (anti-fuite Meta). */
+  var token=((window.cmToken?window.cmToken():(new URLSearchParams(window.location.search).get('id')))||'').trim();
+  var ecrans={charge:document.getElementById('ecran-charge'),probleme:document.getElementById('ecran-probleme'),paroles:document.getElementById('ecran-paroles')};
+  function montrer(nom){for(var k in ecrans){ecrans[k].hidden=(k!==nom);} if(nom==='charge')ecrans.charge.removeAttribute('hidden');}
+  function echap(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 
-    function ajouterSuggestion(texte){
-      var ta=el('modifications'); if(!ta) return;
-      ta.value = ta.value ? ta.value+'\n'+texte : texte;
-      ta.focus();
-    }
+  if(!UUID_V4.test(token)){ montrer('probleme'); return; }
 
-    /* ── Ajustements rapides : 2 consignes fixes injectées dans le champ ── */
-    var PHRASES_RAPIDES = {
-      allonger:   'Allonger un peu les paroles (ajouter un couplet), en gardant le même ton et la même structure.',
-      raccourcir: 'Raccourcir un peu les paroles, en gardant les passages les plus forts.'
-    };
-    function ajustementRapide(cle){
-      var texte = PHRASES_RAPIDES[cle]; if(!texte) return;
-      var ta = el('modifications');
-      if(ta && ta.value.indexOf(texte) !== -1){ ta.focus(); return; }   // déjà présent -> pas de doublon
-      ajouterSuggestion(texte);
-    }
+  var generationCourante=0, enRegen=false, pollTimer=null;
+  var elErr=document.getElementById('msg-erreur'), elInfo=document.getElementById('msg-info');
+  var btnRegen=document.getElementById('btn-regenerer');
 
-    function afficher(d){
-      setTexte('titre-chanson-affiche', d.titre || 'ta chanson');
-      setTexte('nom-chanson-header',   d.titre || '');
-      setTexte('paroles-affichees',    d.paroles || '');
-      rendreSuggestions(d.suggestions);
-      montrer('contenu');
-    }
+  function afficher(p){
+    generationCourante=p.generation_no||0;
+    document.getElementById('titre-chanson').textContent=p.titre||'Ta chanson';
+    document.getElementById('pour').textContent=p.prenom?('Pour '+p.prenom):'';
+    /* Strophes séparées par lignes vides ; alternance visuelle douce (refrains en italique). */
+    var strophes=String(p.paroles||'').split(/\n\s*\n/).filter(function(s){return s.trim();});
+    document.getElementById('paroles').innerHTML=strophes.map(function(s,i){
+      return '<p class="strophe'+(i%2?' impaire':'')+'">'+echap(s.trim())+'</p>';
+    }).join('');
+    var pistes=Array.isArray(p.suggestions)?p.suggestions.filter(Boolean):[];
+    var boite=document.getElementById('pistes');
+    if(pistes.length){
+      boite.hidden=false;
+      document.getElementById('pistes-items').innerHTML=pistes.map(function(s){
+        return '<div class="item"><span>•</span><span>'+echap(s)+'</span></div>';
+      }).join('');
+    } else { boite.hidden=true; }
+    montrer('paroles');
+  }
 
-    function afficherAttenteLongue(){
-      setTexte('erreur-detail', "La création a pris plus de temps que prévu, ça arrive rarement. Clique « Réessayer » pour relancer (c'est généralement instantané).");
-      montrer('etat-erreur');
-    }
-    /* Paroles non générables (réponses trop minces) : message utile + Réessayer relance la génération. */
-    function afficherInputInsuffisant(){
-      setTexte('erreur-detail', "Les réponses fournies étaient un peu courtes pour composer la chanson. Clique « Réessayer » pour relancer, ou recommence le formulaire en ajoutant un souvenir ou ce qui rendait la personne unique.");
-      montrer('etat-erreur');
-    }
-    function arreterPolling(){ fini=true; if(pollTimer){ clearTimeout(pollTimer); pollTimer=null; } }
-
-    /* ── RÉESSAYER : UNE relance réelle (régénère depuis les réponses stockées), pas une boucle ── */
-    async function reessayer(){
-      var btn = document.querySelector('.btn-reessayer');
-      if(btn){ btn.disabled = true; btn.textContent = 'Un instant…'; }
-      setTexte('erreur-detail', 'On relance la création de tes paroles…');
-      try {
-        var res = await fetch('/api/generate-lyrics', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ mode:'retry', token: token })
-        });
-        var d = await res.json();
-        if(res.ok && d && d.paroles){ arreterPolling(); afficher(d); return; }
-        throw new Error('retry');
-      } catch(e){
-        /* #4/#6 : le bouton n'a pas suffi -> on rassure + on programme un courriel de récupération.
-           Après 2 échecs, on RETIRE le bouton « Réessayer » (le courriel prend le relais). */
-        setTexte('erreur-detail', "On n'a pas réussi à l'instant, pas d'inquiétude. On prépare tes paroles et tu recevras un courriel d'ici 24-48 h avec le lien pour les voir et lancer ta chanson (pense à vérifier tes courriels indésirables).");
-        try{ fetch('/api/signaler-echec', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: token, kind: 'lyrics' }) }); }catch(_){}
-        if(btn){
-          var n = (parseInt(btn.dataset.echecs || '0', 10) || 0) + 1;
-          btn.dataset.echecs = String(n);
-          if(n >= 2){ btn.style.display = 'none'; }            // 2 échecs -> on retire le bouton
-          else { btn.disabled = false; btn.textContent = 'Réessayer'; }
+  function charger(rappel){
+    fetch('/api/projet?id='+encodeURIComponent(token),{headers:{accept:'application/json'}})
+      .then(function(r){
+        if(r.status===404){ montrer('probleme'); return null; }
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+      })
+      .then(function(p){
+        if(!p) return;
+        if(p.statut_commercial && p.statut_commercial!=='preview_only'){
+          window.location.href='/espace-client?id='+encodeURIComponent(token); return;
         }
-      }
-    }
+        if(!p.a_paroles && !enRegen){
+          window.location.href='/attente-paroles?id='+encodeURIComponent(token); return;
+        }
+        if(rappel) rappel(p); else afficher(p);
+      })
+      .catch(function(){ if(!rappel){ montrer('probleme'); document.getElementById('probleme-texte').textContent='Impossible de charger tes paroles pour le moment. Réessaie dans un instant.'; } });
+  }
 
-    function terminer(suite){ fini=true; if(pollTimer){ clearTimeout(pollTimer); pollTimer=null; } if(suite) suite(); }
-
-    /* Relance la création des paroles EN BACKEND (mode retry, anti-doublon côté serveur :
-       renvoie les paroles si arrivées entre-temps, sinon (re)génère depuis le survey). */
-    async function relancerParoles(){
-      try {
-        var res = await fetch('/api/generate-lyrics', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ mode:'retry', token: token })
-        });
-        var d = {}; try { d = await res.json(); } catch(e){}
-        return { ok: res.ok, status: res.status, data: d, paroles: d && d.paroles };
-      } catch(e){ return { ok:false, status:0, data:null, paroles:null }; }
-    }
-
-    async function boucle(){
-      if(fini) return;
-      var ecoule = Date.now() - debut;
-
-      if(ecoule < GRACE_MS){
-        // Voie normale : on attend que la génération en arrière-plan écrive les paroles.
-        try {
-          var res = await fetch('/api/lire-projet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token})});
-          var d = await res.json();
-          if(!fini && res.ok && STATUTS_PRETS.indexOf(d.statut)!==-1 && d.paroles){
-            if(String(d.paroles).indexOf('invalid_input')!==-1) return terminer(afficherInputInsuffisant);
-            return terminer(function(){ afficher(d); });
-          }
-        } catch(e){}
-      } else {
-        // Rien livré dans le délai → on relance generate-lyrics en backend (plusieurs fois au besoin).
-        var r = await relancerParoles();
-        if(fini) return;
-        if(r.ok && r.paroles) return terminer(function(){ afficher(r.data); });
-        if(r.status === 422)  return terminer(afficherInputInsuffisant);   // inputs inexploitables : inutile d'insister
-        // 502 / réseau → on retentera au prochain tour, dans la fenêtre des 2 min
-      }
-
-      if(Date.now() - debut >= BUDGET_MS) return terminer(afficherAttenteLongue);
-      pollTimer = setTimeout(boucle, POLL_INTERVAL);
-    }
-
-    /* ── RÉGÉNÉRATION : boucle sur place ── */
-    async function regenerer(){
-      if (IS_COVER) return regenererCover();
-      var modifs=(el('modifications').value||'').trim();
-      if(!modifs){
-        el('modifications').focus();
-        el('modifications').style.borderColor='#c0392b';
-        setTimeout(function(){ el('modifications').style.borderColor=''; }, 1500);
-        return;
-      }
-      var btn=el('btn-regen');
-      btn.disabled=true;
-      btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M22 12a10 10 0 0 1-10 10"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></path></svg> Réécriture en cours…';
-
-      try {
-        var res=await fetch('/api/generate-lyrics',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({ mode:'regenerate', token:token, modifications:modifs })
-        });
-        var d=await res.json();
-        if(res.ok && d.paroles){
-          setErreurInline('regen-erreur','');
-          afficher(d);                       // réaffiche les NOUVELLES paroles + nouvelles suggestions
-          el('modifications').value='';      // on vide le champ pour le prochain tour
+  /* ── Régénération asynchrone : POST, puis sonde jusqu’à generation_no+1 ── */
+  function pollRegen(depuis){
+    var debut=Date.now();
+    (function tick(){
+      charger(function(p){
+        if(p.a_paroles && (p.generation_no||0)>depuis){
+          enRegen=false; btnRegen.disabled=false; btnRegen.innerHTML='<span aria-hidden="true">↻</span>Régénérer mes paroles';
+          elInfo.classList.remove('show');
+          document.getElementById('modifs').value='';
+          afficher(p);
           window.scrollTo({top:0,behavior:'smooth'});
-        } else {
-          setErreurInline('regen-erreur', "La réécriture n'a pas pu aboutir. Reformule tes changements et réessaie.");
-        }
-      } catch(e){
-        setErreurInline('regen-erreur', "Une erreur est survenue. Réessaie dans un instant.");
-      }
-      btn.disabled=false;
-      btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> Régénérer mes paroles';
-    }
-
-    /* helper erreur inline accessible (remplace les alert() bloquants). */
-    function setErreurInline(id,msg){ var e=el(id); if(e){ e.textContent=msg||''; e.style.display=msg?'block':'none'; } }
-
-    /* ── POPUP CONFIRMATION : modale accessible (focus piégé, Échap ferme, focus restauré) ── */
-    var _lastFocus=null;
-    function popupKeydown(e){
-      if(e.key==='Escape'){ fermerPopup(); return; }
-      if(e.key==='Tab'){
-        var f=el('overlay').querySelectorAll('button');
-        if(!f.length) return;
-        var premier=f[0], dernier=f[f.length-1];
-        if(e.shiftKey && document.activeElement===premier){ e.preventDefault(); dernier.focus(); }
-        else if(!e.shiftKey && document.activeElement===dernier){ e.preventDefault(); premier.focus(); }
-      }
-    }
-    function ouvrirPopup(){
-      setErreurInline('confirm-erreur','');
-      var ov=el('overlay'); ov.classList.add('show');
-      _lastFocus=document.activeElement;
-      var oui=ov.querySelector('.popup-oui'); if(oui) oui.focus();
-      document.addEventListener('keydown', popupKeydown);
-    }
-    function fermerPopup(){
-      el('overlay').classList.remove('show');
-      document.removeEventListener('keydown', popupKeydown);
-      if(_lastFocus && _lastFocus.focus) _lastFocus.focus();
-    }
-
-    /* ── CONFIRMER → lancer-chanson (fonction Netlify → Suno) ── */
-    async function confirmerProd(){
-      if (IS_COVER) return confirmerCover();
-      /* Le lancement (fetch lancer-chanson) prend quelques secondes : on garde la popup ouverte
-         avec un état « chargement » sur le bouton, plutôt qu'un écran figé sans feedback. */
-      var oui = document.querySelector('.popup-oui');
-      if(oui && !oui.dataset.label){ oui.dataset.label = oui.textContent; }
-      function restaurerOui(){ if(oui){ oui.disabled=false; oui.textContent = oui.dataset.label || 'Oui, créer ma chanson'; } }
-      if(oui){ oui.disabled=true; oui.textContent='Création en cours…'; }
-      try {
-        var res = await fetch(LANCER_CHANSON,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({ token:token, sans_modification:true, mode:'song', post_purchase:false })
-        });
-        var data = {};
-        try { data = await res.json(); } catch(e){}
-        if(data && data.status === 'plafond'){
-          // Plafond atteint -> on affiche le message « nous contacter », pas de redirection.
-          restaurerOui(); fermerPopup();
-          setTexte('erreur-detail', data.message || "Tu as atteint la limite de régénérations. Écris-nous et on t'aidera avec plaisir.");
-          montrer('etat-erreur');
           return;
         }
-        if(!res.ok || !(data && data.ok)) throw new Error('launch');   // échec du lancement -> pas de fausse page d'attente
-      } catch(e){
-        console.error('lancer-chanson error:', e);
-        restaurerOui(); fermerPopup();
-        montrer('contenu');   // on re-montre les paroles + le bouton, pour réessayer
-        setErreurInline('confirm-erreur', "La création de la chanson n'a pas pu démarrer. Réessaie dans un instant.");
-        return;
-      }
-      fermerPopup();
-      montrer('etat-soumission');
-      setTimeout(function(){ window.location.href=URL_ATTENTE+'?id='+encodeURIComponent(token); }, 2500);
-    }
-
-    /* expose pour les onclick inline */
-    window.regenerer=regenerer; window.ouvrirPopup=ouvrirPopup; window.fermerPopup=fermerPopup; window.confirmerProd=confirmerProd;
-    window.ajustementRapide=ajustementRapide; window.reessayer=reessayer;
-
-    /* ── MODE COVER (correction de paroles depuis l'aperçu) ──
-       Les paroles proposées arrivent via sessionStorage (posées par l'aperçu). On les affiche pour
-       validation ; « J'accepte » lance le cover (mélodie gardée) puis on attend une version PLUS
-       RÉCENTE (sinon on retomberait sur l'ancienne) avant de rediriger vers l'aperçu. */
-    var coverBaseline = 0, coverSuggestions = '[]';   /* #7 : suggestions du projet, réutilisées en mode cover */
-    function stripTags(s){ return String(s||'').replace(/^\s*\[[^\]]*\]\s*$/gm,'').replace(/\n{3,}/g,'\n\n').trim(); }
-    async function compteVersions(){
-      try { var r=await fetch('/api/lire-versions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token})}); var d=await r.json(); return (d&&d.versions&&d.versions.length)||0; }
-      catch(e){ return 0; }
-    }
-    async function initCover(){
-      var data=null; try{ data=JSON.parse(sessionStorage.getItem('cm_cover_'+token)||'null'); }catch(e){}
-      if(!data || !data.lyrics){ window.location.href='/apercu?id='+encodeURIComponent(token); return; }   /* accès direct sans proposition -> retour aperçu */
-      coverBaseline = await compteVersions();
-      /* #7 : on récupère les suggestions du projet (mêmes « pistes » qu'à la première création) pour les
-         réafficher pendant la re-modif. Best-effort : si ça échoue, on continue sans suggestions. */
-      try { var rp=await fetch('/api/lire-projet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token})}); var dp=await rp.json(); if(dp && dp.suggestions) coverSuggestions=dp.suggestions; } catch(_){}
-      var avis=document.querySelector('.avis-important');
-      if(avis) avis.innerHTML="<strong>Voici tes paroles corrigées.</strong> Relis-les : à « J'accepte », on régénère ta chanson en gardant la même mélodie. Tu peux encore ajuster avant.";
-      afficher({ titre:data.titre||'ta chanson', paroles:stripTags(data.lyrics), suggestions:coverSuggestions });
-    }
-    async function regenererCover(){
-      var modifs=(el('modifications').value||'').trim();
-      if(!modifs){ el('modifications').focus(); el('modifications').style.borderColor='#c0392b'; setTimeout(function(){ el('modifications').style.borderColor=''; },1500); return; }
-      var btn=el('btn-regen'); btn.disabled=true;
-      btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M22 12a10 10 0 0 1-10 10"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></path></svg> Réécriture en cours…';
-      try{
-        var res=await fetch('/api/demander-modif-client',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,action:'reproposer',texte:modifs})});
-        var d=await res.json();
-        if(res.ok && d && d.route==='cover' && d.noop){
-          /* Rien de concret appliqué : on garde la demande dans le champ + message actionnable (pas un dead-end). */
-          setErreurInline('regen-erreur', "On n'a pas trouvé de changement concret à appliquer. Décris un changement précis dans les paroles (un mot, une phrase, un détail à retirer ou corriger), plutôt qu'une consigne générale.");
+        if(Date.now()-debut>150000){
+          enRegen=false; btnRegen.disabled=false; btnRegen.innerHTML='<span aria-hidden="true">↻</span>Régénérer mes paroles';
+          elInfo.classList.remove('show');
+          elErr.textContent='La régénération prend plus de temps que prévu. Tes paroles actuelles sont conservées ; réessaie dans une minute.';
+          elErr.classList.add('show');
+          return;
         }
-        else if(res.ok && d && d.route==='cover' && d.lyrics){ setErreurInline('regen-erreur',''); afficher({titre:d.titre||'ta chanson',paroles:stripTags(d.lyrics),suggestions:coverSuggestions}); el('modifications').value=''; window.scrollTo({top:0,behavior:'smooth'}); }
-        else setErreurInline('regen-erreur',"La réécriture n'a pas pu aboutir. Reformule ta demande et réessaie.");
-      }catch(e){ setErreurInline('regen-erreur',"Une erreur est survenue. Réessaie dans un instant."); }
-      btn.disabled=false; btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> Régénérer mes paroles';
-    }
-    async function confirmerCover(){
-      var oui=document.querySelector('.popup-oui');
-      if(oui && !oui.dataset.label){ oui.dataset.label=oui.textContent; }
-      function restaurerOui(){ if(oui){ oui.disabled=false; oui.textContent=oui.dataset.label||'Oui, créer ma chanson'; } }
-      if(oui){ oui.disabled=true; oui.textContent='Un instant…'; }
-      try{
-        var res=await fetch('/api/demander-modif-client',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,action:'lancer'})});
-        var dL={}; try{ dL=await res.json(); }catch(_){}
-        if(!res.ok) throw new Error('lancer');
-        if(dL && dL.route==='busy'){ restaurerOui(); fermerPopup(); montrer('contenu'); setErreurInline('confirm-erreur',"Ta version précédente se prépare encore, laisse-lui un petit instant puis réessaie."); return; }
-      }catch(e){ restaurerOui(); fermerPopup(); montrer('contenu'); setErreurInline('confirm-erreur',"La régénération n'a pas pu démarrer. Réessaie dans un instant."); return; }
-      try{ sessionStorage.removeItem('cm_cover_'+token); }catch(_){}
-      fermerPopup();
-      /* #9 : on réutilise la VRAIE page d'attente (comme au tout début), en mode « mise à jour » : elle
-         attend une version PLUS RÉCENTE que la baseline avant de revenir à l'aperçu (sinon elle
-         renverrait sur l'ancienne version, déjà générée). */
-      window.location.href = '/attente-chanson?id=' + encodeURIComponent(token) + '&maj=1&base=' + encodeURIComponent(coverBaseline);
-    }
+        pollTimer=setTimeout(tick,2500);
+      });
+    })();
+  }
 
-    /* ── INIT ── */
-    if(!token){
-      setTexte('erreur-detail', "Lien invalide ou expiré. Recommence depuis le début.");
-      montrer('etat-erreur');
-    } else if (IS_COVER) {
-      initCover();
-    } else {
-      montrer('etat-chargement');
-      debut = Date.now();
-      boucle();
-    }
-  </script>
-  <script src="/js/cm-pixel.js" defer></script>
+  btnRegen.addEventListener('click',function(){
+    if(enRegen) return;
+    elErr.classList.remove('show');
+    var modifs=document.getElementById('modifs').value.trim();
+    if(modifs.length<3){ elErr.textContent='Décris d’abord ce que tu aimerais changer (ou utilise une piste ci-dessus).'; elErr.classList.add('show'); return; }
+    enRegen=true; btnRegen.disabled=true; btnRegen.textContent='Réécriture en cours…';
+    elInfo.textContent='On réécrit tes paroles en gardant tout ce qui fonctionne. Environ 30 secondes.';
+    elInfo.classList.add('show');
+    fetch('/api/revision-paroles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,modifications:modifs})})
+      .then(function(r){ if(!r.ok&&r.status!==202) throw new Error('HTTP '+r.status); pollRegen(generationCourante); })
+      .catch(function(){
+        enRegen=false; btnRegen.disabled=false; btnRegen.innerHTML='<span aria-hidden="true">↻</span>Régénérer mes paroles';
+        elInfo.classList.remove('show');
+        elErr.textContent='La demande n’est pas partie. Vérifie ta connexion puis réessaie.'; elErr.classList.add('show');
+      });
+  });
+
+  [].forEach.call(document.querySelectorAll('.chip'),function(c){
+    c.addEventListener('click',function(){
+      var t=document.getElementById('modifs');
+      t.value=(t.value?t.value.replace(/\s*$/,'')+'\n':'')+c.getAttribute('data-texte');
+      t.focus();
+    });
+  });
+
+  /* CTA principal : la création de la chanson se branche à l’étape 2b du chantier. */
+  document.getElementById('btn-parfaites').addEventListener('click',function(){
+    elInfo.textContent='La création de la chanson se branche à la prochaine étape du chantier : tes paroles sont sauvegardées.';
+    elInfo.classList.add('show');
+    elInfo.scrollIntoView({behavior:'smooth',block:'center'});
+  });
+
+  window.addEventListener('pagehide',function(){ if(pollTimer)clearTimeout(pollTimer); });
+  charger();
+})();
+</script>
+<script src="/js/cm-pixel.js" defer></script>
 </body>
 </html>

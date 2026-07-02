@@ -213,6 +213,9 @@ export const generations = pgTable(
     genVoice: text('gen_voice'),
     // Prompt de style riche réellement envoyé à Suno (adjusted_style_prompt du pipeline IA).
     stylePrompt: text('style_prompt'),
+    // Suggestions de révision (2-5, québécois) produites avec les paroles : la page
+    // révision les affiche. Tableau JSON (le legacy les stockait en string JSON).
+    suggestions: jsonb('suggestions'),
     cloudinaryAudioUrl: text('cloudinary_audio_url'),
     incidentStatus: text('incident_status'),
     incidentDetail: text('incident_detail'),

@@ -6,660 +6,368 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <title>Partage tes souvenirs · Chanson Mémoire</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=Mulish:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<!-- Icones : sprite SVG inline (voir #cm-icons en bas de body). Remplace Font Awesome (allégé + non bloquant). -->
-<!-- Polices de l'ecran d'attente (Cormorant + Inter, charte /revision) : chargees a la demande a la soumission (ensureOverlayFonts), pas au chargement initial de la page. -->
-<!-- Attribution Meta first/last-touch : capter tot, avant tout le reste (donnee first-party). -->
-<!-- Sentry navigateur (erreurs JS), token/PII scrubbes avant envoi (cm-sentry.js). -->
+<meta name="description" content="Réponds à quelques questions douces sur la personne à honorer : nous transformons tes souvenirs en chanson.">
+<link rel="icon" type="image/png" href="https://res.cloudinary.com/dznxfzsdt/image/upload/v1750366857/Sans_titre_Logo_1_ykaidx.png">
+<!-- Design : funnel v2 (maquette Claude Design « Souvenirs (Survey) »), charte unifiée
+     Newsreader + Work Sans (tokens de l’espace client). Backend : Supabase (/api/survey). -->
 <script src="/js/cm-sentry.js"></script>
 <script src="/js/cm-attrib.js"></script>
 <script src="/js/cm-name.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Work+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--cm-plum-dark:#5C2D4A;--cm-plum-mid:#8B4A6E;--cm-mauve:#C98BB0;--cm-gold:#C4963A;--cm-gold-light:#E8C97A;--cm-white:#fff;--cm-bg:#F8F4F0;--cm-text:#2E1A28;--cm-text-sub:#7A6070;}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-.cm-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
-.cm-ic{width:1em;height:1em;vertical-align:-0.125em;flex-shrink:0;}
-.cm-spin{animation:cm-roue-spin 1s linear infinite;}
-html,body{overflow-x:hidden;}
-html{scroll-behavior:smooth;}
-body{font-family:'Mulish',sans-serif;background:var(--cm-bg);color:var(--cm-text);min-height:100vh;display:flex;flex-direction:column;}
-.cm-header{text-align:center;padding:24px 20px 0;flex-shrink:0;}
-.cm-logo-img{height:48px;width:auto;display:inline-block;}
-.cm-progress-header{padding:20px 24px 0;max-width:600px;margin:0 auto;width:100%;}
-.cm-progress-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.cm-progress-label{font-size:11px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--cm-gold);}
-.cm-progress-count{font-size:11px;color:var(--cm-text-sub);font-weight:600;}
-.cm-progress-track{width:100%;height:4px;background:rgba(92,45,74,.12);border-radius:10px;overflow:hidden;}
-.cm-progress-fill{height:100%;background:linear-gradient(to right,var(--cm-plum-mid),var(--cm-gold));border-radius:10px;transition:width .4s ease;width:0%;}
-.cm-survey-wrap{flex:1;display:flex;flex-direction:column;align-items:center;padding:0 20px 40px;}
-.cm-step-card{width:100%;max-width:560px;background:var(--cm-white);border-radius:24px;padding:36px 32px;margin-top:24px;box-shadow:0 2px 0 rgba(92,45,74,.06),0 8px 32px rgba(92,45,74,.09);border:1px solid rgba(92,45,74,.08);display:none;animation:cm-fadein .3s ease;}
-.cm-step-card.active{display:block;}
-@keyframes cm-fadein{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.cm-q-eyebrow{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--cm-gold);margin-bottom:8px;}
-.cm-q-title{font-family:'Newsreader',Georgia,serif;font-style:italic;font-size:clamp(20px,5vw,26px);font-weight:400;color:var(--cm-plum-dark);line-height:1.35;margin-bottom:8px;}
-.cm-q-sub{font-size:13px;color:var(--cm-text-sub);line-height:1.6;margin-bottom:24px;}
-/* font-size 16px = empeche le zoom automatique d'iOS Safari au focus (sous 16px, iOS zoome et la page deborde / se decentre lateralement). */
-.cm-input{width:100%;font-family:'Mulish',sans-serif;font-size:16px;color:var(--cm-text);background:var(--cm-bg);border:1.5px solid rgba(92,45,74,.18);border-radius:12px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s;resize:none;}
-.cm-input:focus{border-color:var(--cm-mauve);box-shadow:0 0 0 3px rgba(201,139,176,.15);}
-.cm-input::placeholder{color:rgba(122,96,112,.8);}
-.cm-choices{display:flex;flex-direction:column;gap:10px;}
-.cm-choices.cm-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.cm-choice{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;border:1.5px solid rgba(92,45,74,.15);background:var(--cm-bg);cursor:pointer;font-family:'Mulish',sans-serif;font-size:14px;font-weight:600;color:var(--cm-text);transition:all .18s;text-align:left;width:100%;user-select:none;}
-@media(hover:hover){.cm-choice:hover{border-color:var(--cm-mauve);background:rgba(201,139,176,.08);}}
-.cm-choice.selected{border-color:var(--cm-plum-mid);background:rgba(139,74,110,.10);color:var(--cm-plum-dark);}
-.cm-choice-emoji{font-size:18px;flex-shrink:0;line-height:1;}
-.cm-choices.cm-grid-2 .cm-choice{flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;padding:16px 10px;}
-.cm-choices.cm-grid-2 .cm-choice-emoji{font-size:22px;}
-.cm-hint{margin-top:18px;background:rgba(196,150,58,.08);border:1px solid rgba(196,150,58,.22);border-radius:12px;padding:14px 16px;}
-.cm-hint-title{font-size:12px;font-weight:800;color:var(--cm-gold);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
-.cm-hint ul{list-style:none;padding:0;}
-.cm-hint ul li{font-size:12px;color:var(--cm-text-sub);line-height:1.6;padding:2px 0;}
-.cm-hint ul li::before{content:'✦ ';color:var(--cm-gold);font-size:9px;}
-.cm-optional{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cm-text-sub);background:rgba(122,96,112,.10);border-radius:6px;padding:2px 8px;margin-bottom:16px;}
-.cm-nav{display:flex;justify-content:space-between;align-items:center;margin-top:28px;gap:12px;}
-.cm-nav-single{justify-content:flex-end;}
-.cm-btn-prev{font-family:'Mulish',sans-serif;font-size:13px;font-weight:700;color:var(--cm-text-sub);background:none;border:1.5px solid rgba(92,45,74,.15);border-radius:999px;padding:11px 22px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
-@media(hover:hover){.cm-btn-prev:hover{border-color:var(--cm-mauve);color:var(--cm-plum-mid);}}
-.cm-btn-next{font-family:'Mulish',sans-serif;font-size:15px;font-weight:800;color:#fff;background:var(--cm-plum-mid);border:none;border-radius:999px;padding:14px 32px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;}
-@media(hover:hover){.cm-btn-next:hover{background:var(--cm-plum-dark);}}
-.cm-consent{margin-top:16px;display:flex;align-items:flex-start;gap:10px;}
-.cm-consent input[type="checkbox"]{margin-top:2px;flex-shrink:0;width:16px;height:16px;accent-color:var(--cm-plum-dark);cursor:pointer;}
-.cm-consent-label{font-size:12px;color:var(--cm-text-sub);line-height:1.6;}
-.cm-consent-label a{color:var(--cm-plum-mid);text-decoration:underline;}
-@property --cm-submit-angle{syntax:'<angle>';initial-value:0deg;inherits:false;}
-.cm-submit-wrap{margin-top:20px;padding:1.5px;border-radius:999px;background:conic-gradient(from var(--cm-submit-angle),var(--cm-plum-dark) 0%,var(--cm-mauve) 25%,var(--cm-gold) 45%,var(--cm-gold-light) 50%,var(--cm-gold) 55%,var(--cm-mauve) 75%,var(--cm-plum-dark) 100%);animation:cm-submit-spin 4s linear infinite;}
-@keyframes cm-submit-spin{to{--cm-submit-angle:360deg;}}
-@media (prefers-reduced-motion:reduce){.cm-submit-wrap{animation:none;}}
-/* Roue de chargement IDENTIQUE a /revision (.spinner) : meme branding mauve, continuite parfaite. */
-@keyframes cm-roue-spin{to{transform:rotate(360deg);}}
-.cm-roue-attente{width:48px;height:48px;border:2px solid #E8DFF5;border-top-color:#7B5EA7;border-radius:50%;animation:cm-roue-spin 1s linear infinite;margin:0 auto 28px;}
-.cm-submit-btn{font-family:'Mulish',sans-serif;font-size:16px;font-weight:800;color:#fff;background:var(--cm-plum-mid);border:none;border-radius:999px;padding:17px 36px;cursor:pointer;width:100%;display:block;transition:background .2s;}
-@media(hover:hover){.cm-submit-btn:hover{background:var(--cm-plum-dark);}}
-.cm-submit-btn:disabled{opacity:.5;cursor:not-allowed;}
-.cm-submit-note{font-size:11px;color:var(--cm-text-sub);text-align:center;margin-top:10px;}
-.cm-error{font-size:12px;color:#c0392b;margin-top:6px;display:none;}
-.cm-error.show{display:block;}
-/* Note douce quand le champ « nom » deborde (> 6 mots = limite d'affichage cmName). */
-.cm-namehint{display:none;margin-top:10px;font-size:12.5px;line-height:1.5;color:var(--cm-gold);background:rgba(196,150,58,.08);border:1px solid rgba(196,150,58,.22);border-radius:10px;padding:10px 12px;text-align:left;}
-.cm-namehint.show{display:block;}
-.cm-footer{text-align:center;padding:16px 20px 24px;font-size:11px;color:var(--cm-text-sub);}
-.cm-footer a{color:var(--cm-text-sub);}
-@media (max-width:480px){.cm-step-card{padding:28px 20px;border-radius:18px;}}
+  :root{
+    /* Design system unifié (espace client) */
+    --bg:#F7F3EE; --surface:#FDFBF8; --ink:#2B2530; --muted:#8A7F88; --line:#EAE2E6;
+    --accent:#7C6591; --accent-deep:#4A3855; --soft:#EFE7F0; --gold:#C79A4B;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;color:var(--ink);font-family:'Work Sans',system-ui,sans-serif;min-height:100vh;
+    background:
+      radial-gradient(420px 300px at 10% -40px, #EFE7F0 0%, rgba(239,231,240,0) 62%),
+      radial-gradient(420px 320px at 96% 0px, #F5EBE2 0%, rgba(245,235,226,0) 58%),
+      var(--bg);
+  }
+  .page{max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:18px 22px 30px}
+
+  /* En-tête : retour + progression + logo (structure de la maquette) */
+  .haut{display:flex;align-items:center;gap:14px}
+  .btn-retour{
+    width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:rgba(255,255,255,.72);
+    color:var(--ink);font-size:17px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;
+  }
+  @media (hover:hover){ .btn-retour:hover{border-color:var(--accent);color:var(--accent)} }
+  .btn-retour[disabled]{opacity:0;pointer-events:none}
+  .piste{flex:1;height:6px;border-radius:99px;background:var(--soft);overflow:hidden}
+  .barre{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-deep));transition:width .35s ease}
+  .logo{height:18px;width:auto;opacity:.75}
+
+  .chip{font:800 11px 'Work Sans';letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:18px 0 0}
+  h1{font-family:'Newsreader',serif;font-weight:600;font-size:30px;line-height:1.12;margin:8px 0 0}
+  .aide{font:500 14.5px/1.55 'Work Sans';color:var(--muted);margin:10px 0 0}
+
+  .tip{display:flex;align-items:flex-start;gap:10px;background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:16px 0 0}
+  .tip[hidden]{display:none}
+  .tip .i{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font:800 11px 'Work Sans';display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+  .tip .t{font:800 12.5px 'Work Sans';color:var(--accent-deep);margin-bottom:5px}
+  .tip li{font:500 12.5px/1.5 'Work Sans';color:var(--accent-deep);margin:3px 0}
+  .tip ul{margin:0;padding-left:16px}
+
+  .zone{margin:18px 0 0;flex:1;display:flex;flex-direction:column;gap:10px}
+  input[type=text],input[type=email],textarea,select{
+    width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:15px 16px;
+    font:500 16px 'Work Sans';color:var(--ink);outline:none;
+  }
+  textarea{min-height:132px;line-height:1.55;resize:vertical}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+
+  .choix{display:flex;flex-direction:column;gap:9px}
+  .choix.grille{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .carte{
+    position:relative;display:flex;align-items:flex-start;gap:10px;background:var(--surface);border:1.5px solid var(--line);
+    border-radius:16px;padding:13px 14px;cursor:pointer;font:600 14.5px 'Work Sans';color:var(--ink);
+    transition:border-color .15s ease, background .15s ease;
+  }
+  @media (hover:hover){ .carte:hover{border-color:var(--accent)} }
+  .carte input{position:absolute;opacity:0;pointer-events:none}
+  .carte .sous{display:block;font:500 12.5px/1.4 'Work Sans';color:var(--muted);margin-top:2px}
+  .carte.actif{border-color:var(--accent);background:var(--soft)}
+
+  .note,.erreur{display:none;font:500 12.5px/1.45 'Work Sans';border-radius:12px;padding:9px 12px;margin-bottom:10px}
+  .note.show,.erreur.show{display:block}
+  .note{background:#FBF4E6;border:1px solid #EBD9B4;color:#7A5E22;margin-top:8px;margin-bottom:0}
+  .erreur{background:#F9E9E7;border:1px solid #ECC8C2;color:#8C3B2E}
+
+  .bas{margin-top:22px}
+  .btn{
+    width:100%;border:none;border-radius:16px;padding:16px 18px;cursor:pointer;
+    background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;
+    font:700 16px 'Work Sans';letter-spacing:.01em;box-shadow:0 10px 24px rgba(74,56,85,.22);
+  }
+  .btn[disabled]{opacity:.6;cursor:default}
+  @media (hover:hover){ .btn:not([disabled]):hover{filter:brightness(1.06)} }
+  .btn-passer{width:100%;margin-top:10px;background:none;border:none;color:var(--muted);font:600 13.5px 'Work Sans';cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+  .legal{font:500 12px/1.5 'Work Sans';color:var(--muted)}
+  .legal a{color:var(--accent)}
+  .consent{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:13px 14px;cursor:pointer}
+  .consent input{margin-top:3px;flex:none}
+  .consent span{font:500 13px/1.5 'Work Sans';color:var(--ink)}
+  .consent a{color:var(--accent)}
+
+  @media (min-width:700px){
+    .page{padding-top:34px}
+    h1{font-size:34px}
+  }
 </style>
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" sizes="48x48" href="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto,c_fill,w_48,h_48/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
-  <link rel="icon" type="image/png" sizes="96x96" href="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto,c_fill,w_96,h_96/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto,c_fill,w_180,h_180/v1782682803/Favicon_Chanson_M%C3%A9moire_pftcgs.png">
 </head>
 <body>
 
-<!-- Sprite d'icones SVG inline (remplace Font Awesome) -->
-<svg id="cm-icons" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <symbol id="ic-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
-  <symbol id="ic-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
-  <symbol id="ic-lightbulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></symbol>
-  <symbol id="ic-heart" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.9-10-9.3C.6 9 1.7 5.5 5 4.6c2-.5 3.9.4 5 2 1.1-1.6 3-2.5 5-2 3.3.9 4.4 4.4 3 7.1C19.5 16.1 12 21 12 21z"/></symbol>
-  <symbol id="ic-music" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></symbol>
-  <symbol id="ic-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.5"/></symbol>
-</svg>
-
-<!-- Netlify Forms : noms alignés sur Airtable -->
+<!-- Backup Netlify Forms (filet si /api/survey échoue) : champs de CONTENU seulement,
+     jamais l’attribution (Loi 25). Même form-name que l’existant. -->
 <form name="chanson-memoire-survey" netlify netlify-honeypot="bot-field" hidden>
-  <input type="text" name="deceased_name">
-  <input type="text" name="relationship">
-  <input type="text" name="music_style">
-  <input type="text" name="voice">
-  <input type="text" name="mood">
-  <input type="text" name="what_made_unique">
-  <textarea name="memories"></textarea>
-  <textarea name="memory_to_keep"></textarea>
-  <input type="email" name="email">
-  <input type="checkbox" name="consentement">
-  <input type="text" name="token">
-  <input type="text" name="song_type">
-  <input type="text" name="language">
+  <input type="text" name="token"><input type="text" name="song_type">
+  <input type="text" name="deceased_name"><input type="text" name="relationship">
+  <input type="text" name="music_style"><input type="text" name="voice"><input type="text" name="mood">
+  <input type="text" name="language"><input type="text" name="what_made_unique">
+  <input type="text" name="memories"><input type="text" name="memory_to_keep">
+  <input type="email" name="email"><input type="text" name="consentement">
 </form>
 
-<header class="cm-header">
-  <img src="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire" class="cm-logo-img">
-</header>
-<h1 class="cm-sr-only">Partage tes souvenirs pour créer ta chanson personnalisée</h1>
-
-<div class="cm-progress-header">
-  <div class="cm-progress-meta">
-    <span class="cm-progress-label">Tes souvenirs</span>
-    <span class="cm-progress-count" id="cm-progress-count">Étape 1</span>
+<div class="page">
+  <div class="haut">
+    <button class="btn-retour" id="btn-retour" type="button" aria-label="Étape précédente">←</button>
+    <div class="piste" role="progressbar" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1" aria-label="Progression du questionnaire">
+      <div class="barre" id="barre"></div>
+    </div>
+    <img class="logo" src="https://res.cloudinary.com/dznxfzsdt/image/upload/v1750366857/Sans_titre_Logo_1_ykaidx.png" alt="Chanson Mémoire">
   </div>
-  <div class="cm-progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1" aria-label="Progression du formulaire"><div class="cm-progress-fill" id="cm-progress-fill"></div></div>
+
+  <p class="chip" id="chip"></p>
+  <h1 id="titre"></h1>
+  <p class="aide" id="aide"></p>
+  <div class="tip" id="tip" hidden>
+    <span class="i">i</span>
+    <div><div class="t" id="tip-titre"></div><ul id="tip-items"></ul></div>
+  </div>
+
+  <div class="zone" id="zone"></div>
+
+  <div class="bas">
+    <div class="erreur" id="erreur" role="alert"></div>
+    <button class="btn" id="btn-suivant" type="button">Continuer</button>
+    <button class="btn-passer" id="btn-passer" type="button" hidden>Passer cette question</button>
+  </div>
 </div>
-
-<div class="cm-survey-wrap">
-
-  <p style="max-width:560px;margin:14px auto 0;text-align:center;font-size:13px;color:var(--cm-text-sub);line-height:1.55;">Quelques mots suffisent. Tu pourras tout ajuster avant de payer, et tes réponses servent seulement à créer ta chanson.</p>
-  <div class="cm-step-card active" data-step="1">
-    <div class="cm-q-eyebrow">Pour commencer</div>
-    <h2 class="cm-q-title">Cette chanson, c'est…</h2>
-    <p class="cm-q-sub">Ça nous aide à composer juste, dès le départ.</p>
-    <div class="cm-songtype" style="display:flex;flex-direction:column;gap:10px;margin:6px 0 2px;text-align:left;">
-      <label class="cm-consent-label" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;"><input type="radio" name="song_type" value="hommage" checked style="margin-top:3px;flex-shrink:0;"><span><strong>Un hommage</strong><br><span style="opacity:.7;">à la mémoire d'une personne qui nous a quittés</span></span></label>
-      <label class="cm-consent-label" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;"><input type="radio" name="song_type" value="cadeau" style="margin-top:3px;flex-shrink:0;"><span><strong>Un cadeau</strong><br><span style="opacity:.7;">pour une personne bien vivante</span></span></label>
-    </div>
-    <div class="cm-nav cm-nav-single"><button class="cm-btn-next" id="btn-next-1">Continuer <svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-right"></use></svg></button></div>
-  </div>
-
-  <div class="cm-step-card" data-step="2">
-    <div class="cm-q-eyebrow">Pour commencer</div>
-    <h2 class="cm-q-title" data-h="En souvenir de qui créons-nous cette chanson ?" data-c="Pour qui créons-nous cette chanson ?">En souvenir de qui créons-nous cette chanson ?</h2>
-    <p class="cm-q-sub">Son prénom, son surnom, ou ce qui le représente le mieux.</p>
-    <input class="cm-input" type="text" id="input-deceased_name" aria-label="Prénom ou nom de la personne" data-ph-h="Ex : Grand-papa Roger, Maman, Isabelle…" data-ph-c="Ex : Maman, Sophie, mon amoureux…" placeholder="Ex : Grand-papa Roger, Maman, Isabelle…" autocomplete="off" maxlength="80">
-    <div class="cm-error" id="err-deceased_name">Entre un prénom ou un nom (au moins quelques lettres).</div>
-    <div class="cm-namehint" id="namehint-deceased">Ici, on a juste besoin de son prénom ou de son nom. Tu pourras nous raconter tes souvenirs un peu plus loin dans le formulaire.</div>
-    <div class="cm-nav"><button class="cm-btn-prev" data-target="1"><svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-left"></use></svg> Retour</button><button class="cm-btn-next" id="btn-next-2">Continuer <svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-right"></use></svg></button></div>
-  </div>
-
-  <div class="cm-step-card" data-step="3">
-    <div class="cm-q-eyebrow">Ton lien</div>
-    <h2 class="cm-q-title" data-h="Qui était {n} pour toi ?" data-c="Qui est {n} pour toi ?">Qui était-il ou elle pour toi ?</h2>
-    <p class="cm-q-sub">Choisis ce qui s'applique le mieux.</p>
-    <div class="cm-choices" id="choices-relationship">
-      <button class="cm-choice" data-value="Partenaire / conjoint(e)"><span class="cm-choice-emoji">❤️</span> Partenaire / conjoint(e)</button>
-      <button class="cm-choice" data-value="Enfant"><span class="cm-choice-emoji">🌱</span> Enfant</button>
-      <button class="cm-choice" data-value="Parent"><span class="cm-choice-emoji">🙋</span> Parent</button>
-      <button class="cm-choice" data-value="Grand-parent"><span class="cm-choice-emoji">🕊️</span> Grand-parent</button>
-      <button class="cm-choice" data-value="Ami(e) proche"><span class="cm-choice-emoji">🤝</span> Ami(e) proche</button>
-      <button class="cm-choice" data-value="Animal de compagnie"><span class="cm-choice-emoji">🐾</span> Animal de compagnie</button>
-      <button class="cm-choice" data-value="Quelqu'un d'autre"><span class="cm-choice-emoji">💛</span> Quelqu'un d'autre</button>
-    </div>
-    <div class="cm-nav"><button class="cm-btn-prev" data-target="2"><svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-left"></use></svg> Retour</button></div>
-  </div>
-
-  <div class="cm-step-card" data-step="4">
-    <div class="cm-q-eyebrow">La musique</div>
-    <h2 class="cm-q-title">Quel style musical lui ressemble ?</h2>
-    <p class="cm-q-sub" data-h="Choisis le style qui l'aurait le mieux représenté." data-c="Choisis le style qui lui ressemble le plus.">Choisis le style qui l'aurait le mieux représenté.</p>
-    <div class="cm-choices cm-grid-2" id="choices-music_style">
-      <button class="cm-choice" data-value="Pop"><span class="cm-choice-emoji">🎵</span> Pop</button>
-      <button class="cm-choice" data-value="Country"><span class="cm-choice-emoji">🤠</span> Country</button>
-      <button class="cm-choice" data-value="R&B"><span class="cm-choice-emoji">🎶</span> R&B</button>
-      <button class="cm-choice" data-value="Rock"><span class="cm-choice-emoji">🎸</span> Rock</button>
-      <button class="cm-choice" data-value="Jazz"><span class="cm-choice-emoji">🎷</span> Jazz</button>
-      <button class="cm-choice" data-value="Acoustique"><span class="cm-choice-emoji">🎻</span> Acoustique</button>
-      <button class="cm-choice" data-value="Douce Mélodie"><span class="cm-choice-emoji">🎹</span> Douce Mélodie</button>
-      <button class="cm-choice" data-value="Orchestre Gospel"><span class="cm-choice-emoji">🎼</span> Orchestre Gospel</button>
-      <button class="cm-choice" data-value="Hip-Hop"><span class="cm-choice-emoji">🎤</span> Hip-Hop</button>
-      <button class="cm-choice" data-value="Cinématographique"><span class="cm-choice-emoji">🎬</span> Cinématographique</button>
-      <button class="cm-choice" data-value="Latin / Salsa"><span class="cm-choice-emoji">💃</span> Latin / Salsa</button>
-      <button class="cm-choice" data-value="Reggae"><span class="cm-choice-emoji">🌴</span> Reggae</button>
-      <button class="cm-choice" data-value="Électronique / Dance"><span class="cm-choice-emoji">🎧</span> Électronique / Dance</button>
-    </div>
-    <div class="cm-nav"><button class="cm-btn-prev" data-target="3"><svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-left"></use></svg> Retour</button></div>
-  </div>
-
-  <div class="cm-step-card" data-step="5">
-    <div class="cm-q-eyebrow">La voix</div>
-    <h2 class="cm-q-title">Quelle voix préfères-tu pour la chanson ?</h2>
-    <p class="cm-q-sub" data-h="La voix du chanteur ou de la chanteuse qui interprétera ses souvenirs." data-c="La voix du chanteur ou de la chanteuse qui chantera sa chanson.">La voix du chanteur ou de la chanteuse qui interprétera ses souvenirs.</p>
-    <div class="cm-choices cm-grid-2" id="choices-voice">
-      <button class="cm-choice" data-value="Masculin"><span class="cm-choice-emoji">🎙️</span> Masculin</button>
-      <button class="cm-choice" data-value="Féminin"><span class="cm-choice-emoji">🎤</span> Féminin</button>
-    </div>
-    <div class="cm-error" id="err-voice">Choisis une voix pour continuer.</div>
-    <label class="cm-consent-label" for="input-language" style="display:block;text-align:left;margin:18px 0 6px;">Langue de la chanson</label>
-    <select class="cm-input" id="input-language">
-      <option value="fr-CA">Français (Canada)</option>
-      <option value="fr-FR">Français (France)</option>
-      <option value="en">English</option>
-      <option value="es">Español</option>
-    </select>
-    <div class="cm-nav">
-      <button class="cm-btn-prev" data-target="4"><svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-left"></use></svg> Retour</button>
-      <button class="cm-btn-next" id="btn-next-5">Continuer <svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-right"></use></svg></button>
-    </div>
-  </div>
-
-  <div class="cm-step-card" data-step="6">
-    <div class="cm-q-eyebrow">L'ambiance</div>
-    <h2 class="cm-q-title">Choisis l'ambiance de la chanson</h2>
-    <p class="cm-q-sub">Choisis l'émotion qui guide la chanson.</p>
-    <div class="cm-choices cm-grid-2" id="choices-mood">
-      <button class="cm-choice" data-value="Émotionnelle"><span class="cm-choice-emoji">💧</span> Émotionnelle</button>
-      <button class="cm-choice" data-value="Tendre"><span class="cm-choice-emoji">🌸</span> Tendre</button>
-      <button class="cm-choice" data-value="Paisible"><span class="cm-choice-emoji">🕊️</span> Paisible</button>
-      <button class="cm-choice" data-value="Inspirante"><span class="cm-choice-emoji">✨</span> Inspirante</button>
-      <button class="cm-choice" data-value="Reconnaissante"><span class="cm-choice-emoji">🙏</span> Reconnaissante</button>
-      <button class="cm-choice" data-value="Festive"><span class="cm-choice-emoji">🎉</span> Festive</button>
-      <button class="cm-choice" data-value="Optimiste"><span class="cm-choice-emoji">🌤️</span> Optimiste</button>
-      <button class="cm-choice" data-value="Mélancolique"><span class="cm-choice-emoji">🌙</span> Mélancolique</button>
-    </div>
-    <div class="cm-nav"><button class="cm-btn-prev" data-target="5"><svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-left"></use></svg> Retour</button></div>
-  </div>
-
-  <div class="cm-step-card" data-step="7">
-    <div class="cm-q-eyebrow">Sa personnalité</div>
-    <h2 class="cm-q-title" data-h="Qu'est-ce qui rendait {n} unique ?" data-c="Qu'est-ce qui rend {n} unique ?">Qu'est-ce qui le / la rendait unique ?</h2>
-    <p class="cm-q-sub" data-h="Sa façon d'être, ce qu'il ou elle dégageait, ce qui te manque le plus." data-c="Sa façon d'être, ce qu'il ou elle dégage, ce que tu admires le plus chez lui ou elle.">Sa façon d'être, ce qu'il ou elle dégageait, ce qui te manque le plus.</p>
-    <textarea class="cm-input" id="input-what_made_unique" aria-label="Ce qui rendait la personne unique" rows="4" data-ph-h="Ex : La façon dont il faisait rire tout le monde sans même essayer…" data-ph-c="Ex : La façon dont elle fait rire tout le monde sans même essayer…" placeholder="Ex : La façon dont il faisait rire tout le monde sans même essayer…"></textarea>
-    <div class="cm-error" id="err-what_made_unique">Partage au moins quelques mots pour que la chanson lui ressemble vraiment.</div>
-    <div class="cm-hint">
-      <div class="cm-hint-title"><svg class="cm-ic" aria-hidden="true"><use href="#ic-lightbulb"></use></svg> Des pistes si tu cherches par où commencer</div>
-      <ul>
-        <li data-h="Son expression préférée ou ce qu'il / elle répétait souvent" data-c="Son expression préférée, ce qu'il / elle dit tout le temps">Son expression préférée ou ce qu'il / elle répétait souvent</li>
-        <li data-h="Ce que tu remarques maintenant qu'il ou elle n'est plus là" data-c="Ce qui te fait sourire chez lui ou elle">Ce que tu remarques maintenant qu'il ou elle n'est plus là</li>
-        <li data-h="Un geste, une odeur, un bruit qui te rappelle à lui ou elle" data-c="Une manie, un talent, une passion qui le ou la définit">Un geste, une odeur, un bruit qui te rappelle à lui ou elle</li>
-        <li data-h="La façon dont il / elle entrait dans une pièce" data-c="La façon dont il / elle illumine une pièce">La façon dont il / elle entrait dans une pièce</li>
-      </ul>
-    </div>
-    <div class="cm-nav">
-      <button class="cm-btn-prev" data-target="6"><svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-left"></use></svg> Retour</button>
-      <button class="cm-btn-next" id="btn-next-7">Continuer <svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-right"></use></svg></button>
-    </div>
-  </div>
-
-  <div class="cm-step-card" data-step="8">
-    <div class="cm-q-eyebrow" data-h="Tes souvenirs" data-c="Vos moments">Tes souvenirs</div>
-    <h2 class="cm-q-title" data-h="Y a-t-il un souvenir que tu aimerais voir dans la chanson ?" data-c="Y a-t-il un moment que tu aimerais voir dans la chanson ?">Y a-t-il un souvenir que tu aimerais voir dans la chanson ?</h2>
-    <span class="cm-optional">Optionnel, passe si tu n'es pas prêt</span>
-    <textarea class="cm-input" id="input-memories" aria-label="Un souvenir à inclure dans la chanson" rows="4" data-ph-h="Ex : On passait nos dimanches dans sa cuisine…" data-ph-c="Ex : On passe nos dimanches à rire ensemble…" placeholder="Ex : On passait nos dimanches dans sa cuisine…"></textarea>
-    <div class="cm-hint">
-      <div class="cm-hint-title"><svg class="cm-ic" aria-hidden="true"><use href="#ic-heart"></use></svg> <span data-h="Des souvenirs qui touchent particulièrement" data-c="Des moments qui touchent particulièrement">Des souvenirs qui touchent particulièrement</span></div>
-      <ul>
-        <li data-h="Un endroit qui vous appartenait : son fauteuil, votre banc, sa cuisine le matin" data-c="Un endroit qui vous appartient : votre café, votre banc, sa cuisine le matin">Un endroit qui vous appartenait : son fauteuil, votre banc, sa cuisine le matin</li>
-        <li data-h="Un rituel ou une habitude : le café du dimanche, sa façon de…" data-c="Un rituel, une tradition : le souper du dimanche, votre fou rire…">Un rituel ou une habitude : le café du dimanche, sa façon de…</li>
-        <li data-h="La dernière chose que tu lui as dite, ou qu'il ou elle t'a dite" data-c="Une fois où il ou elle t'a vraiment surpris(e)">La dernière chose que tu lui as dite, ou qu'il ou elle t'a dite</li>
-        <li data-h="Ce que tu aurais voulu lui dire encore" data-c="Ce que vous aimez faire ensemble">Ce que tu aurais voulu lui dire encore</li>
-      </ul>
-    </div>
-    <div class="cm-nav">
-      <button class="cm-btn-prev" data-target="7"><svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-left"></use></svg> Retour</button>
-      <button class="cm-btn-next" id="btn-next-8">Continuer <svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-right"></use></svg></button>
-    </div>
-  </div>
-
-  <div class="cm-step-card" data-step="9">
-    <div class="cm-q-eyebrow" data-h="Ce que tu gardes" data-c="Ton message">Ce que tu gardes</div>
-    <h2 class="cm-q-title" data-h="Comment souhaites-tu te souvenir d'eux ?" data-c="Quel message veux-tu lui transmettre ?">Comment souhaites-tu te souvenir d'eux ?</h2>
-    <span class="cm-optional">Optionnel, prends ton temps</span>
-    <p class="cm-q-sub" data-h="Ce que tu veux que cette chanson capture, préserve, ou transmette à ceux qui l'écouteront après toi." data-c="Ce que tu aimerais lui dire, le message qu'elle gardera de cette chanson.">Ce que tu veux que cette chanson capture, préserve, ou transmette à ceux qui l'écouteront après toi.</p>
-    <textarea class="cm-input" id="input-memory_to_keep" aria-label="Ce que la chanson doit garder ou transmettre" rows="4" data-ph-h="Ex : Je veux qu'on se souvienne de son rire…" data-ph-c="Ex : Je veux qu'elle sache à quel point elle compte…" placeholder="Ex : Je veux qu'on se souvienne de son rire…"></textarea>
-    <div class="cm-nav">
-      <button class="cm-btn-prev" data-target="8"><svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-left"></use></svg> Retour</button>
-      <button class="cm-btn-next" id="btn-next-9">Continuer <svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-right"></use></svg></button>
-    </div>
-  </div>
-
-  <div class="cm-step-card" data-step="10">
-    <div class="cm-q-eyebrow">Dernière étape</div>
-    <h2 class="cm-q-title">Où veux-tu recevoir ta chanson ?</h2>
-    <p class="cm-q-sub">Ton aperçu sera prêt en quelques minutes. Entre ton courriel pour le recevoir.</p>
-    <input class="cm-input" type="email" id="input-email" aria-label="Ton adresse courriel" placeholder="ton@courriel.com" autocomplete="email">
-    <div class="cm-error" id="err-email">Entre un courriel valide.</div>
-    <div class="cm-consent">
-      <input type="checkbox" id="consent-check">
-      <label class="cm-consent-label" for="consent-check">
-        En soumettant ce formulaire, j'accepte les
-        <a href="/condition-de-vente" target="_blank">conditions de vente</a>
-        et la <a href="/politique-de-confidentialite" target="_blank">politique de confidentialité</a>
-        de Chanson Mémoire. Je consens à recevoir des communications par courriel.
-      </label>
-    </div>
-    <div class="cm-error" id="err-consent">Accepte les conditions pour continuer.</div>
-    <input type="text" name="bot-field" style="display:none" tabindex="-1" autocomplete="off">
-    <div class="cm-submit-wrap"><button class="cm-submit-btn" id="btn-submit">Créer ma chanson <svg class="cm-ic" aria-hidden="true"><use href="#ic-music"></use></svg></button></div>
-    <p class="cm-submit-note">100 % gratuit à essayer · Aperçu prêt en quelques minutes</p>
-    <div class="cm-nav" style="margin-top:16px;"><button class="cm-btn-prev" data-target="9"><svg class="cm-ic" aria-hidden="true"><use href="#ic-arrow-left"></use></svg> Retour</button></div>
-  </div>
-
-</div>
-
-<footer class="cm-footer">© <span id="cm-year">2026</span> Chanson Mémoire, une marque de LabMarketing inc. · <a href="/politique-de-confidentialite">Confidentialité</a></footer>
 
 <script>
 (function(){
   'use strict';
+  var UUID_V4=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  var MIN_CHARS=3;
 
-  /* ── CONFIG ── */
-  const TOTAL_STEPS  = 10;
-  const SHOW_TOTAL_FROM = 4;   /* on cache « sur 10 » au début (moins intimidant) et on le révèle une fois la personne nommée */
-  const REVISION_URL = '/revision';
-  const SURVEY_ENDPOINT = '/api/soumettre-survey';   // proxy Netlify : cache l'URL du webhook Make (anti-bot) + nettoie côté serveur
-  const MIN_CHARS = 3; /* minimum léger anti-vide / anti-1-lettre */
+  /* ── TOKEN : clé de tout le parcours. ?id=UUID (retour depuis l’attente) = réutilisé. ── */
+  var idParam=new URLSearchParams(window.location.search).get('id')||'';
+  var token=UUID_V4.test(idParam)?idParam:((window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c==='x'?r:(r&0x3|0x8)).toString(16);}));
 
-  /* ── TOKEN : clé de tout le parcours ──
-     Régénération chanson : si on arrive avec ?id=TOKEN (UUID v4 existant), on RÉUTILISE
-     ce token (même Project) et on pré-remplit le formulaire. Sinon, nouveau token. */
-  const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const idParam = new URLSearchParams(window.location.search).get('id') || '';
-  const isRegen = UUID_V4.test(idParam);
-  const token = isRegen
-    ? idParam
-    : ((window.crypto && crypto.randomUUID)
-        ? crypto.randomUUID()
-        : 'cm-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+  /* ── Attribution first/last-touch (paniers cm-attrib.js) — mêmes clés que le legacy. ── */
+  function cmTouch(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{};}catch(e){return {};}}
+  function getParam(n){return (new URLSearchParams(window.location.search).get(n)||'').trim();}
+  function getCookie(n){var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return m?m.pop():'';}
+  var cmFirst=cmTouch('cm_first_touch'), cmLast=cmTouch('cm_last_touch');
+  function cmF(o,n){return (o&&o[n])||getParam(n)||'';}
 
-  /* ── ATTRIBUTION META ── */
-  function getParam(n){ return new URLSearchParams(window.location.search).get(n) || ''; }
-  /* Paniers first-touch / last-touch poses par cm-attrib.js (localStorage). Repli sur l'URL courante
-     si le panier est vide (ex. localStorage bloque, ou pub qui pointe direct sur /souvenirs). */
-  function cmTouch(k){ try{ return JSON.parse(localStorage.getItem(k) || '{}') || {}; }catch(e){ return {}; } }
-  var cmFirst = cmTouch('cm_first_touch');
-  var cmLast  = cmTouch('cm_last_touch');
-  function cmF(o,n){ return (o && o[n]) || getParam(n) || ''; }
-
-  /* ── Pixel Meta : entierement gere par cm-pixel.js (partage, charge en defer en bas de page) ──
-     Il fait le PageView (avec eventID + CAPI), la banniere de consentement, et expose
-     window.cmTrack(event, evtKey, token) pour les events. On NE duplique PLUS le pixel ici :
-     l'ancien code inline gagnait la course window._px et court-circuitait le PageView CAPI. */
-  function getCookie(n){ var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)'); return m?m.pop():''; }
-
-  /* ── ÉTAT : noms = champs Airtable ── */
-  const data = {
-    token:            token,
-    regeneration:     isRegen,   /* token existant => la fonction Netlify cree une nouvelle Generation, pas un nouveau Project */
-    song_type:        'hommage',   /* hommage (décédé) | cadeau (vivant) — étape 1 */
-    deceased_name:    '',
-    relationship:     '',
-    music_style:      '',
-    voice:            '',
-    mood:             '',
-    language:         'fr-CA',   /* langue de la chanson (sélecteur étape finale) */
-    what_made_unique: '',
-    memories:         '',
-    memory_to_keep:   '',
-    email:            '',
-    consentement:     false,
-    fbclid:       (cmLast.fbclid || cmFirst.fbclid || getParam('fbclid')),
-    fbp:          getCookie('_fbp'),
-    fbc:          getCookie('_fbc'),
-    /* FIRST-TOUCH (origine) -> champs utm_* + landing_page + first_touch_at sur le Projet */
-    utm_source:   cmF(cmFirst,'utm_source'),
-    utm_medium:   cmF(cmFirst,'utm_medium'),
-    utm_campaign: cmF(cmFirst,'utm_campaign'),
-    utm_content:  cmF(cmFirst,'utm_content'),
-    utm_term:     cmF(cmFirst,'utm_term'),
-    landing_page: cmFirst.landing_page || window.location.pathname,
-    first_touch_at: cmFirst.at || '',
-    /* LAST-TOUCH (dernier creatif vu) -> champs last_* sur le Projet */
-    last_utm_source:   cmF(cmLast,'utm_source'),
-    last_utm_medium:   cmF(cmLast,'utm_medium'),
-    last_utm_campaign: cmF(cmLast,'utm_campaign'),
-    last_utm_content:  cmF(cmLast,'utm_content'),
-    last_utm_term:     cmF(cmLast,'utm_term'),
-    last_landing_page: cmLast.landing_page || window.location.pathname,
-    last_touch_at: cmLast.at || ''
+  var data={
+    token:token, song_type:'hommage', deceased_name:'', relationship:'', music_style:'',
+    voice:'', mood:'', language:'fr-CA', what_made_unique:'', memories:'', memory_to_keep:'',
+    email:'', consentement:false,
+    fbclid:(cmLast.fbclid||cmFirst.fbclid||getParam('fbclid')), fbp:getCookie('_fbp'), fbc:getCookie('_fbc'),
+    utm_source:cmF(cmFirst,'utm_source'), utm_medium:cmF(cmFirst,'utm_medium'),
+    utm_campaign:cmF(cmFirst,'utm_campaign'), utm_content:cmF(cmFirst,'utm_content'),
+    utm_term:cmF(cmFirst,'utm_term'), landing_page:cmFirst.landing_page||window.location.pathname,
+    first_touch_at:cmFirst.at||'',
+    last_utm_source:cmF(cmLast,'utm_source'), last_utm_medium:cmF(cmLast,'utm_medium'),
+    last_utm_campaign:cmF(cmLast,'utm_campaign'), last_utm_content:cmF(cmLast,'utm_content'),
+    last_utm_term:cmF(cmLast,'utm_term'), last_landing_page:cmLast.landing_page||window.location.pathname,
+    last_touch_at:cmLast.at||''
   };
 
-  let currentStep = 1;
+  /* ── LES 10 ÉTAPES (mêmes questions, mêmes valeurs que le funnel prouvé) ── */
+  var STEPS=[
+    { section:'La chanson', type:'choice', cle:'song_type', requis:true,
+      titre:'Quelle chanson veux-tu créer ?', aide:'Les questions s’adaptent à ton choix.',
+      options:[
+        {v:'hommage', l:'Un hommage', sous:'à la mémoire d’une personne qui nous a quittés'},
+        {v:'cadeau',  l:'Un cadeau',  sous:'pour une personne bien vivante'}
+      ] },
+    { section:'La personne', type:'name', cle:'deceased_name', requis:true,
+      titre:function(){return data.song_type==='cadeau'?'Pour qui est ce cadeau ?':'À la mémoire de qui ?';},
+      aide:'Son prénom (ou son surnom) : celui qu’on chantera.',
+      placeholder:'Ex. : Jean, Maman, Grand-maman Rita…',
+      noteMots:'Juste le nom ici : les souvenirs viennent un peu plus loin.' },
+    { section:'La personne', type:'choice', cle:'relationship', requis:true,
+      titre:function(){return data.song_type==='cadeau'?'Cette personne est…':'Cette personne était…';},
+      aide:'Le lien entre la personne qui offre et la personne honorée.',
+      options:[
+        {v:'Parent',l:'Parent'},{v:'Grand-parent',l:'Grand-parent'},{v:'Enfant',l:'Enfant'},
+        {v:'Partenaire / conjoint(e)',l:'Partenaire / conjoint(e)'},{v:'Ami(e) proche',l:'Ami(e) proche'},
+        {v:'Animal de compagnie',l:'Animal de compagnie'},{v:'Quelqu’un d’autre',l:'Quelqu’un d’autre'}
+      ], grille:true },
+    { section:'La musique', type:'choice', cle:'music_style', requis:true,
+      titre:'Quel style musical lui ressemble ?', aide:'Choisis ce qui lui aurait plu, à elle ou lui.',
+      options:[
+        {v:'Douce Mélodie',l:'Douce mélodie'},{v:'Acoustique',l:'Acoustique'},{v:'Pop',l:'Pop'},
+        {v:'Country',l:'Country'},{v:'Jazz',l:'Jazz'},{v:'R&B',l:'R&B'},{v:'Rock',l:'Rock'},
+        {v:'Hip-Hop',l:'Hip-Hop'},{v:'Cinématographique',l:'Cinématographique'},
+        {v:'Latin / Salsa',l:'Latin / Salsa'},{v:'Reggae',l:'Reggae'},
+        {v:'Électronique / Dance',l:'Électronique / Dance'},{v:'Orchestre Gospel',l:'Orchestre Gospel'}
+      ], grille:true },
+    { section:'La musique', type:'choice', cle:'voice', requis:true,
+      titre:'Quelle voix pour la chanter ?', aide:'La voix qui portera les mots.',
+      options:[{v:'Féminin',l:'Voix féminine'},{v:'Masculin',l:'Voix masculine'}] },
+    { section:'La musique', type:'choice', cle:'mood', requis:true,
+      titre:'Quelle ambiance veux-tu ressentir ?', aide:'L’émotion générale de la chanson.',
+      options:[
+        {v:'Émotionnelle',l:'Émotionnelle'},{v:'Tendre',l:'Tendre'},{v:'Paisible',l:'Paisible'},
+        {v:'Mélancolique',l:'Mélancolique'},{v:'Reconnaissante',l:'Reconnaissante'},
+        {v:'Inspirante',l:'Inspirante'},{v:'Optimiste',l:'Optimiste'},{v:'Festive',l:'Festive'}
+      ], grille:true },
+    { section:'Les souvenirs', type:'text', cle:'what_made_unique', requis:true,
+      titre:function(){return data.song_type==='cadeau'?'Qu’est-ce qui la rend unique ?':'Qu’est-ce qui la rendait unique ?';},
+      aide:'Quelques mots suffisent : c’est le cœur de la chanson.',
+      tipTitre:'Des pistes pour t’inspirer',
+      tip:['Sa façon d’être avec les autres','Un trait de caractère qu’on n’oublie pas','Une passion qui la définissait'] },
+    { section:'Les souvenirs', type:'text', cle:'memories', requis:false,
+      titre:'Des souvenirs partagés à glisser dans la chanson ?',
+      aide:'Un lieu, une habitude, un moment précis : les détails concrets font les plus belles lignes.',
+      tipTitre:'Par exemple',
+      tip:['Les étés au chalet','Sa recette du dimanche','Une chanson qu’on écoutait ensemble'] },
+    { section:'Les souvenirs', type:'text', cle:'memory_to_keep', requis:false,
+      titre:'Qu’est-ce qu’on veut garder et transmettre ?',
+      aide:'Une phrase, une valeur, une promesse : elle trouvera sa place dans le refrain ou le pont.' },
+    { section:'Dernière étape', type:'email', cle:'email', requis:true,
+      titre:'Où t’envoyer la chanson ?',
+      aide:'On t’écrit dès que les paroles sont prêtes, puis quand la chanson est créée.' }
+  ];
+  var SHOW_TOTAL_FROM=4, TOTAL=STEPS.length;
 
-  function updateProgress(step){
-    document.getElementById('cm-progress-fill').style.width = Math.round(((step-1)/(TOTAL_STEPS-1))*100)+'%';
-    document.getElementById('cm-progress-count').textContent = (step < SHOW_TOTAL_FROM) ? ('Étape '+step) : ('Étape '+step+' sur '+TOTAL_STEPS);
-    var pb=document.querySelector('.cm-progress-track'); if(pb) pb.setAttribute('aria-valuenow', step);
-  }
+  /* ── Rendu générique d’une étape (même mécanique que la maquette) ── */
+  var etape=1;
+  var el={chip:document.getElementById('chip'),titre:document.getElementById('titre'),aide:document.getElementById('aide'),
+    tip:document.getElementById('tip'),tipTitre:document.getElementById('tip-titre'),tipItems:document.getElementById('tip-items'),
+    zone:document.getElementById('zone'),err:document.getElementById('erreur'),btn:document.getElementById('btn-suivant'),
+    passer:document.getElementById('btn-passer'),retour:document.getElementById('btn-retour'),barre:document.getElementById('barre')};
 
-  /* Polices de l'ecran d'attente (Cormorant + Inter) : chargees a la demande (etape finale), pas au load initial. */
-  var _overlayFontsLoaded=false;
-  function ensureOverlayFonts(){
-    if(_overlayFontsLoaded) return; _overlayFontsLoaded=true;
-    var l=document.createElement('link'); l.rel='stylesheet';
-    l.href='https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap';
-    document.head.appendChild(l);
-  }
+  function texteDe(t){return typeof t==='function'?t():t;}
+  function montrerErreur(msg){el.err.textContent=msg;el.err.classList.add('show');}
+  function cacherErreur(){el.err.classList.remove('show');}
+  function echap(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 
-  function goTo(step){
-    document.querySelectorAll('.cm-step-card').forEach(function(c){ c.classList.remove('active'); });
-    var t = document.querySelector('[data-step="'+step+'"]');
-    if(t){ t.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
-    if(step===10) ensureOverlayFonts();
-    currentStep = step; updateProgress(step); applyType();
-  }
+  function rendre(){
+    var s=STEPS[etape-1];
+    cacherErreur();
+    el.retour.disabled=(etape===1);
+    el.barre.style.width=Math.round(((etape-1)/(TOTAL-1))*100)+'%';
+    document.querySelector('.piste').setAttribute('aria-valuenow',etape);
+    el.chip.textContent=s.section+' · '+(etape<SHOW_TOTAL_FROM?('étape '+etape):('étape '+etape+' sur '+TOTAL));
+    el.titre.textContent=texteDe(s.titre);
+    el.aide.textContent=texteDe(s.aide)||'';
+    if(s.tip){el.tip.hidden=false;el.tipTitre.textContent=s.tipTitre||'Pour t’inspirer';
+      el.tipItems.innerHTML=s.tip.map(function(t){return '<li>'+echap(t)+'</li>';}).join('');}
+    else el.tip.hidden=true;
+    el.passer.hidden=!!s.requis;
+    el.btn.textContent=(etape===TOTAL)?'Créer mes paroles':'Continuer';
 
-  /* Ambiances ADAPTÉES au type : cadeau (occasions joyeuses) vs hommage (mémoire). Les valeurs
-     correspondent aux ambiances des prompts curés (table Airtable Songs_Styles). */
-  var MOODS_HOMMAGE = [['Émotionnelle','💧'],['Tendre','🌸'],['Paisible','🕊️'],['Inspirante','✨'],['Reconnaissante','🙏'],['Festive','🎉'],['Optimiste','🌤️'],['Mélancolique','🌙']];
-  var MOODS_CADEAU  = [['Inspirante','✨'],['Émotionnelle','💧'],['Romantique','❤️'],['Joyeuse et entrainante','🎉'],['Drôle et enjouée','😄'],['Énergique','⚡'],['Paisible','🕊️']];
-  function renderMoods(cadeau){
-    var box=document.getElementById('choices-mood'); if(!box) return;
-    var set = cadeau ? MOODS_CADEAU : MOODS_HOMMAGE;
-    var stillValid = set.some(function(m){ return m[0]===data.mood; });
-    box.innerHTML = set.map(function(m){
-      return '<button class="cm-choice'+((stillValid && m[0]===data.mood)?' selected':'')+'" data-value="'+m[0]+'"><span class="cm-choice-emoji">'+m[1]+'</span> '+m[0]+'</button>';
-    }).join('');
-    if(!stillValid) data.mood='';   // l'ancienne ambiance n'existe pas dans ce set -> on réinitialise
-  }
-
-  /* Adaptation hommage/cadeau : bascule tous les textes [data-h]/[data-c] et placeholders
-     [data-ph-h]/[data-ph-c]. {n} = prénom saisi (sinon « cette personne »). */
-  function applyType(){
-    var sel=document.querySelector('input[name="song_type"]:checked');
-    data.song_type=(sel&&sel.value)||'hommage';
-    var c = data.song_type==='cadeau';
-    var n = (window.cmName ? cmName(data.deceased_name) : data.deceased_name) || 'cette personne';
-    document.querySelectorAll('[data-h]').forEach(function(el){
-      var t = (c ? el.getAttribute('data-c') : el.getAttribute('data-h')) || '';
-      el.textContent = t.replace('{n}', n);
-    });
-    document.querySelectorAll('[data-ph-h]').forEach(function(el){
-      el.placeholder = c ? el.getAttribute('data-ph-c') : el.getAttribute('data-ph-h');
-    });
-    renderMoods(c);
-  }
-  [].forEach.call(document.querySelectorAll('input[name="song_type"]'), function(r){ r.addEventListener('change', applyType); });
-  applyType();
-
-  function bindChoices(containerId, dataKey, nextStep){
-    var c=document.getElementById(containerId); if(!c) return;
-    c.querySelectorAll('.cm-choice').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        c.querySelectorAll('.cm-choice').forEach(function(b){ b.classList.remove('selected'); });
-        btn.classList.add('selected');
-        data[dataKey] = btn.dataset.value;
-        setTimeout(function(){ goTo(nextStep); }, 220);
+    if(s.type==='choice'){
+      el.zone.innerHTML='<div class="choix'+(s.grille?' grille':'')+'" role="radiogroup">'+
+        s.options.map(function(o){
+          var actif=data[s.cle]===o.v?' actif':'';
+          return '<label class="carte'+actif+'"><input type="radio" name="'+s.cle+'" value="'+echap(o.v)+'"'+(actif?' checked':'')+'><span>'+echap(o.l)+(o.sous?'<span class="sous">'+echap(o.sous)+'</span>':'')+'</span></label>';
+        }).join('')+'</div>';
+      [].forEach.call(el.zone.querySelectorAll('input[type=radio]'),function(r){
+        r.addEventListener('change',function(){
+          data[s.cle]=r.value;
+          [].forEach.call(el.zone.querySelectorAll('.carte'),function(c){c.classList.remove('actif');});
+          r.closest('.carte').classList.add('actif');
+          cacherErreur();
+        });
       });
-    });
-  }
-  bindChoices('choices-relationship', 'relationship', 4);
-  bindChoices('choices-music_style',  'music_style',  5);
-  /* Ambiances : délégation (les boutons sont re-rendus par renderMoods selon hommage/cadeau). */
-  document.getElementById('choices-mood').addEventListener('click', function(e){
-    var btn=e.target.closest('.cm-choice'); if(!btn) return;
-    this.querySelectorAll('.cm-choice').forEach(function(b){ b.classList.remove('selected'); });
-    btn.classList.add('selected'); data.mood=btn.dataset.value;
-    setTimeout(function(){ goTo(7); }, 220);
-  });
-
-  /* Voix : sélection SANS auto-avance (la langue est sur la même étape) -> bouton Continuer. */
-  document.querySelectorAll('#choices-voice .cm-choice').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('#choices-voice .cm-choice').forEach(function(b){ b.classList.remove('selected'); });
-      btn.classList.add('selected'); data.voice=btn.dataset.value;
-      var e=document.getElementById('err-voice'); if(e) e.classList.remove('show');
-    });
-  });
-  document.getElementById('btn-next-5').addEventListener('click', function(){
-    if(!data.voice){ document.getElementById('err-voice').classList.add('show'); return; }
-    var langSel=document.getElementById('input-language'); if(langSel) data.language=langSel.value;
-    goTo(6);
-  });
-
-  /* ── PRÉ-REMPLISSAGE (régénération chanson) ──
-     Relit les réponses précédentes via lire-survey.js (champs minimisés) et les réinjecte.
-     Le client peut alors changer style/ambiance et bonifier le contenu avant régénération. */
-  function setVal(id, v){ var el=document.getElementById(id); if(el && v) el.value = v; }
-  function selectChoice(containerId, dataKey, value){
-    if(!value) return;
-    var c=document.getElementById(containerId); if(!c) return;
-    c.querySelectorAll('.cm-choice').forEach(function(b){
-      if(b.dataset.value === value){ b.classList.add('selected'); data[dataKey] = value; }
-    });
-  }
-  // Pré-remplir UNIQUEMENT sur un vrai clic « Régénérer » (param regen=1), pas sur un retour-arrière.
-  var wantPrefill = isRegen && (new URLSearchParams(window.location.search).get('regen') === '1');
-  // Recharge un formulaire vierge si la page est restaurée depuis le cache (bouton précédent).
-  window.addEventListener('pageshow', function(e){ if(e.persisted) location.reload(); });
-  if(wantPrefill){
-    // On retire regen=1 de l'URL pour qu'un retour-arrière ne re-déclenche pas le pré-remplissage.
-    try { history.replaceState({}, '', '/souvenirs?id=' + encodeURIComponent(token)); } catch(e){}
-    fetch('/api/lire-survey', {
-      method:'POST', headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify({ token: token })
-    })
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(s){
-      if(!s) return;
-      /* song_type AVANT applyType : sinon renderMoods utilise le set hommage et efface une ambiance cadeau. */
-      if(s.song_type){
-        data.song_type = s.song_type;
-        var rt=document.querySelector('input[name="song_type"][value="'+s.song_type+'"]'); if(rt) rt.checked=true;
-      }
-      if(s.langue){
-        data.language = s.langue;
-        var ls=document.getElementById('input-language'); if(ls) ls.value=s.langue;
-      }
-      setVal('input-deceased_name',    s.prenom_defunt);
-      setVal('input-what_made_unique', s.unicite);
-      setVal('input-memories',         s.souvenirs);
-      setVal('input-memory_to_keep',   s.souvenir_garder);
-      data.deceased_name    = s.prenom_defunt   || '';
-      data.what_made_unique = s.unicite         || '';
-      data.memories         = s.souvenirs       || '';
-      data.memory_to_keep   = s.souvenir_garder || '';
-      selectChoice('choices-relationship', 'relationship', s.relation);
-      selectChoice('choices-music_style',  'music_style',  s.style_musical);
-      selectChoice('choices-voice',        'voice',        s.voix);
-      data.mood = s.ambiance || '';   /* set avant applyType -> renderMoods re-selectionne dans le bon set */
-      applyType();
-    })
-    .catch(function(){ /* pré-remplissage best-effort : si échec, formulaire vierge */ });
-  }
-
-  document.querySelectorAll('.cm-btn-prev').forEach(function(btn){
-    btn.addEventListener('click', function(){ goTo(parseInt(btn.dataset.target)); });
-  });
-
-  /* ── Étape 1 : type de chanson -> étape 2 ── */
-  document.getElementById('btn-next-1').addEventListener('click', function(){ applyType(); goTo(2); });
-
-  /* ── Étape 2 : prénom (minimum 3 caractères) ── */
-  document.getElementById('btn-next-2').addEventListener('click', function(){
-    var v=document.getElementById('input-deceased_name').value.trim();
-    var e=document.getElementById('err-deceased_name');
-    if(v.length < MIN_CHARS){ e.classList.add('show'); return; }
-    e.classList.remove('show'); data.deceased_name=v; applyType(); goTo(3);
-  });
-  document.getElementById('input-deceased_name').addEventListener('keydown', function(e){
-    if(e.key==='Enter') document.getElementById('btn-next-2').click();
-  });
-  /* Note douce si on depasse 6 mots : ce champ = juste le nom, les souvenirs viennent plus loin
-     (6 = meme limite que cmName, au-dela le nom affiche serait tronque). */
-  (function(){
-    var inp=document.getElementById('input-deceased_name'), hint=document.getElementById('namehint-deceased');
-    if(inp && hint){
-      inp.addEventListener('input', function(){
-        var words=inp.value.trim().split(/\s+/).filter(Boolean);
-        hint.classList.toggle('show', words.length > 6);
+    } else if(s.type==='name'){
+      el.zone.innerHTML='<input type="text" id="champ" autocomplete="off" placeholder="'+echap(s.placeholder||'')+'" value="'+echap(data[s.cle]||'')+'">'+
+        '<div class="note" id="note-mots">'+echap(s.noteMots||'')+'</div>';
+      var inp=document.getElementById('champ');
+      inp.addEventListener('input',function(){
+        var mots=inp.value.trim().split(/\s+/).filter(Boolean);
+        document.getElementById('note-mots').classList.toggle('show',mots.length>6);
       });
+      inp.addEventListener('keydown',function(e){if(e.key==='Enter')el.btn.click();});
+      inp.focus();
+    } else if(s.type==='text'){
+      el.zone.innerHTML='<textarea id="champ" placeholder="Écris comme ça vient : on s’occupe du reste."></textarea>';
+      document.getElementById('champ').value=data[s.cle]||'';
+    } else if(s.type==='email'){
+      el.zone.innerHTML=
+        '<input type="email" id="champ" autocomplete="email" inputmode="email" placeholder="ton@courriel.com" value="'+echap(data.email||'')+'">'+
+        '<label for="input-language" class="legal" style="margin-top:6px">Langue de la chanson</label>'+
+        '<select id="input-language">'+
+          [['fr-CA','Français (Québec)'],['fr-FR','Français (France)'],['en','Anglais'],['es','Espagnol']].map(function(o){
+            return '<option value="'+o[0]+'"'+(data.language===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+
+        '</select>'+
+        '<label class="consent"><input type="checkbox" id="consent"'+(data.consentement?' checked':'')+'>'+
+          '<span>J’accepte les <a href="/condition-de-vente" target="_blank" rel="noopener">conditions</a> et la <a href="/politique-de-confidentialite" target="_blank" rel="noopener">politique de confidentialité</a>. Mes réponses servent uniquement à créer la chanson.</span></label>';
     }
-  })();
-
-  /* ── Étape 7 : unicité (minimum 3 caractères) ── */
-  document.getElementById('btn-next-7').addEventListener('click', function(){
-    var v=document.getElementById('input-what_made_unique').value.trim();
-    var e=document.getElementById('err-what_made_unique');
-    if(v.length < MIN_CHARS){ e.classList.add('show'); return; }
-    e.classList.remove('show'); data.what_made_unique=v; goTo(8);
-  });
-
-  document.getElementById('btn-next-8').addEventListener('click', function(){
-    data.memories=document.getElementById('input-memories').value.trim(); goTo(9);
-  });
-
-  document.getElementById('btn-next-9').addEventListener('click', function(){
-    data.memory_to_keep=document.getElementById('input-memory_to_keep').value.trim(); goTo(10);
-  });
-
-  function redirigerVersRevision(){
-    window.location.href = REVISION_URL + '?id=' + encodeURIComponent(token);
+    window.scrollTo(0,0);
   }
 
-  document.getElementById('btn-submit').addEventListener('click', function(){
-    var email=document.getElementById('input-email').value.trim();
-    var consent=document.getElementById('consent-check').checked;
-    var errEmail=document.getElementById('err-email');
-    var errConsent=document.getElementById('err-consent');
-    var valid=true;
-    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ errEmail.classList.add('show'); valid=false; }
-    else errEmail.classList.remove('show');
-    if(!consent){ errConsent.classList.add('show'); valid=false; }
-    else errConsent.classList.remove('show');
-    if(!valid) return;
+  function valider(){
+    var s=STEPS[etape-1];
+    if(s.type==='choice'){
+      if(s.requis&&!data[s.cle]){montrerErreur('Choisis une option pour continuer.');return false;}
+    } else if(s.type==='name'){
+      var v=document.getElementById('champ').value.trim();
+      if(v.length<MIN_CHARS){montrerErreur('Écris au moins le prénom (3 lettres minimum).');return false;}
+      data[s.cle]=v;
+    } else if(s.type==='text'){
+      var t=document.getElementById('champ').value.trim();
+      if(s.requis&&t.length<MIN_CHARS){montrerErreur('Quelques mots suffisent, mais il en faut un peu.');return false;}
+      data[s.cle]=t;
+    } else if(s.type==='email'){
+      var email=document.getElementById('champ').value.trim();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){montrerErreur('Vérifie ton courriel : c’est là qu’on t’envoie la chanson.');return false;}
+      if(!document.getElementById('consent').checked){montrerErreur('Coche la case de consentement pour continuer.');return false;}
+      data.email=email;data.consentement=true;
+      var l=document.getElementById('input-language');data.language=(l&&l.value)||'fr-CA';
+    }
+    return true;
+  }
 
-    data.email=email; data.consentement=true;
-    var langSel=document.getElementById('input-language'); data.language=(langSel&&langSel.value)||'fr-CA';
-
-    /* On neutralise TOUS les caractères de contrôle + guillemets / antislashs AVANT l'envoi :
-       protection défensive du JSON. La fonction Netlify re-nettoie aussi côté serveur (ceinture +
-       bretelles). Sans effet sur les paroles (l'IA réécrit de toute façon). */
-    Object.keys(data).forEach(function(k){
-      if(typeof data[k]==='string'){ data[k]=data[k].replace(/[\x00-\x1F\x7F]+/g,' ').replace(/[\\"]/g,"'").trim(); }
-    });
-
-    var btn=document.getElementById('btn-submit');
-    btn.disabled=true; btn.innerHTML='<svg class="cm-ic cm-spin" aria-hidden="true"><use href="#ic-spinner"></use></svg> Envoi en cours…';
-    var ovAttente=document.getElementById('overlay-attente-paroles'); if(ovAttente) ovAttente.style.display='flex';
-
-    /* Backup Netlify Forms (fire-and-forget) : filet de securite si /api/soumettre-survey echoue.
-       On n'envoie QUE les champs de contenu (ceux declares dans le <form> cache). PAS l'attribution
-       (utm/fbclid/fbp...) : inutile dans ce backup et evite de stocker des donnees marketing dans
-       Netlify Forms (Loi 25). La source de verite reste /api/soumettre-survey (Airtable direct). */
-    var BACKUP_FIELDS=['token','song_type','deceased_name','relationship','music_style','voice','mood','language','what_made_unique','memories','memory_to_keep','email','consentement'];
-    var fd=new FormData();
-    fd.append('form-name','chanson-memoire-survey');
-    BACKUP_FIELDS.forEach(function(k){ fd.append(k, data[k]); });
-    fetch('/', { method:'POST', body:fd }).catch(function(){});
-
-    /* Fonction Netlify /api/soumettre-survey (mode direct) : crée Client + Project + paroles +
-       Generation dans Airtable. Tout le traitement reste côté serveur, rien n'est exposé au client. */
-    fetch(SURVEY_ENDPOINT, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify(data)
-    })
-    .then(function(){ if(window.cmSetNoTrack) window.cmSetNoTrack(email); if(window.cmTrack) window.cmTrack('Lead','lead',token); redirigerVersRevision(); })
-    .catch(function(err){ console.error('Erreur soumission:', err); redirigerVersRevision(); });
+  el.btn.addEventListener('click',function(){
+    if(!valider())return;
+    if(etape<TOTAL){etape++;rendre();return;}
+    soumettre();
   });
+  el.passer.addEventListener('click',function(){
+    var s=STEPS[etape-1];
+    var champ=document.getElementById('champ');
+    data[s.cle]=champ?champ.value.trim():'';
+    etape++;rendre();
+  });
+  el.retour.addEventListener('click',function(){if(etape>1){etape--;rendre();}});
 
-  /* a11y : les messages d'erreur sont annonces par les lecteurs d'ecran quand ils apparaissent. */
-  document.querySelectorAll('.cm-error').forEach(function(e){ e.setAttribute('role','alert'); });
-  /* Annee du footer toujours a jour (defaut 2026 dans le HTML si JS off). */
-  var yEl=document.getElementById('cm-year'); if(yEl) yEl.textContent=new Date().getFullYear();
+  function soumettre(){
+    /* Caractères de contrôle neutralisés côté client (le serveur re-nettoie : ceinture + bretelles).
+       Les guillemets/apostrophes RESTENT intacts : tout est paramétré côté Supabase. */
+    Object.keys(data).forEach(function(k){
+      if(typeof data[k]==='string')data[k]=data[k].replace(/[\x00-\x1F\x7F]+/g,' ').trim();
+    });
+    el.btn.disabled=true;el.btn.textContent='Envoi en cours…';
 
-  updateProgress(1);
+    /* Backup Netlify Forms : contenu seulement, jamais l’attribution (Loi 25). */
+    var BACKUP=['token','song_type','deceased_name','relationship','music_style','voice','mood','language','what_made_unique','memories','memory_to_keep','email','consentement'];
+    var fd=new FormData();fd.append('form-name','chanson-memoire-survey');
+    BACKUP.forEach(function(k){fd.append(k,data[k]);});
+    fetch('/',{method:'POST',body:fd}).catch(function(){});
+
+    fetch('/api/survey',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+      .then(function(r){
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        if(window.cmSetNoTrack)window.cmSetNoTrack(data.email);
+        if(window.cmTrack)window.cmTrack('Lead','lead',token);
+        window.location.href='/attente-paroles?id='+encodeURIComponent(token);
+      })
+      .catch(function(){
+        el.btn.disabled=false;el.btn.textContent='Créer mes paroles';
+        montrerErreur('L’envoi n’a pas fonctionné. Réessaie dans un instant : tes réponses sont conservées ici.');
+      });
+  }
+
+  window.addEventListener('pageshow',function(e){if(e.persisted)location.reload();});
+  rendre();
 })();
 </script>
-  <!-- Ecran d'attente plein, affiche pendant la generation des paroles (fetch synchrone vers soumettre-survey).
-       Reprend EXACTEMENT le header + la barre d'etapes + la roue mauve de /revision : aucune difference visible
-       au moment de la redirection vers la page des paroles (continuite parfaite, une seule roue branding). -->
-  <div id="overlay-attente-paroles" style="display:none;position:fixed;inset:0;z-index:9999;background:#F5F0EA;flex-direction:column;align-items:stretch;overflow-y:auto;font-family:'Inter',sans-serif;">
-    <header style="background:#FDFAF6;border-bottom:1px solid #EDE6DC;padding:20px 24px;display:flex;align-items:center;gap:12px;">
-      <img src="https://res.cloudinary.com/dcx1tfm47/image/upload/f_auto,q_auto/v1781659915/Logo_Chanson_M%C3%A9moire_jiq5ce.png" alt="Chanson Mémoire" style="height:40px;width:auto;display:block;">
-    </header>
-    <div style="background:#FDFAF6;border-bottom:1px solid #EDE6DC;padding:14px 24px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#6B5A7E;letter-spacing:0.05em;">
-      <div style="display:flex;align-items:center;gap:6px;opacity:0.7;"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span> Tes souvenirs</div>
-      <div style="color:#EDE6DC;font-size:14px;">›</div>
-      <div style="display:flex;align-items:center;gap:6px;opacity:1;color:#7B5EA7;font-weight:500;"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span> Tes paroles</div>
-      <div style="color:#EDE6DC;font-size:14px;">›</div>
-      <div style="display:flex;align-items:center;gap:6px;opacity:0.45;"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span> Création</div>
-    </div>
-    <div style="max-width:720px;width:100%;margin:0 auto;padding:48px 24px 80px;text-align:center;">
-      <div style="padding:80px 0;">
-        <div class="cm-roue-attente"></div>
-        <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:300;color:#2C2035;margin-bottom:10px;">Votre texte personnalisé est en cours de rédaction.</div>
-        <div style="font-size:14px;color:#6B5A7E;font-weight:300;">Cela prend environ 30 secondes.<br>Cette page se mettra à jour automatiquement.</div>
-      </div>
-    </div>
-  </div>
-  <script src="/js/cm-pixel.js" defer></script>
+<script src="/js/cm-pixel.js" defer></script>
 </body>
 </html>

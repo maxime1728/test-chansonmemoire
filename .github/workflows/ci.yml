@@ -39,7 +39,11 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: cm_ci
         ports:
+          # Deux ports vers le MÊME Postgres : 5432 = chemin « migrations » (drizzle-kit),
+          # 6543 = chemin « runtime » (_lib/db.ts refuse :5432, comme en prod où 6543 est
+          # le pooler transaction). Les gardes-fous restent stricts des deux côtés.
           - 5432:5432
+          - 6543:5432
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
@@ -47,6 +51,8 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/cm_ci
+      SUPABASE_DB_URL: postgres://postgres:postgres@localhost:6543/cm_ci
+      GENERATE_LYRICS_SECRET: secret-ci
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -66,9 +72,6 @@ jobs:
       - name: Dérive schéma vs migrations (drizzle-kit check)
         run: npm run db:check
 
-      - name: Tests unitaires TypeScript
-        run: npm run test:ts
-
       - name: Migrations depuis ZÉRO sur Postgres éphémère (bloquant)
         run: npm run db:migrate
 
@@ -77,3 +80,9 @@ jobs:
 
       - name: Smoke — les contraintes échouent FORT (doublon rejeté, FK, CHECK, audit, soft-delete)
         run: node scripts/smoke-db.mjs
+
+      # Après les migrations : les tests d'intégration (suffixe .integration) frappent la
+      # vraie base éphémère via le chemin runtime (6543). Sans SUPABASE_DB_URL, ils se
+      # sautent d'eux-mêmes (exécution locale).
+      - name: Tests unitaires + intégration TypeScript
+        run: npm run test:ts
